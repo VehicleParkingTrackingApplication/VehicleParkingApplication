@@ -3,9 +3,9 @@ import siteController from '../app/controllers/SiteController.js';
 
 const router = express.Router();
 // router.use(':slug', NewsController.show);
-router.use('/login', siteController.login);
-// router.use('/register', siteController.register);
-router.use('/search', siteController.search);
-router.use('/', siteController.index);
+router.get('/login', siteController.login);
+router.get('/register', siteController.register);
+router.get('/search', siteController.search);
+router.get('/', siteController.index);
 
 export default router;
