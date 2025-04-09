@@ -10,7 +10,7 @@
           <a class="nav-link active" aria-current="page" href="/">Home</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#">Link</a>
+          <a class="nav-link" href="#">Facility Management</a>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -23,15 +23,18 @@
             <li><a class="dropdown-item" href="#">Something else here</a></li>
           </ul>
         </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" aria-disabled="true" href="/login">Login</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" aria-disabled="true" href="/register">Register</a>
-        </li>
+        {{#if user}}
+          <li class="nav-item">
+            <a class="nav-link active" aria-disabled="true" href="#">Account</a>
+          </li>
+        {{else}}
+          <li class="nav-item">
+            <a class="nav-link active" aria-disabled="true" href="/login">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-disabled="true" href="/register">Register</a>
+          </li>
+        {{/if}}
       </ul>
       {{!-- <form class="d-flex" role="search">
         <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">

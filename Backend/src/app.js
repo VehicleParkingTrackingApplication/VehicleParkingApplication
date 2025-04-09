@@ -1,6 +1,6 @@
 import express from 'express';
-// const express = require('express');
-// import morgan from 'morgan';
+import morgan from 'morgan';
+import session from 'express-session';
 import { engine } from 'express-handlebars';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -17,11 +17,18 @@ const PORT = 3000;
 db.connect();
 
 app.use(express.static(join(__dirname, 'public')));
-app.use(express.urlencoded({extended: true,}));
+app.use(express.urlencoded({extended: true}));
 app.use(express.json());
+app.use(
+  session({
+    secret: 'yourSecretKey',
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 
 // HTTP logger display
-// app.use(morgan('combined')); // get log when request is successful
+app.use(morgan('combined')); // get log when request is successful
 
 // Template engine
 app.engine('hbs', engine({
