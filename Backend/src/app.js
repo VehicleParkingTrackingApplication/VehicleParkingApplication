@@ -6,12 +6,15 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import route from './routes/index.js';
 import db from './config/db/index.js';
+import dotenv from 'dotenv';
+dotenv.config();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 1313;
 
 // Connect to DB
 db.connect();

@@ -1,16 +1,21 @@
 import User from '../models/User.js';
+import Camera_Data from '../models/CameraData.js';
 import bcrypt from 'bcrypt';
+import importCSVData from '../../utils/dataImport.js';
 
 class siteController {
-    async index(req, res) {
-        const userData = await User.find();
+    async index(req, res, next) {
+        // const userData = await User.find();
         // res.json(userData);
         res.render('homepage/home');
+        // User.find({})
+        //     .then(userData => res.render('homepage/home'))
+        //     .catch(next);
     }
 
-    search(req, res) {
-        res.render('homepage/search');
-    }
+    // search(req, res) {
+    //     res.render('homepage/search');
+    // }
     login(req, res) {
         res.render('homepage/login');
     }
@@ -41,7 +46,6 @@ class siteController {
             userName: req.body.username,
             password: req.body.password
         }
-
         // Check whether the usernaem already exists in database
         const existingUser = await User.findOne({ userName: data.userName });
         if (existingUser) {
@@ -55,6 +59,21 @@ class siteController {
         }
         const userData = await User.insertMany(data)
         res.redirect('/login');
+    }
+    async importData(req, res) {
+        try {
+            const filename = req.query.file || '2025-04-02.csv';
+            const results = await importCSVData(filename);
+            console.log(results);
+            const cameraDataImport = await Camera_Data.insertMany(results);
+
+            // res.json({ success: true, count: results.length });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+        // const cameraData = await Camera_Data.find();
+        // res.json(cameraData);
+        res.render('homepage/register')
     }
     show(req, res) {
         res.render('homepage/show');
