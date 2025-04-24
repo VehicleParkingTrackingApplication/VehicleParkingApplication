@@ -1,6 +1,11 @@
 Method 1: Run by docker container
+1. install docker desktop -> access the image link: https://hub.docker.com/r/brandonng/car-parking-monitoring-v0
 
+2. run in the terminal: 
+docker pull brandonng/car-parking-monitoring-v0
+docker run -d -p 8001:1313 binhng/car-parking:v1
 
+open the localhost:8001
 
 Step 1:
 install nodejs at https://nodejs.org/en

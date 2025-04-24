@@ -1,7 +1,8 @@
 import siteRouter from './site.js';
+import parkingRouter from './parking.js';
 
 function route(app) {
-    // app.use('/camera', registerRouter)
+    app.use('/camera-data', parkingRouter)
     app.use('/', siteRouter);
 }
 
