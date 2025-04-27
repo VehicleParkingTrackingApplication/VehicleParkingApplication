@@ -5,7 +5,8 @@
   "main": "src/app.js",
   "scripts": {
     "start": "nodemon --inspect src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "beautiful": "prettier --single-quote --trailing-comma all --write 'src/**/*.{js,json,scss,css,html}'"
   },
   "keywords": [],
   "author": "",
@@ -25,7 +26,10 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.1",
     "morgan": "^1.10.0",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "prettier": "^3.5.3"
   }
 }

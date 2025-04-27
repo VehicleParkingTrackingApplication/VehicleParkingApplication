@@ -1,17 +1,21 @@
-import Camera_Data from '../models/CameraData.js';
+import cameraData from '../models/CameraData.js';
+import parkingArea from '../models/ParkingAreaSchema.js';
+// import ParkingVehicles from '../models/ParkingVehicles.js';
 
 class parkingController {
     async index(req, res) {
-        const cameraData = await Camera_Data.find();
-        res.json(cameraData)
+        const cameraDataJson = await cameraData.find({});
+        return res.json(cameraDataJson);
     }
+
+    async getParkingArea(req, res) {
+        const parkingArea = await parkingArea.find();
+        res.json(parkingInfoJson);
+    }
+
     async getParkingVehicles(req, res) {
         const parkingVehicleJson = await ParkingVehicles.find();
         res.json(parkingVehicleJson);
-    }
-    async getParkingInfo(req, res) {
-        const parkingInfoJson = await ParkingInfo.find();
-        res.json(parkingInfoJson);
     }
 }
 

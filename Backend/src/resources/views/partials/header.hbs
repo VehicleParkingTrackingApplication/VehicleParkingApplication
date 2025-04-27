@@ -10,29 +10,38 @@
           <a class="nav-link active" aria-current="page" href="/">Home</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#">Facility Management</a>
+          <a class="nav-link active" href="#">Parking Areas Management</a>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Dropdown
           </a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#">Action</a></li>
-            <li><a class="dropdown-item" href="#">Another action</a></li>
+            <li><a class="dropdown-item" href="/vehicles">Vehicles</a></li>
+            <li><a class="dropdown-item" href="/blacklist">Blacklist</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="#">Something else here</a></li>
           </ul>
         </li>
         {{#if checkUsername}}
           <li class="nav-item">
-            <a class="nav-link active" aria-disabled="true" href="#">Account</a>
+            <a class="nav-link active" aria-disabled="true" href="/account">Account</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-disabled="true" href="/business-info">Business Info</a>
+          </li>
+          
+          <li class="nav-item">
+            <form action="/account/logout" method="POST">
+              <button type="submit" class="nav-link btn btn-link">Logout</button>
+            </form>
           </li>
         {{else}}
           <li class="nav-item">
-            <a class="nav-link active" aria-disabled="true" href="/login">Login</a>
+            <a class="nav-link active" aria-disabled="true" href="/account/login">Login</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link active" aria-disabled="true" href="/register">Register</a>
+            <a class="nav-link active" aria-disabled="true" href="/account/register">Register</a>
           </li>
         {{/if}}
       </ul>

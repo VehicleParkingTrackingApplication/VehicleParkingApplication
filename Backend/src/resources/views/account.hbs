@@ -1,0 +1,35 @@
+<div class="container py-5">
+<h1 class="mb-4">My Profile</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+    <div class="row mb-2">
+        <div class="col-sm-4 text-muted">Full Name</div>
+        <div class="col-sm-8">{{user.fullname}}</div>
+    </div>
+    <div class="row mb-2">
+        <div class="col-sm-4 text-muted">Username</div>
+        <div class="col-sm-8">{{user.userName}}</div>
+    </div>
+    <div class="row mb-2">
+        <div class="col-sm-4 text-muted">Date of Birth</div>
+        <div class="col-sm-8">{{user.dob}}</div>
+    </div>
+    <div class="row mb-2">
+        <div class="col-sm-4 text-muted">Member Since</div>
+        <div class="col-sm-8">{{user.createAt}}</div>
+    </div>
+    <div class="row mb-2">
+        <div class="col-sm-4 text-muted">Last Updated</div>
+        <div class="col-sm-8">{{user.updateAt}}</div>
+    </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="/" class="btn btn-outline-primary">Back to Home</a>
+    <form action="/logout" method="POST" class="d-inline">
+    <button type="submit" class="btn btn-danger">Logout</button>
+    </form>
+</div>
+</div>
+

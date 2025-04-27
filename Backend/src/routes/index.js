@@ -1,9 +1,11 @@
-import siteRouter from './site.js';
-import parkingRouter from './parking.js';
+import homeRouter from './home.js';
+import accountRouter from './account.js';
+// import parkingRouter from './parking.js';
 
 function route(app) {
-    app.use('/camera-data', parkingRouter)
-    app.use('/', siteRouter);
+//   app.use('/camera-data', parkingRouter);
+  app.use('/account', accountRouter)
+  app.use('/', homeRouter);
 }
 
 // module.exports = route;

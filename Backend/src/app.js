@@ -9,7 +9,6 @@ import db from './config/db/index.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -20,27 +19,32 @@ const PORT = process.env.PORT || 1313;
 db.connect();
 
 app.use(express.static(join(__dirname, 'public')));
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(
   session({
     secret: 'yourSecretKey',
     resave: false,
     saveUninitialized: true,
-  })
+  }),
 );
 
 // HTTP logger display
 app.use(morgan('combined')); // get log when request is successful
 
 // Template engine
-app.engine('hbs', engine({
-  extname: '.hbs'
-}));
+app.engine(
+  'hbs',
+  engine({
+    extname: '.hbs',
+  }),
+);
 app.set('view engine', 'hbs');
 app.set('views', join(__dirname, 'resources/views'));
 
 // routes init
 route(app);
 
-app.listen(PORT, () => console.log(`Server is running on http://localhost:${PORT}`));
+app.listen(PORT, () =>
+  console.log(`Server is running on http://localhost:${PORT}`),
+);
