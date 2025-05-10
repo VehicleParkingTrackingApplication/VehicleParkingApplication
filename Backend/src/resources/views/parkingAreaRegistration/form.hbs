@@ -1,0 +1,39 @@
+<head>
+  <title>Add Parking Area</title>
+</head>
+<body>
+
+  <h2>Add a Parking Area</h2>
+
+  <form action="/parking-area-management/registration-confirm" method="POST">
+    <label for="business_id">Business ID:</label><br>
+    <input type="text" id="business_id" name="business_id" required><br><br>
+
+    <label for="business_phone_number">Business Phone Number:</label><br>
+    <input type="text" id="business_phone_number" name="business_phone_number" required><br><br>
+
+    <label for="name">Parking Area Name:</label><br>
+    <input type="text" id="name" name="name" required><br><br>
+
+    <label for="maxSlot">Max Slots:</label><br>
+    <input type="number" id="maxSlot" name="maxSlot" required min="1"><br><br>
+
+    <label>Price (in dollars):</label><br>
+    Car: <input type="number" name="price_car" required><br>
+    Motorbike: <input type="number" name="price_motorbike" required><br>
+    Bicycle: <input type="number" name="price_bicycle" required><br><br>
+
+    <label>Location:</label><br>
+    Address: <input type="text" name="location_address" required><br>
+    Suburb: <input type="text" name="location_suburb" required><br>
+    City: <input type="text" name="location_city" required><br>
+    State: <input type="text" name="location_state" required><br>
+    Postcode: <input type="text" name="location_postcode" required><br><br>
+
+    <label for="policy">Policy:</label><br>
+    <textarea id="policy" name="policy" rows="4" cols="50"></textarea><br><br>
+
+    <button type="submit">Add Parking Area</button>
+  </form>
+
+</body>
