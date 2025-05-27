@@ -4,6 +4,10 @@ import session from 'express-session';
 import { engine } from 'express-handlebars';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+// import swaggerUi from 'swagger-ui-express';
+// import swaggerDocument from './swagger.js';
+// import swagge_jsdoc from './swagger-jsdoc';
+
 import route from './routes/index.js';
 import db from './config/db/index.js';
 import dotenv from 'dotenv';
@@ -22,22 +26,25 @@ app.use(express.static(join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(
-  session({
-    secret: 'yourSecretKey',
-    resave: false,
-    saveUninitialized: true,
-  }),
+    session({
+        secret: 'yourSecretKey',
+        resave: false,
+        saveUninitialized: true,
+    }),
 );
 
 // HTTP logger display
 app.use(morgan('combined')); // get log when request is successful
 
+// Swagger UI
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // Template engine
 app.engine(
-  'hbs',
-  engine({
-    extname: '.hbs',
-  }),
+    'hbs',
+    engine({
+        extname: '.hbs',
+    }),
 );
 app.set('view engine', 'hbs');
 app.set('views', join(__dirname, 'resources/views'));
@@ -46,5 +53,5 @@ app.set('views', join(__dirname, 'resources/views'));
 route(app);
 
 app.listen(PORT, () =>
-  console.log(`Server is running on http://localhost:${PORT}`),
+    console.log(`Server is running on http://localhost:${PORT}`),
 );

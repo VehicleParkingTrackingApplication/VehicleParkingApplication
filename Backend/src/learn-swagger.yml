@@ -1,0 +1,59 @@
+openapi: '3.0.3'
+info:
+  title: CSIT321 - Capstone Project
+  description: This is a sample server for CSIT321 - Capstone Project
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: users
+    description: API for users
+paths:
+  /login:
+    post:
+      tags:
+        - users
+      summary: login
+      description: login for user to access the application
+      operationId: Login
+      requestBody:
+        description: Login request
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: vbn267@uowmail.edu.au
+                password:
+                  type: string
+                  example: binh123456
+        required: true
+      responses:
+        '200':
+          description: successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Login successful
+                  result:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                        example: 0df59a257eddf841b1b989c91e3e2bcbcd95f3feb32612e8aa17f7d5acbd0e1c1ec4241cbc18bff8231ccd8c9cca3db5e7092e6f29e65d54316302b2cc70c48e
+                      refresh_token: 
+                        type: string
+                        example: 05a560d9861c4b4f9d414dd0203f272951f6621cc008a0eca2d735260e1f466dfc513f3842d5945ec72cef6383c9bddd061d17c4ce0ef5e4980a7f524e600ab0
+        '422':
+          description: invalid input
+          
+
+                
+              
+    
