@@ -1,0 +1,25 @@
+{{!-- <!-- Add this where you want the import button to appear -->
+<button id="importCameraData" class="btn btn-primary">Import Camera Data</button>
+
+<script>
+document.getElementById('importCameraData').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/home/import-camera-data', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(result.message);
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error importing data: ' + error.message);
+    }
+});
+</script>  --}}

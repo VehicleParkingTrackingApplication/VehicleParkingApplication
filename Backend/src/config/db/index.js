@@ -1,17 +1,30 @@
 // const mooogoose = require('mooogoose');
 import mongoose from 'mongoose';
 
-async function connect() {
-  try {
-    await mongoose.connect('mongodb://localhost:27017/car_parking', {
-      // binhnguyen_education_dev
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('Connected to MongoDB successfully!');
-  } catch (error) {
-    console.log('Error conneting to MongoDB: ', error);
-  }
-}
+const dbConnect = async () => {
+    try {
+        const connect = await mongoose.connect(process.env.CONNECTION_STRING);
+        console.log(`Connected to MongoDB successfully: ${connect.connection.host}`);
+        console.log(`Database name: ${connect.connection.name}`);
+        
+        // Handle connection events
+        // mongoose.connection.on('error', (err) => {
+        //     console.error('MongoDB connection error:', err);
+        // });
 
-export default { connect };
+        // mongoose.connection.on('disconnected', () => {
+        //     console.log('MongoDB disconnected');
+        // });
+
+        // process.on('SIGINT', async () => {
+        //     await mongoose.connection.close();
+        //     console.log('MongoDB connection closed through app termination');
+        //     process.exit(0);
+        // });
+         
+    } catch (error) {
+        console.log('Error conneting to MongoDB: ', error);
+    }
+};
+
+export default dbConnect;

@@ -4,12 +4,13 @@ import session from 'express-session';
 import { engine } from 'express-handlebars';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import cookieParser from 'cookie-parser';
 // import swaggerUi from 'swagger-ui-express';
 // import swaggerDocument from './swagger.js';
 // import swagge_jsdoc from './swagger-jsdoc';
 
 import route from './routes/index.js';
-import db from './config/db/index.js';
+import dbConnect from './config/db/index.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -20,10 +21,11 @@ const app = express();
 const PORT = process.env.PORT || 1313;
 
 // Connect to DB
-db.connect();
+dbConnect();
 
 app.use(express.static(join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(
     session({

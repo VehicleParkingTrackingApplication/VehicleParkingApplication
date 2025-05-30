@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-const Schema = mongoose.Schema;
+import moongoose from 'mongoose';
+const Schema = moongoose.Schema;
 
 const User = new Schema({
     username: { type: String, maxLength: 255 },
@@ -12,4 +12,4 @@ const User = new Schema({
     updateAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.model('User', User);
+export default moongoose.model('User', User);
