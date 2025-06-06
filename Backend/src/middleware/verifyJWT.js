@@ -1,24 +1,42 @@
 import jwt from 'jsonwebtoken';
 
-const verifyJWT = (req, res, next) => {
-    const authHeader = req.headers.authorization || req.headers.Authorization;
+export const verifyJWT = (req, res, next) => {
+    const authHeader = req.headers.authorization;
     if (!authHeader) {
         return res.status(401).json({ message: 'Access denied. No authorization header.' });
     }
-    
-    const token = authHeader.split(' ')[1];
+
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
     if (!token) {
-        return res.status(401).json({ message: 'Access denied. No token provided.' });
+        return res.status(401).json({ 
+            message: 'Access token required' 
+        });
     }
 
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
-        if (err) {
-            console.log("CHECK ERRPOR", err);
-            return res.sendStatus(400).json({ message: 'Invalid token.' }) //invalid token
+    try {
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        
+        // Verify it's an access token
+        if (decoded?.type || '' !== 'access') {
+            return res.status(401).json({ 
+                message: 'Invalid token type' 
+            });
         }
-        req.user = decode;
+
+        // Add user info to request object
+        // TODO: Reimplement on all controller, user is now an object. use user.id, user.role
+        req.user = {
+            id: decoded.id,
+            role: decoded.role
+        };
+
         next();
-    });
-}
+    } catch (err) {
+        return res.status(401).json({ 
+            message: 'Invalid or expired token' 
+        });
+    }
+};
 
 export default verifyJWT;

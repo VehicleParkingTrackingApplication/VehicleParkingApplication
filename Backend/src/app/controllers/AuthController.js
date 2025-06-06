@@ -15,8 +15,7 @@ const handleNewUser = async (req, res) => {
     // Check whether the usernaem already exists in database
     const existingUser = await User.findOne({username: data.username})
     if (existingUser) {
-        return res.status(400).json({ 'message': 'User already exists. Please choose a different username.' });
-    } else if (data.password !== data.confirmedPassword) {
+        return res.status(400).json({ 'message': 'User already exists. Please choose a different username.' });    } else if (data.password !== data.confirmedPassword) {
         return res.status(400).json({ 'message': 'Password and confirmed password do not match.' });
     }
     try {
@@ -25,6 +24,7 @@ const handleNewUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(data.password, saltRounds);
         data.password = hashedPassword;
         await User.insertMany(data);
+        return res.status(201).json({ 'message': 'User created successfully.' });
     } catch (err) {
         return res.status(500).json({ 'message': err.message });
     }
@@ -49,7 +49,7 @@ const handleLogin = async (req, res) => {
         };
     }
     // Check whether the password is correct
-    const checkPassword = bcrypt.compare(
+    const checkPassword = await bcrypt.compare(
         data.password,
         currentUser.password
     );
@@ -59,74 +59,153 @@ const handleLogin = async (req, res) => {
             message: 'Password is incorrect. Please try again.' 
         };
     }
+    
     const payload = {
-        userId: currentUser._id,
-        businessId: currentUser.business_id,
+        id: currentUser._id.toString(),
         role: currentUser.role
     };
-    const token = jwt.sign(
-        payload,
-        process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: '1h'}
+
+    // Generate access token (15 minutes)
+    const accessToken = jwt.sign(
+        {
+            ...payload,
+            type: 'access',
+            exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+        },
+        process.env.ACCESS_TOKEN_SECRET
+    );
+    
+    // Generate refresh token (3 months)
+    const refreshToken = jwt.sign(
+        {
+            ...payload,
+            type: 'refresh',
+            exp: Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60) // 3 months
+        },
+        process.env.REFRESH_TOKEN_SECRET
     );
 
     return { 
         status: 200, 
         message: 'Login successful',
-        token
+        accessToken,
+        refreshToken
     };
 }
-// Session: save in file, redis, memcache (sync disk), database, etc.
-// const sessions = {};
-class AuthController {
-    login(req, res) {
-        res.render('homepage/login');
+
+const handleRefresh = async (req, res) => {
+    const refreshToken = req.cookies.refreshToken;
+    
+    if (!refreshToken) {
+        return {
+            status: 401,
+            message: 'Refresh token not found'
+        };
     }
+    
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        
+        // Verify it's a refresh token
+        if (decoded.type !== 'refresh') {
+            return {
+                status: 401,
+                message: 'Invalid token type'
+            };        }
+        
+        // Generate new access token
+        const payload = {
+            role: decoded.role,
+            id: decoded.id
+        };
+        
+        const newAccessToken = jwt.sign(
+            {
+                ...payload,
+                type: 'access',
+                exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+            },
+            process.env.ACCESS_TOKEN_SECRET
+        );
+        
+        return {
+            status: 200,
+            message: 'Token refreshed successfully',
+            accessToken: newAccessToken
+        };
+    } catch (err) {
+        return {
+            status: 401,
+            message: 'Invalid refresh token'
+        };
+    }
+}
+
+class AuthController {
     async loginPost(req, res) {
         const result = await handleLogin(req, res);
         if (result.status === 200) {
-            res.cookie('token', result.token, {
+            // Set refresh token in HTTP-only cookie
+            res.cookie('refreshToken', result.refreshToken, {
                 httpOnly: true,
-                secure: true,
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'Strict',
-                maxAge: 60 * 60 * 1000 // 1 hour
+                maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
             });
+            
             res.json({
                 message: 'Login successful',
-                token: result.token
-            });
-        } else {
+                accessToken: result.accessToken
+            });        } else {
             return res.status(result.status).json({ message: result.message });
         }
     }
-    async register(req, res) {
-        res.render('homepage/register');
-    }
     async registerPost(req, res) {
         try {
-            await handleNewUser(req, res);
-            res.redirect('/account/login');
-            return;
+            const registrationResult = await handleNewUser(req, res);
+            // Check if registration was successful by checking if response was already sent
+            if (res.headersSent) {
+                return; // Registration was successful, response already sent
+            }
+            
+            // After successful registration, log the user in
+            const result = await handleLogin(req, res);
+            if (result.status === 200) {
+                res.cookie('refreshToken', result.refreshToken, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'Strict',
+                    maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
+                });
+                
+                res.json({
+                    message: 'Registration and login successful',
+                    accessToken: result.accessToken
+                });
+            } else {
+                return res.status(result.status).json({ message: result.message });
+            }
         } catch (err) {
             return res.status(500).json({ message: err.message });
         }
+    }    async refresh(req, res) {
+        const result = await handleRefresh(req, res);
+        return res.status(result.status).json({
+            message: result.message,
+            ...(result.accessToken && { accessToken: result.accessToken })
+        });
     }
-    logout(req, res) {
-        //Clear the refresh token from the database
-        // if (req.user) {
-        //     User.findOneAndUpdate(
-        //         { _id: req.user.id },
-        //         { $set: { refreshToken: null}}
-        //     ).exec();
-        // }
-
-        res.clearCookie('token');
+    
+    async logout(req, res) {
+        // Clear the refresh token cookie
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict'
+        });
         
-        req.session.destroy((err) => {
-            if (err) 
-                return res.redirect('/');
-            res.clearCookie('connect.sid');
-            res.redirect('/auth/login');
+        return res.status(200).json({
+            message: 'Logged out successfully'
         });
     }
 }
