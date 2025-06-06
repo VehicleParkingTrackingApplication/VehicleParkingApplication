@@ -17,6 +17,14 @@ const verifyJWT = (req, res, next) => {
             return res.sendStatus(400).json({ message: 'Invalid token.' }) //invalid token
         }
         req.user = decode;
+
+        // TODO: deserialize -> if is a valid json object + exp > now() -> authenticated
+        // {
+        // “role”: string,  -> role based permissions
+        // “Id”: string, -> user context for api
+        // “exp”: number -> check expiration time, if expired -> request refresh token in exchange to an access token
+        // }
+
         next();
     });
 }
