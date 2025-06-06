@@ -2,7 +2,7 @@ import ParkingAreaSchema from '../app/models/ParkingAreaSchema.js';
 
 const parkingAreas = [
   {
-    business_id: '68072d236749799fda546d8d',
+    business_id: '683d4188a0c9a9af6e5d547c',
     business_phone_number: '0291234567', // landline in NSW (02)
     name: 'Sydney Central Parking',
     maxSlot: 120,
@@ -19,7 +19,7 @@ const parkingAreas = [
       'No overnight parking without prior approval; gates lock at midnight.',
   },
   {
-    business_id: '68072d236749799fda546d8d',
+    business_id: '683d4188a0c9a9af6e5d547c',
     business_phone_number: '0412567890', // mobile (04)
     name: 'Darling Harbour Car Park',
     maxSlot: 80,
@@ -35,7 +35,7 @@ const parkingAreas = [
     policy: 'Flat rate applies after 6 pm; no refunds.',
   },
   {
-    business_id: '68072d236749799fda546d8d',
+    business_id: '683d4188a0c9a9af6e5d547c',
     business_phone_number: '0287654321', // landline in NSW (02)
     name: 'Surry Hills Bike & Ride',
     maxSlot: 40,
@@ -52,7 +52,7 @@ const parkingAreas = [
       'Bicycle spaces first‑come, first‑served; car spaces pre‑booking only.',
   },
   {
-    business_id: '68072d236749799fda546d8d',
+    business_id: '683d4188a0c9a9af6e5d547c',
     business_phone_number: '0419876543', // mobile (04)
     name: 'Ultimo Evening Parking',
     maxSlot: 60,
@@ -68,7 +68,7 @@ const parkingAreas = [
     policy: 'Evening rates (after 5 pm) only; no weekend access.',
   },
   {
-    business_id: '68072d236749799fda546d8d',
+    business_id: '683d4188a0c9a9af6e5d547c',
     business_phone_number: '0298765432', // landline in NSW (02)
     name: 'Chippendale Multi‑Deck',
     maxSlot: 150,

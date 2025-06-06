@@ -1,33 +1,31 @@
 import cameraData from '../models/CameraData.js';
-import ParkingArea from '../models/ParkingAreaSchema.js';
-import ParkingVehicle from '../models/ParkingVehicleSchema.js';
+import ParkingAreaSchema from '../models/ParkingAreaSchema.js';
+import ParkingVehicleSchema from '../models/ParkingVehicleSchema.js';
 
 
 class parkingController {
     async index(req, res) {
-        // res.json({ message: 'Parking Area Controller' });
-        const cameraDataJson = await cameraData.find({});
-        return res.json(cameraDataJson);
+        const parkingArea = await ParkingAreaSchema.find({});
+        return res.json(parkingArea);
     }
 
     // get all parking areas of a business
     async getParkingAreaByBusiness(req, res) {
         try {
-            const { businessId } = req.params;
+            const businessId = req.user.busienssId;
             if (!businessId) {
                 return res.status(400).json({
                     message: 'Business ID is required'
                 });
             }
-            const parkingAreas = await ParkingArea.find({ business_id: business_id });
+            const ParkingArea = await ParkingAreaSchema.find({ business_id: businessId });
             
-            // const parkingAreas = await ParkingArea.find();
-
-            if (!parkingAreas || parkingAreas.length === 0) {
+            if (!ParkingArea || ParkingArea.length === 0) {
                 return res.status(400).json({
-                    message: 'No parking areas found for this business'
+                    message: 'No parking areas registered for this business!!!'
                 });
             }
+            return res.status(200).json(ParkingArea);
         } catch (error) {
             return res.status(500).json({
                 message: 'Error fetching parking areas',

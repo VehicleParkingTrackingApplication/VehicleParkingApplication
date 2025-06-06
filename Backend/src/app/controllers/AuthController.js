@@ -1,80 +1,134 @@
-// // controllers/AuthController.js
-// import User from '../models/User.js';
+import User from '../models/User.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-// import bcrypt from 'bcrypt';
-// import jwt from 'jsonwebtoken';
+const handleNewUser = async (req, res) => {
+    const data = { 
+        username: req.body.username, 
+        password: req.body.password,
+        confirmedPassword: req.body.confirmedPassword,
+        role: 'Admin'
+    };
+    if (!data.username || !data.password || !data.confirmedPassword) {
+        return res.status(400).json({ 'message': 'Username & password & confirmed password are required.' });
+    }
+    // Check whether the usernaem already exists in database
+    const existingUser = await User.findOne({username: data.username})
+    if (existingUser) {
+        return res.status(400).json({ 'message': 'User already exists. Please choose a different username.' });
+    } else if (data.password !== data.confirmedPassword) {
+        return res.status(400).json({ 'message': 'Password and confirmed password do not match.' });
+    }
+    try {
+        // if username is not exist, then hash the password and save to the database
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+        data.password = hashedPassword;
+        await User.insertMany(data);
+    } catch (err) {
+        return res.status(500).json({ 'message': err.message });
+    }
+}
 
-// class AuthController {
-//   login(req, res) {
-//     res.render('homepage/login');
-//   }
-//   async loginPost(req, res) {
-//     const data = {
-//       username: req.body.username,
-//       password: req.body.password,
-//     };
-//     if (!data.username || !data.password) {
-//       return res
-//         .status(400)
-//         .json({ message: 'Please enter username and password.' });
-//     }
-//     // Check whether the username and password are correct
+const handleLogin = async (req, res) => {
+    const data = { 
+        username: req.body.username, 
+        password: req.body.password
+    };
+    if (!data.username || !data.password) {
+        return { 
+            status: 400, 
+            message: 'Please enter username and password.' 
+        };
+    }
+    const currentUser = await User.findOne({ username: data.username});
+    if (!currentUser) {
+        return { 
+            status: 400, 
+            message: 'Username does not exist. Please register first.' 
+        };
+    }
+    // Check whether the password is correct
+    const checkPassword = bcrypt.compare(
+        data.password,
+        currentUser.password
+    );
+    if (!checkPassword) {
+        return { 
+            status: 400, 
+            message: 'Password is incorrect. Please try again.' 
+        };
+    }
+    const payload = {
+        userId: currentUser._id,
+        businessId: currentUser.business_id,
+        role: currentUser.role
+    };
+    const token = jwt.sign(
+        payload,
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: '1h'}
+    );
 
-//     const checkUsername = await User.findOne({ userName: data.username });
-//     if (!checkUsername) {
-//       res.send('Username does not exist. Please register first.');
-//     } else {
-//       const checkPassword = bcrypt.compare(
-//         data.password,
-//         checkUsername.password,
-//       );
-//       if (checkPassword) {
-//         // Create JWTs
-//         const accessToken = jwt.sign(
-//           { user: checkUsername.userName },
-//           process.env.ACCESS_TOKEN_SECRET,
-//           { expiresIn: '5m' },
-//         );
-//         const refreshToken = jwt.sign(
-//           { user: checkUsername.userName },
-//           process.env.REFRESH_TOKEN_SECRET,
-//           { expiresIn: '1d' },
-//         );
-//         req.session.checkUsername = checkUsername;
-//         res.redirect('/');
-//       } else {
-//         res.send('Incorrect password. Please try again.');
-//       }
-//     }
-//   }
-//   async register(req, res) {
-//     res.render('homepage/register');
-//   }
-//   async registerPost(req, res) {
-//     const data = {
-//       userName: req.body.username,
-//       password: req.body.password,
-//     };
-//     // Check whether the usernaem already exists in database
-//     const existingUser = await User.findOne({ userName: data.userName });
-//     if (existingUser) {
-//       res.send('User already exists. Please choose a different username.');
-//     } else {
-//       // if username is not exist, then hash the password and save to the database
-//       const saltRounds = 10;
-//       const hashedPassword = await bcrypt.hash(data.password, saltRounds);
-//       data.password = hashedPassword;
-//     }
-//     const userData = await User.insertMany(data);
-//     res.redirect('/login');
-//   }
-//   logout(req, res) {
-//     req.session.destroy((err) => {
-//       if (err) 
-//         return res.redirect('/');
-//       res.clearCookie('connect.sid');
-//       res.redirect('/account/login');
-//     });
-//   }
-// }
-// export default new AuthController();
+    return { 
+        status: 200, 
+        message: 'Login successful',
+        token
+    };
+}
+// Session: save in file, redis, memcache (sync disk), database, etc.
+// const sessions = {};
+class AuthController {
+    login(req, res) {
+        res.render('homepage/login');
+    }
+    async loginPost(req, res) {
+        const result = await handleLogin(req, res);
+        if (result.status === 200) {
+            res.cookie('token', result.token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'Strict',
+                maxAge: 60 * 60 * 1000 // 1 hour
+            });
+            res.json({
+                message: 'Login successful',
+                token: result.token
+            });
+        } else {
+            return res.status(result.status).json({ message: result.message });
+        }
+    }
+    async register(req, res) {
+        res.render('homepage/register');
+    }
+    async registerPost(req, res) {
+        try {
+            await handleNewUser(req, res);
+            res.redirect('/account/login');
+            return;
+        } catch (err) {
+            return res.status(500).json({ message: err.message });
+        }
+    }
+    logout(req, res) {
+        //Clear the refresh token from the database
+        // if (req.user) {
+        //     User.findOneAndUpdate(
+        //         { _id: req.user.id },
+        //         { $set: { refreshToken: null}}
+        //     ).exec();
+        // }
+
+        res.clearCookie('token');
+        
+        req.session.destroy((err) => {
+            if (err) 
+                return res.redirect('/');
+            res.clearCookie('connect.sid');
+            res.redirect('/auth/login');
+        });
+    }
+}
+
+export default new AuthController();

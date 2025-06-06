@@ -19,4 +19,4 @@ const CameraData = new Schema({
 // Add index for better query performance
 // CameraData.index({ date: 1, time: 1 });
 
-export default mongoose.model('camera_datas', CameraData);
+export default mongoose.model('camera datas', CameraData);
