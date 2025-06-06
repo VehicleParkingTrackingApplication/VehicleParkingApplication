@@ -152,13 +152,17 @@ class ApiClient {
 
     async register(username, password, confirmedPassword) {
         try {
+            if (password !== confirmedPassword) {
+                throw new Error('Passwords do not match');
+            }
+
             const response = await fetch(`${this.baseURL}/auth/register`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ username, password, confirmedPassword })
+                body: JSON.stringify({ username, password })
             });
 
             if (response.ok) {

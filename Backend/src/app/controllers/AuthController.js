@@ -6,17 +6,15 @@ const handleNewUser = async (req, res) => {
     const data = { 
         username: req.body.username, 
         password: req.body.password,
-        confirmedPassword: req.body.confirmedPassword,
-        role: 'Admin'
+        role: 'admin'
     };
-    if (!data.username || !data.password || !data.confirmedPassword) {
+    if (!data.username || !data.password) {
         return res.status(400).json({ 'message': 'Username & password & confirmed password are required.' });
     }
     // Check whether the usernaem already exists in database
     const existingUser = await User.findOne({username: data.username})
     if (existingUser) {
-        return res.status(400).json({ 'message': 'User already exists. Please choose a different username.' });    } else if (data.password !== data.confirmedPassword) {
-        return res.status(400).json({ 'message': 'Password and confirmed password do not match.' });
+        return res.status(400).json({ 'message': 'User already exists. Please choose a different username.' });
     }
     try {
         // if username is not exist, then hash the password and save to the database
@@ -142,7 +140,7 @@ const handleRefresh = async (req, res) => {
 }
 
 class AuthController {
-    async loginPost(req, res) {
+    async login(req, res) {
         const result = await handleLogin(req, res);
         if (result.status === 200) {
             // Set refresh token in HTTP-only cookie
@@ -160,7 +158,7 @@ class AuthController {
             return res.status(result.status).json({ message: result.message });
         }
     }
-    async registerPost(req, res) {
+    async register(req, res) {
         try {
             const registrationResult = await handleNewUser(req, res);
             // Check if registration was successful by checking if response was already sent

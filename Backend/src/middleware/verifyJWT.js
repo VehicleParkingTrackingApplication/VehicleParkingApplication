@@ -18,7 +18,7 @@ export const verifyJWT = (req, res, next) => {
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         
         // Verify it's an access token
-        if (decoded?.type || '' !== 'access') {
+        if (decoded.type !== 'access') {
             return res.status(401).json({ 
                 message: 'Invalid token type' 
             });
