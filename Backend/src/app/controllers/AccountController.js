@@ -1,7 +1,7 @@
-import User from '../models/User.js';
+import user from '../models/userSchema.js';
 
 
-class AccountController {
+class accountController {
     async index(req, res) {
         res.json({message: "Hello account"});
         const user = req.session.checkUsername;
@@ -27,4 +27,4 @@ class AccountController {
     // }
 }
 
-export default new AccountController();
+export default new accountController();

@@ -1,7 +1,7 @@
 import moongoose from 'mongoose';
 const Schema = moongoose.Schema;
 
-const LocationSchema = new Schema(
+const locationSchema = new Schema(
   {
     address: { type: String, required: true },
     suburb: { type: String, required: true },
@@ -12,7 +12,7 @@ const LocationSchema = new Schema(
   { _id: false },
 );
 
-const PriceSchema = new Schema(
+const priceSchema = new Schema(
   {
     car: { type: Number, required: true },
     motorbike: { type: Number, required: true },
@@ -21,22 +21,22 @@ const PriceSchema = new Schema(
   { _id: false },
 );
 
-const ParkingAreaSchema = new Schema(
+const parkingAreaSchema = new Schema(
   {
-    business_id: {
+    businessId: {
       type: Schema.Types.ObjectId,
       ref: 'Business',
       required: true,
     },
-    business_phone_number: { type: Number, required: true },
+    businessPhoneNumber: { type: Number, required: true },
     name: { type: String, required: true, trim: true },
     maxSlot: { type: Number, required: true, min: 1 },
     currentSlot: { type: Number, default: 0, min: 0 },
-    price: { type: PriceSchema, required: true },
-    location: { type: LocationSchema, required: true },
+    price: { type: priceSchema, required: true },
+    location: { type: locationSchema, required: true },
     policy: { type: String, default: '', trim: true },
   },
   { timestamps: true },
 );
 
-export default moongoose.model('parking area', ParkingAreaSchema);
+export default moongoose.model('parking areas', parkingAreaSchema);

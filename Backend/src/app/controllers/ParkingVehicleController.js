@@ -1,5 +1,5 @@
-import ParkingVehicleSchema from '../models/ParkingVehicleSchema.js';
-import ParkingAreaSchema from '../models/ParkingAreaSchema.js';
+import ParkingVehicleSchema from '../models/parkingVehicleSchema.js';
+import ParkingAreaSchema from '../models/parkingAreaSchema.js';
 
 class ParkingVehicleController {
     async getParkingVehicleByParkingArea(req, res) {

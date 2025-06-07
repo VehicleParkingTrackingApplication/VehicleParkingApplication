@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
 
-const CameraData = new Schema({
+const cameraDataSchema = new Schema({
     date: { type: String, required: true },
     time: { type: String, required: true },
     plateNumber: { type: String, required: true },
@@ -12,11 +12,10 @@ const CameraData = new Schema({
     status: { type: String, required: true },
     duration: { type: String, default: '0' },
 }, {
-    timestamps: true,
-    collection: 'camera_datas'
+    timestamps: true
 });
 
 // Add index for better query performance
 // CameraData.index({ date: 1, time: 1 });
 
-export default mongoose.model('camera datas', CameraData);
+export default mongoose.model('camera datas', cameraDataSchema);

@@ -1,4 +1,4 @@
-import User from '../models/User.js';
+import User from '../models/userSchema.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -7,7 +7,7 @@ const handleNewUser = async (req, res) => {
         username: req.body.username, 
         password: req.body.password,
         confirmedPassword: req.body.confirmedPassword,
-        role: 'Admin'
+        role: 'admin'
     };
     if (!data.username || !data.password || !data.confirmedPassword) {
         return res.status(400).json({ 'message': 'Username & password & confirmed password are required.' });
@@ -78,7 +78,7 @@ const handleLogin = async (req, res) => {
 }
 // Session: save in file, redis, memcache (sync disk), database, etc.
 // const sessions = {};
-class AuthController {
+class authController {
     login(req, res) {
         res.render('homepage/login');
     }
@@ -105,20 +105,18 @@ class AuthController {
     async registerPost(req, res) {
         try {
             await handleNewUser(req, res);
-            res.redirect('/account/login');
-            return;
+            return res.status(201).json({
+                status: 201,
+                message: 'Registration successful'
+            });
         } catch (err) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json({ 
+                status: 500,
+                message: err.message 
+            });
         }
     }
     logout(req, res) {
-        //Clear the refresh token from the database
-        // if (req.user) {
-        //     User.findOneAndUpdate(
-        //         { _id: req.user.id },
-        //         { $set: { refreshToken: null}}
-        //     ).exec();
-        // }
 
         res.clearCookie('token');
         
@@ -131,4 +129,4 @@ class AuthController {
     }
 }
 
-export default new AuthController();
+export default new authController();

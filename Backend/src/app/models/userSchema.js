@@ -1,7 +1,7 @@
 import moongoose from 'mongoose';
 const Schema = moongoose.Schema;
 
-const User = new Schema({
+const userSchema = new Schema({
     username: { 
         type: String, 
         maxLength: 255 
@@ -19,7 +19,7 @@ const User = new Schema({
     role: {
         type: String, 
         required: true,
-        enum: ['admin', 'staff', 'Customer']
+        enum: ['admin', 'staff', 'customer']
     },
     firstName: { 
         type: String, 
@@ -48,4 +48,4 @@ const User = new Schema({
     }
 });
 
-export default moongoose.model('User', User);
+export default moongoose.model('users', userSchema);

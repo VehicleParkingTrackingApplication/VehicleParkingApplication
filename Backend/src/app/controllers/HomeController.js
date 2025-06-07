@@ -1,5 +1,5 @@
-import User from '../models/User.js';
-import Camera_Data from '../models/CameraData.js';
+import User from '../models/userSchema.js';
+import Camera_Data from '../models/cameraDataSchema.js';
 import bcrypt from 'bcrypt';
 
 import importCSVData from '../../utils/dataImport.js';
@@ -13,7 +13,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-class HomeController {
+class homeController {
     index(req, res, next) {
         console.log('Session user:', req.session.user);
         res.render('homepage/home', {
@@ -42,7 +42,7 @@ class HomeController {
 
     async importParkingAreaData(req, res) {
         try {
-            const results = await parkingAreaImport();
+            const results = await parkingAreaImport(req, res);
             console.log(results);
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });
@@ -54,4 +54,4 @@ class HomeController {
     }
 }
 
-export default new HomeController();
+export default new homeController();
