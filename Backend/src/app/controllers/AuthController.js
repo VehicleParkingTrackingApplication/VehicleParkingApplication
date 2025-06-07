@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import User from '../models/userSchema.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -83,48 +84,99 @@ class authController {
         res.render('homepage/login');
     }
     async loginPost(req, res) {
+=======
+import { handleLogin, handleRegister, handleRefresh } from '../services/authService.js';
+
+class AuthController {
+    // POST /api/auth/login
+    async login(req, res) {
+>>>>>>> main
         const result = await handleLogin(req, res);
         if (result.status === 200) {
-            res.cookie('token', result.token, {
+            // Set refresh token in HTTP-only cookie
+            res.cookie('refreshToken', result.refreshToken, {
                 httpOnly: true,
-                secure: true,
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'Strict',
-                maxAge: 60 * 60 * 1000 // 1 hour
+                maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
             });
+            
             res.json({
                 message: 'Login successful',
-                token: result.token
-            });
-        } else {
+                accessToken: result.accessToken
+            });        } else {
             return res.status(result.status).json({ message: result.message });
         }
     }
+
+    // POST /api/auth/register
     async register(req, res) {
-        res.render('homepage/register');
-    }
-    async registerPost(req, res) {
         try {
+<<<<<<< HEAD
             await handleNewUser(req, res);
             return res.status(201).json({
                 status: 201,
                 message: 'Registration successful'
             });
+=======
+            const registrationResult = await handleRegister(req, res);
+            // Check if registration was successful by checking if response was already sent
+            if (res.headersSent) {
+                return; // Registration was successful, response already sent
+            }
+            
+            // After successful registration, log the user in
+            const result = await handleLogin(req, res);
+            if (result.status === 200) {
+                res.cookie('refreshToken', result.refreshToken, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'Strict',
+                    maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
+                });
+                
+                res.json({
+                    message: 'Registration and login successful',
+                    accessToken: result.accessToken
+                });
+            } else {
+                return res.status(result.status).json({ message: result.message });
+            }
+>>>>>>> main
         } catch (err) {
             return res.status(500).json({ 
                 status: 500,
                 message: err.message 
             });
         }
+    }    
+    
+    // POST /api/auth/refresh
+    async refresh(req, res) {
+        const result = await handleRefresh(req, res);
+        return res.status(result.status).json({
+            message: result.message,
+            ...(result.accessToken && { accessToken: result.accessToken })
+        });
     }
+<<<<<<< HEAD
     logout(req, res) {
 
         res.clearCookie('token');
+=======
+    
+    // POST /api/auth/logout
+    async logout(req, res) {
+        // Clear the refresh token cookie
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict'
+        });
+>>>>>>> main
         
-        req.session.destroy((err) => {
-            if (err) 
-                return res.redirect('/');
-            res.clearCookie('connect.sid');
-            res.redirect('/auth/login');
+        return res.status(200).json({
+            message: 'Logged out successfully'
         });
     }
 }

@@ -42,9 +42,6 @@ app.use(
 // HTTP logger display
 app.use(morgan('combined')); // get log when request is successful
 
-// Swagger UI
-// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
 // Template engine
 app.engine(
     'hbs',

@@ -1,6 +1,6 @@
-const roleList = {
-    "Admin": 5150,
-    "Staff": 1984,
-    "User": 2001
+const ROLES_LIST = {
+    "admin": 5150,
+    "staff": 1984,
+    "user": 2001
 }
 export default roleList;

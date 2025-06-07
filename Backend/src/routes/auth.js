@@ -3,17 +3,19 @@ import authController from '../app/controllers/authController.js';
 
 const router = express.Router();
 
-// GET /api/auth/login
-// router.get('/login', authController.login);
-
-// POST /api/auth/login
-router.post('/login', authController.loginPost);
-
-// GET /api/auth/register
-// router.get('/register', authController.register);
+// POST /api/auth/login 
+// BODY: { username, password }
+// RESPONSE: { message, accessToken }
+router.post('/login', authController.login);
 
 // POST /api/auth/register
-router.post('/register', authController.registerPost);
+// BODY: { username, password }
+// RESPONSE: { message }
+router.post('/register', authController.register);
+
+// POST /api/auth/refresh
+// RESPONSE { message, accessToken }
+router.post('/refresh', authController.refresh);
 
 // POST /api/auth/logout
 router.post('/logout', authController.logout);
