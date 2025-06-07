@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 
 const verifyJWT = (req, res, next) => {
-    const authHeader = req.headers.Authorization || req.headers.authorization;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
     if (!authHeader) {
         return res.status(401).json({ message: 'Access denied. No authorization header.' });
     }
-    console.log(authHeader);
-    let token = authHeader.split(' ')[1];
+    
+    const token = authHeader.split(' ')[1];
     if (!token) {
         return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
@@ -17,7 +17,14 @@ const verifyJWT = (req, res, next) => {
             return res.sendStatus(400).json({ message: 'Invalid token.' }) //invalid token
         }
         req.user = decode;
-        console.log(req.user);
+
+        // TODO: deserialize -> if is a valid json object + exp > now() -> authenticated
+        // {
+        // “role”: string,  -> role based permissions
+        // “Id”: string, -> user context for api
+        // “exp”: number -> check expiration time, if expired -> request refresh token in exchange to an access token
+        // }
+
         next();
     });
 }

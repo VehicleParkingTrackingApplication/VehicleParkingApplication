@@ -5,13 +5,11 @@ import { engine } from 'express-handlebars';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import cookieParser from 'cookie-parser';
-// import swaggerUi from 'swagger-ui-express';
-// import swaggerDocument from './swagger.js';
-// import swagge_jsdoc from './swagger-jsdoc';
-
 import route from './routes/index.js';
 import dbConnect from './config/db/index.js';
 import dotenv from 'dotenv';
+import cors from 'cors';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,15 +21,21 @@ const PORT = process.env.PORT || 1313;
 // Connect to DB
 dbConnect();
 
+app.use(cors())
 app.use(express.static(join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(
     session({
-        secret: 'yourSecretKey',
+        secret: process.env.SESSION_SECRET || 'yourSecretKey',
         resave: false,
-        saveUninitialized: true,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
     }),
 );
 
@@ -46,6 +50,11 @@ app.engine(
     'hbs',
     engine({
         extname: '.hbs',
+        helpers: {
+            eq: function (v1, v2) {
+                return v1 === v2;
+            }
+        }
     }),
 );
 app.set('view engine', 'hbs');

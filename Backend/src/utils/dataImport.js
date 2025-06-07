@@ -52,9 +52,7 @@ const importCSVData = async (filename) => {
         })
         .on('end', async () => {
             try {
-                console.log("CHECK CHECK");
                 await CameraData.insertMany(results);
-                console.log("Check check 123");
                 console.log(`Found ${results.length} valid records to import`);
                 resolve(results);
             } catch (error) {
