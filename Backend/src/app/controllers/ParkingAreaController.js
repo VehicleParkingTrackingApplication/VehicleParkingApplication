@@ -1,9 +1,6 @@
-import cameraData from '../models/CameraData.js';
-import ParkingAreaSchema from '../models/ParkingAreaSchema.js';
-import ParkingVehicleSchema from '../models/ParkingVehicleSchema.js';
+import parkingAreaSchema from '../models/parkingAreaSchema.js';
 
-
-class parkingController {
+class parkingAreaController {
     async index(req, res) {
         const parkingArea = await ParkingAreaSchema.find({});
         return res.json(parkingArea);
@@ -126,4 +123,4 @@ class parkingController {
     }
 }
 
-export default new parkingController();
+export default new parkingAreaController();

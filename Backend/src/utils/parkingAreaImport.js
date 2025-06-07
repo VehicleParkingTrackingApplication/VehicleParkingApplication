@@ -1,9 +1,9 @@
-import ParkingAreaSchema from '../app/models/ParkingAreaSchema.js';
+import parkingAreaSchema from '../app/models/parkingAreaSchema.js';
 
-const parkingAreas = [
+const getParkingAreasTemplate = (businessId) => [
   {
-    business_id: '683d4188a0c9a9af6e5d547c',
-    business_phone_number: '0291234567', // landline in NSW (02)
+    businessId: businessId,
+    businessPhoneNumber: '0291234567', // landline in NSW (02)
     name: 'Sydney Central Parking',
     maxSlot: 120,
     currentSlot: 0,
@@ -19,8 +19,8 @@ const parkingAreas = [
       'No overnight parking without prior approval; gates lock at midnight.',
   },
   {
-    business_id: '683d4188a0c9a9af6e5d547c',
-    business_phone_number: '0412567890', // mobile (04)
+    businessId: businessId,
+    businessPhoneNumber: '0412567890', // mobile (04)
     name: 'Darling Harbour Car Park',
     maxSlot: 80,
     currentSlot: 0,
@@ -32,11 +32,11 @@ const parkingAreas = [
       state: 'NSW',
       postcode: '2000',
     },
-    policy: 'Flat rate applies after 6 pm; no refunds.',
+    policy: 'Flat rate applies after 6 pm; no refunds.',
   },
   {
-    business_id: '683d4188a0c9a9af6e5d547c',
-    business_phone_number: '0287654321', // landline in NSW (02)
+    businessId: businessId,
+    businessPhoneNumber: '0287654321', // landline in NSW (02)
     name: 'Surry Hills Bike & Ride',
     maxSlot: 40,
     currentSlot: 0,
@@ -52,8 +52,8 @@ const parkingAreas = [
       'Bicycle spaces first‑come, first‑served; car spaces pre‑booking only.',
   },
   {
-    business_id: '683d4188a0c9a9af6e5d547c',
-    business_phone_number: '0419876543', // mobile (04)
+    businessId: businessId,
+    businessPhoneNumber: '0419876543', // mobile (04)
     name: 'Ultimo Evening Parking',
     maxSlot: 60,
     currentSlot: 0,
@@ -65,11 +65,11 @@ const parkingAreas = [
       state: 'NSW',
       postcode: '2007',
     },
-    policy: 'Evening rates (after 5 pm) only; no weekend access.',
+    policy: 'Evening rates (after 5 pm) only; no weekend access.',
   },
   {
-    business_id: '683d4188a0c9a9af6e5d547c',
-    business_phone_number: '0298765432', // landline in NSW (02)
+    businessId: businessId,
+    businessPhoneNumber: '0298765432', // landline in NSW (02)
     name: 'Chippendale Multi‑Deck',
     maxSlot: 150,
     currentSlot: 0,
@@ -81,16 +81,34 @@ const parkingAreas = [
       state: 'NSW',
       postcode: '2008',
     },
-    policy: 'Permit holders only between 8 am–6 pm; pay‑and‑display otherwise.',
+    policy: 'Permit holders only between 8 am–6 pm; pay‑and‑display otherwise.',
   },
 ];
 
-const parkingAreaImport = async () => {
+const parkingAreaImport = async (req, res) => {
   try {
-    const insertedData = await ParkingAreaSchema.insertMany(parkingAreas);
-    console.log(`✅ Imported ${insertedData.length} parking areas.`);
+    const businessId = req.user.businessId;
+    if (!businessId) {
+      return res.status(400).json({ 
+        status: 400,
+        message: 'Business ID not found in token' 
+      });
+    }
+  
+    const parkingAreas = getParkingAreasTemplate(businessId);
+    const insertedData = await parkingAreaSchema.insertMany(parkingAreas);
+    
+    return res.status(201).json({
+      status: 201,
+      message: `Successfully imported ${insertedData.length} parking areas`,
+      data: insertedData
+    });
   } catch (error) {
-    console.error('❌ Error importing parking areas:', error);
+    return res.status(500).json({ 
+      status: 500,
+      message: 'Error importing parking areas',
+      error: error.message 
+    });
   }
 };
 

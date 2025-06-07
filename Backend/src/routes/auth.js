@@ -1,23 +1,23 @@
 import express from 'express';
-import AuthController from '../app/controllers/AuthController.js';
+import authController from '../app/controllers/authController.js';
 
 const router = express.Router();
 
 // POST /api/auth/login 
 // BODY: { username, password }
 // RESPONSE: { message, accessToken }
-router.post('/login', AuthController.login);
+router.post('/login', authController.login);
 
 // POST /api/auth/register
 // BODY: { username, password }
 // RESPONSE: { message }
-router.post('/register', AuthController.register);
+router.post('/register', authController.register);
 
 // POST /api/auth/refresh
 // RESPONSE { message, accessToken }
-router.post('/refresh', AuthController.refresh);
+router.post('/refresh', authController.refresh);
 
 // POST /api/auth/logout
-router.post('/logout', AuthController.logout);
+router.post('/logout', authController.logout);
 
 export default router;

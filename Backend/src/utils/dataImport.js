@@ -3,7 +3,7 @@ import csv from 'csv-parser';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import CameraData from '../app/models/CameraData.js';
+import cameraDataSchema from '../app/models/cameraDataSchema.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,7 +52,7 @@ const importCSVData = async (filename) => {
         })
         .on('end', async () => {
             try {
-                await CameraData.insertMany(results);
+                await cameraDataSchema.insertMany(results);
                 console.log(`Found ${results.length} valid records to import`);
                 resolve(results);
             } catch (error) {

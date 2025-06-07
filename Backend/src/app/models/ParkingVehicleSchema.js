@@ -1,7 +1,7 @@
 import moongoose from 'mongoose';
 const Schema = moongoose.Schema;
 
-const ParkingVehicleSchema = new Schema({
+const parkingVehicleSchema = new Schema({
     parking_area_id: { 
         type: Schema.Types.ObjectId,
         ref: 'parking area',
@@ -63,11 +63,11 @@ const ParkingVehicleSchema = new Schema({
 // ParkingVehicleSchema.index({ status: 1 });
 
 // method to calculate the duration of the vehicle come in and leav the parking area
-ParkingVehicleSchema.methods.calculationDuration = function() {
+parkingVehicleSchema.methods.calculationDuration = function() {
     if (this.entry_time && this.exit_time) {
         const durationMs = this.exit_time - this.entry_time;
         this.duration = Math.round(durationMs / (1000 * 60));
     }
 }
 
-export default moongoose.model('parking vehicles', ParkingVehicleSchema)
+export default moongoose.model('parking vehicles', parkingVehicleSchema)
