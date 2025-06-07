@@ -31,6 +31,7 @@ export const verifyJWT = (req, res, next) => {
             role: decoded.role
         };
 
+
         next();
     } catch (err) {
         return res.status(401).json({ 
