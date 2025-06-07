@@ -1,7 +1,4 @@
-import cameraData from '../models/CameraData.js';
 import ParkingAreaSchema from '../models/ParkingAreaSchema.js';
-import ParkingVehicleSchema from '../models/ParkingVehicleSchema.js';
-
 
 class parkingController {
     async index(req, res) {
