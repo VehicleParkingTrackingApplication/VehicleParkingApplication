@@ -1,4 +1,4 @@
-const roleAuthorization = (...allowedRoles) => {
+const requireRole = (...allowedRoles) => {
     return (req, res, next) => {
         console.log('User role:', req.user.role);
         console.log('Allowed roles:', allowedRoles);
@@ -14,4 +14,4 @@ const roleAuthorization = (...allowedRoles) => {
     };
 };
 
-export default roleAuthorization;
+export default requireRole;

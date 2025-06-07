@@ -17,12 +17,16 @@ clone the github repo by cmd:
 git clone {repo link}
 
 Step 3: install packages
-npm install express
+```
+cd Backend
+npm i
+```
 
 Step 4: run the backend
 move to backend folder and run the command:
-cd Backend
-npm run dev
+```
+npm run start
+```
 
 
 

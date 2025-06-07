@@ -1,4 +1,4 @@
-import { handleLogin, handleRegister, handleRefresh } from '../services/AuthService.js';
+import { handleLogin, handleRegister, handleRefresh } from '../services/authService.js';
 
 class AuthController {
     // POST /api/auth/login

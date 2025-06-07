@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-export const verifyJWT = (req, res, next) => {
+export const requireAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         return res.status(401).json({ message: 'Access denied. No authorization header.' });
@@ -40,4 +40,4 @@ export const verifyJWT = (req, res, next) => {
     }
 };
 
-export default verifyJWT;
+export default requireAuth;
