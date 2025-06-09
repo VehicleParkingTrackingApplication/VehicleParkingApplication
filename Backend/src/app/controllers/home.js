@@ -1,21 +1,13 @@
-import User from '../models/userSchema.js';
-import Camera_Data from '../models/cameraDataSchema.js';
-import bcrypt from 'bcrypt';
+import importCSVData from '../../utils/data-import.js';
+import businessImport from '../../utils/business-import.js';
+import parkingAreaImport from '../../utils/parking-area-import.js';
 
-import importCSVData from '../../utils/dataImport.js';
-import businessImport from '../../utils/businessImport.js';
-import parkingAreaImport from '../../utils/parkingAreaImport.js';
-
-import jwt from 'jsonwebtoken';
-import fsPromiseses from 'fs/promises';
-import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 class homeController {
     index(req, res, next) {
-        console.log('Session user:', req.session.user);
         res.render('homepage/home', {
             user: req.session.user
         });
@@ -24,7 +16,7 @@ class homeController {
     async importData(req, res) {
         try {
             const filename = req.query.file || '2025-04-02.csv';
-            const results = await importCSVData(filename);
+            const results = await importCSVData(req, res,filename);
             console.log(results);
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });

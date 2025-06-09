@@ -6,6 +6,7 @@
   "scripts": {
     "start": "nodemon --inspect src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "simulate": "node ./scripts/simulate.js",
     "beautiful": "prettier --single-quote --trailing-comma all --write 'src/**/*.{js,json,scss,css,html}'"
   },
   "keywords": [],
@@ -15,6 +16,7 @@
   "dependencies": {
     "bcrypt": "^5.1.1",
     "bootstrap": "^5.3.5",
+    "cli-table3": "^0.6.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
@@ -25,6 +27,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.16.0",
     "mongoose": "^8.13.2",
+    "node-fetch": "^3.3.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
