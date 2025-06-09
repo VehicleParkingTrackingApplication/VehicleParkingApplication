@@ -28,6 +28,7 @@ export const requireAuth = (req, res, next) => {
         // TODO: Reimplement on all controller, user is now an object. use user.id, user.role
         req.user = {
             id: decoded.id,
+            businessId: decoded.businessId,
             role: decoded.role
         };
 

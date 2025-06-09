@@ -1,6 +1,6 @@
 import express from 'express';
-import requireAuth from '../middleware/auth/requireAuth.js';
-import requireRole from '../middleware/auth/requireRole.js';
+import requireAuth from '../middleware/auth/require-auth.js';
+import requireRole from '../middleware/auth/require-role.js';
 
 const router = express.Router();
 

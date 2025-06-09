@@ -10,9 +10,9 @@ const userSchema = new Schema({
         type: String, 
         maxLength: 255 
     },
-    business_id: {
+    businessId: {
         type: Schema.Types.ObjectId,
-        ref: 'Business',
+        ref: 'businesses',
         required: true,
         default: '683d4188a0c9a9af6e5d547c'
     },

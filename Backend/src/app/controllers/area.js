@@ -1,8 +1,8 @@
-import parkingAreaSchema from '../models/parkingAreaSchema.js';
+import Area from '../models/Area.js';
 
 class parkingAreaController {
     async index(req, res) {
-        const parkingArea = await ParkingAreaSchema.find({});
+        const parkingArea = await Area.find({});
         return res.json(parkingArea);
     }
 
@@ -10,9 +10,9 @@ class parkingAreaController {
     async getParkingAreaByBusiness(req, res) {
         try {
             const businessId = req.user.businessId;
-            // console
             if (!businessId) {
                 return res.status(400).json({
+                    success: false,
                     message: 'Business ID is required'
                 });
             }
@@ -26,31 +26,31 @@ class parkingAreaController {
             let sortOrder =  req.query.sortOrder === "desc" ? -1 : 1;
             const sort = { [sortField]: sortOrder };
 
-            // const parkingArea = await ParkingAreaSchema.find({});
-            // return res.json(parkingArea);
-
-            console.log("Check");
-            const ParkingArea = await ParkingAreaSchema.find(
+            console.log("Searching with params:", { businessId, page, limit, search, sort });
+            const parkingArea = await Area.find(
                 {  
-                    business_id: businessId, 
+                    businessId: businessId, 
                     name: { $regex: searchRegex }
                 })
                 .skip(page * limit)
-                .limit(limit);
+                .limit(limit)
+                .sort(sort);
                 
-            console.log(page, limit, search);
-            const total = await ParkingAreaSchema.countDocuments({
-                business_id: businessId, 
+            console.log("Found parking areas:", parkingArea);
+            const total = await Area.countDocuments({
+                businessId: businessId, 
                 name: { $regex: searchRegex }
-            })
+            });
 
-            if (!ParkingArea || ParkingArea.length === 0) {
+            if (!parkingArea || parkingArea.length === 0) {
                 return res.status(400).json({
+                    success: false,
                     message: 'No parking areas registered for this business!!!'
                 });
             }
             return res.status(200).json({
-                data: ParkingArea,
+                success: true,
+                data: parkingArea,
                 pagination: {
                     total,
                     page: page + 1,
@@ -59,7 +59,9 @@ class parkingAreaController {
                 }
             });
         } catch (error) {
+            console.error("Error in getParkingAreaByBusiness:", error);
             return res.status(500).json({
+                success: false,
                 message: 'Error fetching parking areas',
                 error: error.message
             });
@@ -78,42 +80,54 @@ class parkingAreaController {
             const { parkingAreaId } = req.params;
             if (!parkingAreaId) {
                 return res.status(400).json({
+                    success: false,
                     message: 'Parking area ID is required'
                 });
             }
             
-            const parkingAreaExists = await ParkingArea.findById(parkingAreaId);
+            const parkingAreaExists = await Area.findById(parkingAreaId);
             if (!parkingAreaExists) {
                 return res.status(400).json({
+                    success: false,
                     message: 'Parking area not found'
                 });
             }
             // get all vehicles in the parking area
-            const vehicles = await ParkingVehicle.find({
-                parking_area_id: parkingAreaId
-            })
+            const vehicles = await parkingVehicleSchema.find({
+                parkingAreaId: parkingAreaId
+            });
 
             return res.status(200).json({ 
+                success: true,
                 parkingArea: parkingAreaExists,
                 vehicles
             });
             
         } catch (error) {
+            console.error("Error in getVehiclesByParkingArea:", error);
             return res.status(500).json({
-                message: 'Eror fetching vehicles',
+                success: false,
+                message: 'Error fetching vehicles',
                 error: error.message
-            })
+            });
         }
-        
     }
 
     // get all parking areas of all business (use to check the database)
     async getParkingArea(req, res) {
         try {
-            const parkingAreas = await ParkingArea.find();
-            return res.status(200).json(parkingAreas);
+            const parkingAreas = await Area.find();
+            return res.status(200).json({
+                success: true,
+                data: parkingAreas
+            });
         } catch (error) {
-            return res.status(500).json({ message: 'Error fetching parking areas', error: error.message });
+            console.error("Error in getParkingArea:", error);
+            return res.status(500).json({ 
+                success: false,
+                message: 'Error fetching parking areas', 
+                error: error.message 
+            });
         }
     }
 

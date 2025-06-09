@@ -1,11 +1,11 @@
 import express from 'express';
-import accountController from '../app/controllers/accountController.js';
+import account from '../app/controllers/account.js';
 
 const router = express.Router();
 
 // GET /api/account
 router.get('/', (req, res) => {
-    async (req, res) => accountController.index(req, res);
+    async (req, res) => account.index(req, res);
 });
 
 export default router;

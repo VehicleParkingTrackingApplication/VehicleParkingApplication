@@ -1,7 +1,6 @@
 import express from 'express';
-import homeController from '../app/controllers/homeController.js';
-import importCSVData from '../utils/dataImport.js';
-import verifyJWT from '../middleware/verifyJWT.js';
+import homeController from '../app/controllers/home.js';
+import requireAuth from '../middleware/auth/require-auth.js';
 
 const router = express.Router();
 
@@ -22,13 +21,13 @@ const router = express.Router();
 //     }
 // });
 
-router.get('/import-data', async (req, res) =>
+router.post('/import-data', requireAuth, async (req, res) =>
     homeController.importData(req, res)
 );
-router.get('/import-business-data', async (req, res) =>
+router.post('/import-business-data', requireAuth, async (req, res) =>
     homeController.importBusinessData(req, res)
 );
-router.get('/import-parking-area-data', verifyJWT, async (req, res) => 
+router.post('/import-parking-area-data', requireAuth, async (req, res) => 
     homeController.importParkingAreaData(req, res)
 );
 

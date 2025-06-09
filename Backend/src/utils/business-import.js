@@ -1,26 +1,26 @@
-import businessSchema from '../app/models/businessSchema.js';
+import Business from '../app/models/Business.js';
 
 const businessDatas = [
   {
     name: 'Central Parking Pty Ltd',
     parkingArea: 10,
-    created_at: Date.now(),
+    createdAt: Date.now(),
   },
   {
     name: 'Harbour View Parking Co',
     parkingArea: 5,
-    created_at: Date.now(),
+    createdAt: Date.now(),
   },
   {
     name: 'Surry Hills Bike & Ride LLC',
     parkingArea: 5,
-    created_at: Date.now(),
+    createdAt: Date.now(),
   },
 ];
 
 const businessImport = async () => {
   try {
-    const insertedData = await businessSchema.insertMany(businessDatas);
+    const insertedData = await Business.insertMany(businessDatas);
     console.log(`✅ Imported ${insertedData.length} business.`);
   } catch (error) {
     console.error('❌ Error importing business:', error);

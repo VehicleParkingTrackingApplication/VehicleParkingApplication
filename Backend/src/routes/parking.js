@@ -1,16 +1,19 @@
 import express from 'express';
-import parkingAreaController from '../app/controllers/parkingAreaController.js';
-import parkingVehicleController from '../app/controllers/parkingVehicleController.js'
-import requireAuth from '../middleware/auth/requireAuth.js';
+import area from '../app/controllers/area.js';
+import vehicle from '../app/controllers/vehicle.js'
+import requireAuth from '../middleware/auth/require-auth.js';
 
 
 const router = express.Router();
 
 // GET /api/parking/area
-router.get('/area', requireAuth, parkingAreaController.getParkingAreaByBusiness);
+router.get('/area', requireAuth, area.getParkingAreaByBusiness);
 
 // GET /api/parking/vehicle
-router.get('/vehicle', requireAuth, parkingVehicleController.getParkingVehicleByParkingArea);
+router.get('/vehicle', requireAuth, vehicle.getParkingVehicleByParkingArea);
+
+// POST /api/parking/simulate
+router.post('/simulate', vehicle.handleSimulation);
 
 // router.get('/area', requireAuth, ParkingAreaController.getParkingAreaByBusiness);
 
