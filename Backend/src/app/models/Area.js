@@ -30,7 +30,7 @@ const Area = new Schema(
     },
     businessPhoneNumber: { type: Number, required: true },
     name: { type: String, required: true, trim: true },
-    capability: { type: Number, required: true, min: 1 },
+    capacity: { type: Number, required: true, min: 1 },
     price: { type: Price, required: true },
     location: { type: Location, required: true },
     policy: { type: String, default: '', trim: true },
