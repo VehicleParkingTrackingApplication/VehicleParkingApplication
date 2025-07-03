@@ -32,6 +32,17 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+        cache-dependency-path: Backend/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: Backend
+      run: npm ci
+    
+    - name: build
+      working-directory: Backend
+      run: npm run build --if-present
+      
+    - name: test
+      working-directory: Backend
+      run: npm test --if-present
+    
