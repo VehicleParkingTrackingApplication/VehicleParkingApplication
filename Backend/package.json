@@ -5,7 +5,9 @@
   "main": "src/app.js",
   "scripts": {
     "start": "nodemon --inspect src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "simulate": "node ./scripts/simulate.js",
     "beautiful": "prettier --single-quote --trailing-comma all --write 'src/**/*.{js,json,scss,css,html}'"
   },
@@ -14,6 +16,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
     "bootstrap": "^5.3.5",
     "cli-table3": "^0.6.5",
@@ -27,16 +30,25 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.16.0",
     "mongoose": "^8.13.2",
+    "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
+    "serverless-http": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/node": "^7.27.1",
+    "@babel/preset-env": "^7.27.2",
     "@types/express": "^5.0.1",
+    "@types/jest": "^30.0.0",
+    "babel-jest": "^30.0.2",
     "husky": "^9.1.7",
+    "jest": "^30.0.3",
     "lint-staged": "^15.5.1",
     "morgan": "^1.10.0",
     "nodemon": "^3.1.9",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "supertest": "^7.1.1"
   }
 }

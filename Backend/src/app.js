@@ -9,6 +9,7 @@ import route from './routes/index.js';
 import dbConnect from './config/db/index.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
+// import serverless from 'serverless-http';
 
 dotenv.config();
 
@@ -63,3 +64,5 @@ route(app);
 app.listen(PORT, () =>
     console.log(`Server is running on http://localhost:${PORT}`),
 );
+
+// export const handler = serverless(app);
