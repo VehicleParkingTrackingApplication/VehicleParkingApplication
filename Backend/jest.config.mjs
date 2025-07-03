@@ -17,6 +17,14 @@ const config = {
   // Automatically clear mock calls, instances, contexts and results before every test
   clearMocks: true,
 
+  // Enable ES modules support
+  // extensionsToTreatAsEsm: ['.js'],
+  // globals: {
+  //   'ts-jest': {
+  //     useESM: true,
+  //   },
+  // },
+
   // Indicates whether the coverage information should be collected while executing the test
   // collectCoverage: false,
 
@@ -86,10 +94,12 @@ const config = {
   ],
 
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
-  // moduleNameMapper: {},
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
-  // modulePathIgnorePatterns: [],
+  modulePathIgnorePatterns: [],
 
   // Activates notifications for test results
   // notify: false,

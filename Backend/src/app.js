@@ -9,7 +9,7 @@ import route from './routes/index.js';
 import dbConnect from './config/db/index.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import serverless from 'serverless-http'
+// import serverless from 'serverless-http';
 
 dotenv.config();
 

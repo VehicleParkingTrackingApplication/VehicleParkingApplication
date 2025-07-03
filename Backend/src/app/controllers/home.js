@@ -1,4 +1,4 @@
-import importCSVData from '../../utils/data-import.js';
+// import importCSVData from '../../utils/data-import.js';
 import businessImport from '../../utils/business-import.js';
 import parkingAreaImport from '../../utils/parking-area-import.js';
 
@@ -8,10 +8,10 @@ dotenv.config();
 
 class homeController {
     index(req, res, next) {
-        res.json({"Check": "Hello}"});
-        res.render('homepage/home', {
-            user: req.session.user
-        });
+        res.json({"Check": "Hello"});
+        // res.render('homepage/home', {
+        //     user: req.session.user
+        // });
     }
     
     async importData(req, res) {
