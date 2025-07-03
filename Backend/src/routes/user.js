@@ -14,7 +14,7 @@ router.get('/manager', requireAuth, requireRole('manager'), (req, res) => {
     res.send({ message: 'Manager page' });
 });
 
-// ALl can access this router
+// All can access this router
 router.get('/user', requireAuth, requireRole('user'), (req, res) => {
     res.send({ message: 'User page' });
 });

@@ -8,6 +8,7 @@ dotenv.config();
 
 class homeController {
     index(req, res, next) {
+        res.json({"Check": "Hello}"});
         res.render('homepage/home', {
             user: req.session.user
         });

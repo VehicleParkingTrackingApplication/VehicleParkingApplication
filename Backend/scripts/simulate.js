@@ -53,12 +53,6 @@ const PLATE_LENGTH = 6; // 3 letters + 3 numbers
 const MIN_CONFIDENCE = 80;
 const MAX_CONFIDENCE = 100;
 
-// Peak hours configuration
-const PEAK_HOUR_START = 8;  // 8 AM
-const PEAK_HOUR_END = 18;   // 6 PM
-const PEAK_HOUR_VEHICLE_MIN = 1;
-const PEAK_HOUR_VEHICLE_MAX = 3;
-
 // ============= END SIMULATION CONFIGURATION =============
 
 // Map to track plate numbers and their status for each area
@@ -144,22 +138,22 @@ async function createAreaDirectories(areas) {
 }
 
 // Handle script termination
-process.on('SIGINT', async () => {
-    console.log('\n\nClearing simulation data...');
-    try {
-        const areas = await Area.find();
-        for (const area of areas) {
-            const areaDir = path.join(process.cwd(), 'src', 'public', 'simulation', `${area.name}_${area._id.toString()}`);
-            const csvFilePath = path.join(areaDir, `${today}.csv`);
-            const header = 'date,time,parkingAreaId,plateNumber,country,confidence,angle,image,status\n';
-            fs.writeFileSync(csvFilePath, header);
-        }
-        console.log('Simulation data cleared successfully.');
-    } catch (error) {
-        console.error('Error clearing simulation data:', error);
-    }
-    process.exit(0);
-});
+// process.on('SIGINT', async () => {
+//     console.log('\n\nClearing simulation data...');
+//     try {
+//         const areas = await Area.find();
+//         for (const area of areas) {
+//             const areaDir = path.join(process.cwd(), 'src', 'public', 'simulation', `${area.name}_${area._id.toString()}`);
+//             const csvFilePath = path.join(areaDir, `${today}.csv`);
+//             const header = 'date,time,parkingAreaId,plateNumber,country,confidence,angle,image,status\n';
+//             fs.writeFileSync(csvFilePath, header);
+//         }
+//         console.log('Simulation data cleared successfully.');
+//     } catch (error) {
+//         console.error('Error clearing simulation data:', error);
+//     }
+//     process.exit(0);
+// });
 
 // Generate a random plate number
 function generatePlateNumber() {

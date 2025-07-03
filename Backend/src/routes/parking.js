@@ -39,51 +39,8 @@ router.get('/vehicle', requireAuth, vehicle.getParkingVehicleByParkingArea);
 // POST /api/parking/simulate
 router.post('/simulate', vehicle.handleSimulation);
 
-// Endpoint to import CSV file
-router.post('/import-csv', upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
 
-        const filePath = req.file.path;
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        const lines = fileContent.split('\n').filter(line => line.trim());
-
-        // Process each line
-        const processedRecords = [];
-        for (const line of lines) {
-            const [date, time, parkingAreaId, plateNumber, country, confidence, angle, image, status] = line.split(',');
-
-            // Create vehicle data object
-            const vehicleData = {
-                date,
-                time,
-                parkingAreaId,
-                plateNumber,
-                country,
-                confidence: parseInt(confidence),
-                angle: parseInt(angle),
-                image,
-                status
-            };
-
-            // Here you would typically save to your database
-            // For now, we'll just collect the processed records
-            processedRecords.push(vehicleData);
-        }
-
-        res.json({
-            message: 'CSV file imported successfully',
-            recordsProcessed: processedRecords.length,
-            data: processedRecords
-        });
-
-    } catch (error) {
-        console.error('Error importing CSV:', error);
-        res.status(500).json({ error: 'Error importing CSV file' });
-    }
-});
+// router.post('/vehicle/input/data/simulation, async')
 
 // Endpoint to receive vehicle data
 router.post('/vehicle/input/data', async (req, res) => {
