@@ -6,8 +6,14 @@ name: Backend Deploy (Unit Testing)
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/backend.yml'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/backend.yml'
 
 jobs:
   build:
