@@ -1,5 +1,5 @@
 import User from '../models/User.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 export const handleRegister = async (req, res) => {
@@ -47,7 +47,7 @@ export const handleLogin = async (req, res) => {
         };
     }
     // Check whether the password is correct
-    const checkPassword = await bcrypt.compare(
+    const checkPassword = bcrypt.compare(
         data.password,
         currentUser.password
     );

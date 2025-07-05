@@ -1,5 +1,11 @@
 .vscode
 
 node_modules/
+preprocessing_data/
+public/
+scripts/
+
+lambda-deployment.zip
+
 npm-debug.log
 .env
