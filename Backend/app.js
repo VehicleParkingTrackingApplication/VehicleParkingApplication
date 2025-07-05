@@ -5,8 +5,8 @@ import { engine } from 'express-handlebars';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import cookieParser from 'cookie-parser';
-import route from './routes/index.js';
-import dbConnect from './config/db/index.js';
+import route from './src/routes/index.js';
+import dbConnect from './src/config/db/index.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import serverless from 'serverless-http';
@@ -69,4 +69,3 @@ const handleRequest = serverless(app);
 export const handler = async (event, context) => {
     return await handleRequest(event, context);
 }
-// export const handler = serverless(app);
