@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon --inspect app.js",
-    "build": "esbuild app.js --bundle --platform=node --target=node22 --outdir=dist",
     "deploy": "aws lambda update-function-code --function-name MonitoringParkingBackend --zip-file fileb://deploy.zip",
     "test": "jest",
     "test:watch": "jest --watch",
