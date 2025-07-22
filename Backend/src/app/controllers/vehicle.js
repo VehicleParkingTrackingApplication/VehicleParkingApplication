@@ -1,6 +1,6 @@
 import Vehicle from '../models/Vehicle.js';
 
-class ParkingVehicleController {
+class parkingVehicleController {
     async getParkingVehicleByParkingArea(req, res) {
         try {
             const parkingAreaId = req.query.parkingAreaId;
@@ -110,4 +110,4 @@ class ParkingVehicleController {
     }
 }
 
-export default new ParkingVehicleController();
+export default new parkingVehicleController();

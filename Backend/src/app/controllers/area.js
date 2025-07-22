@@ -1,4 +1,5 @@
 import Area from '../models/Area.js';
+import FtpServer from '../models/FtpServer.js';
 
 class parkingAreaController {
     async index(req, res) {
@@ -113,28 +114,121 @@ class parkingAreaController {
         }
     }
 
-    // get all parking areas of all business (use to check the database)
-    async getParkingArea(req, res) {
+    // input parking area for business
+    async inputParkingArea(req, res) {
         try {
-            const parkingAreas = await Area.find();
-            return res.status(200).json({
-                success: true,
-                data: parkingAreas
+            const { name, capacity, location } = req.body;
+            const businessId = req.user.businessId;
+
+            if (!businessId || !name || !location) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Misisng required fields" 
+                });
+            }
+
+            const existingArea = Area.findOne({ name: name });
+            console.log(existingArea.name);
+            if (!existingArea) {
+                return res.status(400).json({
+                    success: false,
+                    message: "This name is already registered for another parking area!"
+                })
+            }
+
+            const newArea = Area({
+                businessId: businessId,
+                name: name,
+                capacity: capacity,
+                location: location
             });
+            const savedArea = await newArea.save();
+
+
+            res.status(201).json({
+                success: true,
+                message: "Area saved successfully",
+                data: savedArea
+            });
+
         } catch (error) {
-            console.error("Error in getParkingArea:", error);
-            return res.status(500).json({ 
+            console.log("Error in input area: ", error);
+            res.status(500).json({
                 success: false,
-                message: 'Error fetching parking areas', 
-                error: error.message 
+                message: "Internal server error",
+                error: error.message
             });
         }
     }
 
-    async getParkingVehicles(req, res) {
-        const parkingVehicleJson = await ParkingVehicles.find();
-        res.json(parkingVehicleJson);
+    async inputFtpServer(req,res) {
+        try {
+            const {areaId, host, port, user, password, secure, secureOptions } = req.body;
+            if ( !areaId || !host || !port || !user || !password || !secure || !secureOptions ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Missing ftp-server required fields."
+                });
+            }
+            const newFtpServer = new FtpServer({
+                host: host,
+                port: port, 
+                user: user,
+                password: password, 
+                secure: secure,
+                secureOptions: secureOptions
+            });
+
+            const savedFtpServer = await newFtpServer.save();
+            console.log(savedFtpServer);
+            // update area with new ftp server;
+            const updatedArea = await Area.findByIdAndUpdate(
+                areaId,
+                { ftpserver: savedFtpServer._id },
+                { new: true }
+            )
+            
+            console.log(updatedArea);
+            
+            if (!updatedArea) {
+                return res.status(404).json({
+                    sucess: false,
+                    message: "Area not found"
+                });
+            }
+
+            return res.status(201).json({
+                success: true,
+                message: "Ftp server saved successfully and area updated with new ftp server",
+                ftpServer: savedFtpServer
+            })
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error",
+                error: error.message
+            });
+        }
     }
+    // get all parking areas of all business (use to check the database)
+    // async getParkingArea(req, res) {
+    //     try {
+    //         const parkingAreas = await Area.find();
+    //         return res.status(200).json({
+    //             success: true,
+    //             data: parkingAreas
+    //         });
+    //     } catch (error) {
+    //         console.error("Error in getParkingArea:", error);
+    //         return res.status(500).json({ 
+    //             success: false,
+    //             message: 'Error fetching parking areas', 
+    //             error: error.message 
+    //         });
+    //     }
+    // }
+
+
 }
 
 export default new parkingAreaController();

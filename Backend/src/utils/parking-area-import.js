@@ -6,7 +6,6 @@ const getParkingAreasTemplate = (businessId) => [
     businessPhoneNumber: '0291234567', // landline in NSW (02)
     name: 'Sydney Central Parking',
     capacity: 120,
-    price: { car: 15.0, motorbike: 7.0, bicycle: 3.0 },
     location: {
       address: '123 Pitt St',
       suburb: 'Sydney CBD',
@@ -22,7 +21,6 @@ const getParkingAreasTemplate = (businessId) => [
     businessPhoneNumber: '0412567890', // mobile (04)
     name: 'Darling Harbour Car Park',
     capacity: 80,
-    price: { car: 12.5, motorbike: 6.0, bicycle: 2.5 },
     location: {
       address: '50 Harbour St',
       suburb: 'Darling Harbour',
@@ -37,7 +35,6 @@ const getParkingAreasTemplate = (businessId) => [
     businessPhoneNumber: '0287654321', // landline in NSW (02)
     name: 'Surry Hills Bike & Ride',
     capacity: 40,
-    price: { car: 10.0, motorbike: 5.0, bicycle: 1.0 },
     location: {
       address: '200 Bourke St',
       suburb: 'Surry Hills',
@@ -53,7 +50,6 @@ const getParkingAreasTemplate = (businessId) => [
     businessPhoneNumber: '0419876543', // mobile (04)
     name: 'Ultimo Evening Parking',
     capacity: 60,
-    price: { car: 8.0, motorbike: 4.0, bicycle: 2.0 },
     location: {
       address: '77 Quarry Rd',
       suburb: 'Ultimo',
@@ -68,7 +64,6 @@ const getParkingAreasTemplate = (businessId) => [
     businessPhoneNumber: '0298765432', // landline in NSW (02)
     name: 'Chippendale Multi‑Deck',
     capacity: 150,
-    price: { car: 18.0, motorbike: 9.0, bicycle: 4.0 },
     location: {
       address: '25 Abercrombie St',
       suburb: 'Chippendale',

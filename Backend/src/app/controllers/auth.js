@@ -12,7 +12,6 @@ class authController {
                 sameSite: 'Strict',
                 maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
             });
-            
             res.json({
                 message: 'Login successful',
                 accessToken: result.accessToken

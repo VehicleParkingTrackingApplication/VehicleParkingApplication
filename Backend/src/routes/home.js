@@ -1,7 +1,6 @@
 import express from 'express';
 import homeController from '../app/controllers/home.js';
 import requireAuth from '../middleware/auth/require-auth.js';
-
 const router = express.Router();
 
 

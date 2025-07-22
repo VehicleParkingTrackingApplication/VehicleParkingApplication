@@ -11,6 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "simulate": "node ./scripts/simulate.js",
+    "ftp": "node ./scripts/listFtpServer.js",
     "beautiful": "prettier --single-quote --trailing-comma all --write 'src/**/*.{js,json,scss,css,html}'"
   },
   "keywords": [],
@@ -19,6 +20,7 @@
   "description": "",
   "dependencies": {
     "axios": "^1.6.7",
+    "basic-ftp": "^5.0.5",
     "bcryptjs": "^3.0.2",
     "bootstrap": "^5.3.5",
     "cli-table3": "^0.6.5",
@@ -29,6 +31,9 @@
     "express": "^5.1.0",
     "express-handlebars": "^8.0.1",
     "express-session": "^1.18.1",
+    "ftp": "^0.3.10",
+    "ftp-srv": "^4.6.3",
+    "ftps": "^1.2.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.16.0",
     "mongoose": "^8.13.2",

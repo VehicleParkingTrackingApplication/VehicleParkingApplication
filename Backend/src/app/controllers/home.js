@@ -7,11 +7,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 class homeController {
-    index(req, res, next) {
-        res.json({"Check": "Hello"});
-        // res.render('homepage/home', {
-        //     user: req.session.user
-        // });
+    index(req, res) {
+        res.json({"message": "Hello home"});
     }
     
     async importData(req, res) {
@@ -40,10 +37,6 @@ class homeController {
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });
         }
-    }
-
-    show(req, res) {
-        res.render('homepage/show');
     }
 }
 

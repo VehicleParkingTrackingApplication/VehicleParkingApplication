@@ -33,14 +33,18 @@ const upload = multer({ storage: storage });
 // GET /api/parking/area
 router.get('/area', requireAuth, area.getParkingAreaByBusiness);
 
+// POST /api/parking/area/input-area
+router.post('/area/input-area', requireAuth, area.inputParkingArea);
+
+// POST /api/parking/area/input-ftpserver
+router.post('/area/input-ftpserver', requireAuth, area.inputFtpServer);
+
 // GET /api/parking/vehicle
 router.get('/vehicle', requireAuth, vehicle.getParkingVehicleByParkingArea);
 
 // POST /api/parking/simulate
 router.post('/simulate', vehicle.handleSimulation);
 
-
-// router.post('/vehicle/input/data/simulation, async')
 
 // Endpoint to receive vehicle data
 router.post('/vehicle/input/data', async (req, res) => {

@@ -69,7 +69,7 @@ export const handleLogin = async (req, res) => {
         {
             ...payload,
             type: 'access',
-            exp: Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60) // 3 months
+            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 1 day
             // exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
         },
         process.env.ACCESS_TOKEN_SECRET

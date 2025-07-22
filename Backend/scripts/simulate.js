@@ -127,7 +127,7 @@ const today = sydneyDateObj.toISOString().split('T')[0];  // YYYY-MM-DD format
 
 // Function to create area-specific directories
 async function createAreaDirectories(areas) {
-    const baseDir = path.join(process.cwd(), 'src', 'public', 'simulation');
+    const baseDir = path.join(process.cwd(), 'public', 'simulation');
     
     for (const area of areas) {
         const areaDir = path.join(baseDir, `${area.name}_${area._id.toString()}`);
@@ -440,7 +440,7 @@ if (isMainThread) {
         
         try {
             // Write to CSV file
-            const areaDir = path.join(process.cwd(), 'src', 'public', 'simulation', `${area.name}_${area._id.toString()}`);
+            const areaDir = path.join(process.cwd(), 'public', 'simulation', `${area.name}_${area._id.toString()}`);
             const csvFilePath = path.join(areaDir, `${today}.csv`);
             const csvLine = `${event.date},${event.time},${event.parkingAreaId},${event.plateNumber},${event.country},${event.confidence},${event.angle},${event.image},${event.status}\n`;
             fs.appendFileSync(csvFilePath, csvLine);
