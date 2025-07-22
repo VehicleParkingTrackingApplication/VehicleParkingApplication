@@ -14,7 +14,7 @@ describe('Home Controller', () => {
                 .get('/api/home')
                 .expect('Content-Type', /json/)
                 .expect(200);
-            expect(response.body).toEqual({ "Check": "Hello" });
+            expect(response.body).toEqual({ "Check": "Hello home page" });
         });
 
         it('shoud have correct response structure', async() => {
@@ -23,7 +23,7 @@ describe('Home Controller', () => {
                 .expect(200);
             expect(response.body).toHaveProperty('Check');
             expect(typeof response.body.Check).toBe('string');
-            expect(response.body.Check).toBe('Hello');
+            expect(response.body.Check).toBe('Hello home page');
         });
     });
 
@@ -37,7 +37,7 @@ describe('Home Controller', () => {
 
             homeController.index(mockReq, mockRes);
 
-            expect(mockRes.json).toHaveBeenCalledWith({"Check": "Hello"});
+            expect(mockRes.json).toHaveBeenCalledWith({"Check": "Hello home page"});
         })
     })
 
