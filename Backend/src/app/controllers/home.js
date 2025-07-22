@@ -8,7 +8,7 @@ dotenv.config();
 
 class homeController {
     index(req, res) {
-        res.json({"message": "Hello home"});
+        res.json({"Check": "Hello home page"});
     }
     
     async importData(req, res) {

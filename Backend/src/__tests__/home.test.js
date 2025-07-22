@@ -14,7 +14,7 @@ describe('Home Controller', () => {
                 .get('/api/home')
                 .expect('Content-Type', /json/)
                 .expect(200);
-            expect(response.body).toEqual({ "Check": "Hello" });
+            expect(response.body).toEqual({ "Check": "Hello home page" });
         });
 
         it('shoud have correct response structure', async() => {
