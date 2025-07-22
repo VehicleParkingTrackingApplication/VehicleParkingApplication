@@ -23,7 +23,7 @@ describe('Home Controller', () => {
                 .expect(200);
             expect(response.body).toHaveProperty('Check');
             expect(typeof response.body.Check).toBe('string');
-            expect(response.body.Check).toBe('Hello');
+            expect(response.body.Check).toBe('Hello home page');
         });
     });
 
