@@ -37,7 +37,7 @@ describe('Home Controller', () => {
 
             homeController.index(mockReq, mockRes);
 
-            expect(mockRes.json).toHaveBeenCalledWith({"Check": "Hello"});
+            expect(mockRes.json).toHaveBeenCalledWith({"Check": "Hello home page"});
         })
     })
 
