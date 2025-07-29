@@ -174,6 +174,27 @@ const HomePage: React.FC = () => {
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
+
+            {/* Feature 7 */}
+            <div className="bg-gray-50 p-8 rounded-xl hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-6">
+                <Zap className="w-6 h-6 text-yellow-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Parking Area Tracking
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Monitor top 10 recent entries, view all existing cars, and access full records 
+              in a centralized view. Optimized for real-time parking analytics.
+            </p>
+            <Link
+              to="/area-management"
+              className="inline-flex items-center gap-2 text-yellow-600 hover:text-yellow-700 font-medium"
+            >
+              Go to Parking Area
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
           </div>
         </div>
       </section>

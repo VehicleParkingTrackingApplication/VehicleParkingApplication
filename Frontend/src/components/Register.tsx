@@ -1,45 +1,48 @@
 import React from 'react';
-import { Card, CardContent } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { useNavigate } from 'react-router-dom';
+import styles from './Register.module.css'; 
 
-export default function RegisterPage() {
-    const nav = useNavigate();
-    return (
-        <div className="flex flex-col md:flex-row min-h-screen">
-            <div className="flex-1 bg-gradient-to-b from-blue-900 via-black to-yellow-900 flex items-center justify-center p-8">
-                <div className="text-white text-center">
-                    <h2 className="text-3xl font-bold mb-2">MoniPark</h2>
-                    <p className="opacity-80">"From Parked Cars to Smart Starts"</p>
-                    <Button 
-                        variant="outline" 
-                        className="mt-4" 
-                        onClick={() => nav('/')}
-                    >
-                        Back to Home
-                    </Button>
-                </div>
-            </div>
-            <div className="flex-1 bg-gray-800 flex items-center justify-center p-8">
-                <Card className="w-full max-w-md bg-gray-700">
-                <CardContent className="space-y-6">
-                    <h3 className="text-2xl font-semibold text-center">Register</h3>
-                    <Input placeholder="Name" />
-                    <Input type="email" placeholder="Email" />
-                    <Input type="tel" placeholder="Phone number" />
-                    <Input type="password" placeholder="Password" />
-                    <Button size="lg" className="w-full" onClick={() => nav('/signin')}>Register</Button>
-                    <Button 
-                        variant="ghost" 
-                        className="w-full" 
-                        onClick={() => nav('/signin')}
-                    >
-                        Already have an account? Sign in
-                    </Button>
-                </CardContent>
-                </Card>
-            </div>
+export default function Register() {
+  return (
+    <div className={styles['page-wrapper']}>
+      <div className={styles['split-container']}>
+        {/* Left Side */}
+        <div className={styles['left-panel']}>
+          <div className={styles['logo']}>
+            <h1>MoniPark</h1>
+            <p>"From Parked Cars to Smart Starts"</p>
+          </div>
         </div>
-    );
+
+        {/* Right Side (Form) */}
+        <div className={styles['right-panel']}>
+          <div className={styles['container']}>
+            <h2>Register</h2>
+            <form>
+              <div className={styles['form-group']}>
+                <label htmlFor="name">Name</label>
+                <input type="text" id="name" placeholder="Enter your full name" />
+              </div>
+
+              <div className={styles['form-group']}>
+                <label htmlFor="email">Email</label>
+                <input type="email" id="email" placeholder="Enter your email" />
+              </div>
+
+              <div className={styles['form-group']}>
+                <label htmlFor="phone">Phone number</label>
+                <input type="tel" id="phone" placeholder="Enter your phone number" />
+              </div>
+
+              <div className={styles['form-group']}>
+                <label htmlFor="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password" />
+              </div>
+
+              <button type="submit">Register</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

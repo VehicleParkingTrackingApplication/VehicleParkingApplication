@@ -1,113 +1,117 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { useNavigate } from 'react-router-dom';
+import styles from './Register.module.css'; // Reuse the same CSS module
 
 export default function LoginPage() {
-    const nav = useNavigate();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+  const nav = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-    const handleLogin = async () => {
-        if (!email || !password) {
-            setError('Please enter both email and password');
-            return;
-        }
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
 
-        setIsLoading(true);
-        setError('');
+    setIsLoading(true);
+    setError('');
 
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:1313'}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email,
-                    password
-                })
-            });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:1313'}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-            if (response.ok) {
-                const data = await response.json();
-                // Store token or user data if needed
-                localStorage.setItem('token', data.token || '');
-                localStorage.setItem('user', JSON.stringify(data.user || {}));
-                nav('/');
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Login failed');
-            }
-        } catch (err) {
-            setError('Network error. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token || '');
+        localStorage.setItem('user', JSON.stringify(data.user || {}));
+        nav('/');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Login failed');
+      }
+    } catch (err) {
+        console.error(err);
+        setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <div className="flex flex-col md:flex-row min-h-screen">
-        <div className="flex-1 bg-gray-800 flex items-center justify-center p-8">
-            <Card className="w-full max-w-md bg-gray-700">
-            <CardContent className="space-y-6">
-                <h3 className="text-2xl font-semibold text-center">Sign in</h3>
-                {error && (
-                    <div className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded">
-                        {error}
-                    </div>
-                )}
-                <Input 
-                    type="email" 
-                    placeholder="Email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
-                <Input 
-                    type="password" 
-                    placeholder="Password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                            handleLogin();
-                        }
-                    }}
-                />
-                <Button 
-                    size="lg" 
-                    className="w-full" 
-                    onClick={handleLogin}
-                    disabled={isLoading}
-                >
-                    {isLoading ? 'Logging in...' : 'Login'}
-                </Button>
-                <Button 
-                    variant="ghost" 
-                    className="w-full" 
-                    onClick={() => nav('/register')}
-                >
-                    Don't have an account? Register
-                </Button>
-            </CardContent>
-            </Card>
-        </div>
-        <div className="flex-1 bg-gradient-to-b from-blue-900 via-black to-yellow-900 flex items-center justify-center p-8">
-            <div className="text-white text-center max-w-sm">
-            <h2 className="text-3xl font-bold mb-4">MoniPark</h2>
-            <p>An AI-driven car park monitoring solution tailored for SMEs — seamlessly integrating Real-Time Occupancy Tracking, Smart Vehicle Analytics, and Automated Visitor Insights. Unlock next-level efficiency by transforming parking spaces into data-powered growth hubs.</p>
-            <Button 
-                variant="outline" 
-                className="mt-4" 
-                onClick={() => nav('/')}
+ return (
+    <div className={styles['page-wrapper']}>
+      <div className={styles['split-container']}>
+        <div className={styles['right-panel']}>
+          <div className={styles['container']}>
+            <h2>Login</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleLogin();
+              }}
             >
-                Back to Home
-            </Button>
-            </div>
+              {error && (
+                <div style={{ color: 'red', fontSize: '13px', marginBottom: '10px' }}>
+                  {error}
+                </div>
+              )}
+
+              <div className={styles['form-group']}>
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className={styles['form-group']}>
+                <label htmlFor="password">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleLogin();
+                  }}
+                />
+              </div>
+
+              <button type="submit" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Login'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => nav('/register')}
+                style={{
+                  background: 'transparent',
+                  color: '#F5F5F7',
+                  border: 'none',
+                  marginTop: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                Don’t have an account? Register
+              </button>
+            </form>
+          </div>
         </div>
+        <div className={styles['left-panel']}>
+          <div className={styles['logo']}>
+            <h1>MoniPark</h1>
+            <p>"An AI-driven car park monitoring solution tailored for SMEs — seamlessly integrating Real-Time Occupancy Tracking, Smart Vehicle Analytics, and Automated Visitor Insights. Unlock next-level efficiency by transforming parking spaces into data-powered growth hubs."</p>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
