@@ -5,6 +5,7 @@ import RegisterPage from './components/Register';
 import LoginPage from './components/Login';
 import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
+import AreaManagement from './components/AreaManagement';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/signin" element={<LoginPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/area-management" element={<AreaManagement />} />
         </Routes>
     </div>
   );
