@@ -18,7 +18,8 @@ const Vehicle = new Schema({
     },
     image: {
         type: String,
-        required: true
+        required: true,
+        default: "image.jpg"
     },
     datetime:{
         type: Date,

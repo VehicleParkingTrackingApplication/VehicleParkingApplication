@@ -14,4 +14,12 @@ COPY . .
 
 EXPOSE 1313
 
+# Environment variable example (uncomment to set default, or pass with -e at runtime)
+# ENV CONNECTION_STRING=mongodb://your-mongo-uri
+# ENV ACCESS_TOKEN_SECRET=your-access-token-secret
+# ENV REFRESH_TOKEN_SECRET=your-refresh-token-secret
+
+# By default, Docker allows passing env variables at runtime:
+# docker run -e CONNECTION_STRING=... -e ACCESS_TOKEN_SECRET=... -e REFRESH_TOKEN_SECRET=... ...
+
 CMD [ "npm", "start" ]

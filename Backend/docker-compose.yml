@@ -1,0 +1,11 @@
+# docker compose up -d
+# docker compose down
+
+services:
+  car-parking:
+    image: brandonng/car-parking:v1
+    ports:
+      - "1313:1313"
+    env_file:
+      - .env
+    restart: unless-stopped

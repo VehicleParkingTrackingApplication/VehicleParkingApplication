@@ -47,6 +47,7 @@
     "@babel/core": "^7.27.4",
     "@babel/node": "^7.27.1",
     "@babel/preset-env": "^7.27.2",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.1",
     "@types/jest": "^30.0.0",
     "babel-jest": "^30.0.2",
