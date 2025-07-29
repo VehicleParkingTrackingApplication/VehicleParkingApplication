@@ -25,7 +25,7 @@ const Area = new Schema(
     capacity: { type: Number, required: true, min: 1 },
     location: { type: String, required: true },
     policy: { type: String, default: '', trim: true },
-    savedTimestamp: { type: String, default: ' '},
+    savedTimestamp: { type: String, default: ''},
   },
   { timestamps: true },
 );

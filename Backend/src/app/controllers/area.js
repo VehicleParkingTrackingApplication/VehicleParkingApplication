@@ -184,7 +184,7 @@ class parkingAreaController {
             // update area with new ftp server;
             const updatedArea = await Area.findByIdAndUpdate(
                 areaId,
-                { ftpserver: savedFtpServer._id },
+                { ftpServer: savedFtpServer._id },
                 { new: true }
             )
             

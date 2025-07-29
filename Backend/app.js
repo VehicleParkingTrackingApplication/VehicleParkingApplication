@@ -11,6 +11,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import serverless from 'serverless-http';
 
+// Import scheduler service
+import { initializeScheduler } from './src/app/services/schedulerService.js';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +24,11 @@ const PORT = process.env.PORT || 1313;
 
 // Connect to DB
 dbConnect();
+
+// ============= INITIALIZE SCHEDULER SERVICE =============
+// Initialize scheduler if not in test environment
+initializeScheduler();
+// ============= END SCHEDULER INITIALIZATION =============
 
 app.use(cors())
 app.use(express.static(join(__dirname, 'public')));
