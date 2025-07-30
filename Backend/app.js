@@ -12,7 +12,7 @@ import cors from 'cors';
 import serverless from 'serverless-http';
 
 // Import scheduler service
-import { initializeScheduler } from './src/app/services/schedulerService.js';
+// import { initializeScheduler } from './src/app/services/schedulerService.js';
 
 dotenv.config();
 
@@ -27,10 +27,20 @@ dbConnect();
 
 // ============= INITIALIZE SCHEDULER SERVICE =============
 // Initialize scheduler if not in test environment
-initializeScheduler();
+// initializeScheduler();
 // ============= END SCHEDULER INITIALIZATION =============
 
-app.use(cors())
+// CORS configuration for development
+// app.use(cors());
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production' 
+        ? ['https://yourdomain.com'] // Replace with your production domain
+        : ['http://localhost:5173', 'http://127.0.0.1:5173'], // Frontend dev server
+    credentials: true, // Allow cookies and credentials
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 app.use(express.static(join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

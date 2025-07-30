@@ -3,6 +3,8 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../services/backend';
+import { setCookie } from '../utils/cookies';
 
 export default function LoginPage() {
     const nav = useNavigate();
@@ -21,28 +23,29 @@ export default function LoginPage() {
         setError('');
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:1313'}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email,
-                    password
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Store token or user data if needed
-                localStorage.setItem('token', data.token || '');
-                localStorage.setItem('user', JSON.stringify(data.user || {}));
-                nav('/');
+            // Use the API service instead of direct fetch
+            const authResult = await login(email, password);
+            
+            if (authResult) {
+                const { user, token } = authResult;
+                
+                // Store token in cookies securely
+                setCookie('token', token, {
+                    maxAge: 60 * 60 * 24 * 7, // 7 days
+                    secure: true,
+                    sameSite: 'Strict'
+                });
+                
+                // Store user data in localStorage (non-sensitive data)
+                localStorage.setItem('user', JSON.stringify(user));
+                
+                // Redirect to dashboard or home
+                nav('/dashboard');
             } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Login failed');
+                setError('Invalid email or password');
             }
         } catch (err) {
+            console.error('Login error:', err);
             setError('Network error. Please try again.');
         } finally {
             setIsLoading(false);
@@ -71,7 +74,7 @@ export default function LoginPage() {
                     placeholder="Password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                             handleLogin();
                         }

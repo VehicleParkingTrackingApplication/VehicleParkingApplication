@@ -8,7 +8,8 @@ class authController {
             // Set refresh token in HTTP-only cookie
             res.cookie('refreshToken', result.refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
+                // secure: process.env.NODE_ENV === 'production',
+                secure: true,
                 sameSite: 'Strict',
                 maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
             });
@@ -33,12 +34,12 @@ class authController {
             // After successful registration, log the user in
             const result = await handleLogin(req, res);
             if (result.status === 200) {
-                res.cookie('refreshToken', result.refreshToken, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'Strict',
-                    maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
-                });
+                // res.cookie('refreshToken', result.refreshToken, {
+                //     httpOnly: true,
+                //     secure: process.env.NODE_ENV === 'production',
+                //     sameSite: 'Strict',
+                //     maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
+                // });
                 
                 res.json({
                     message: 'Registration and login successful',

@@ -1,13 +1,37 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, LogOut } from 'lucide-react';
 import NavigationMenu from './NavigationMenu';
+import { Button } from './ui/button';
+import { logout } from '../services/backend';
+import { deleteCookie } from '../utils/cookies';
 
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Call logout API
+      await logout();
+      
+      // Clear cookies and localStorage
+      deleteCookie('token');
+      localStorage.removeItem('user');
+      
+      // Redirect to home
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if API call fails, clear local data
+      deleteCookie('token');
+      localStorage.removeItem('user');
+      navigate('/');
+    }
   };
 
   return (
@@ -43,6 +67,15 @@ const Header: React.FC = () => {
             >
               Get Started
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -79,6 +112,16 @@ const Header: React.FC = () => {
                 >
                   Get Started
                 </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors py-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
               </div>
             </div>
           </div>

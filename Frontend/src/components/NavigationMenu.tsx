@@ -25,12 +25,12 @@ const NavigationMenu: React.FC<NavigationMenuProps> = ({ className = '' }) => {
     },
     {
       title: 'Dashboard',
-      url: '/dashboard',
+      url: '/',
       icon: <BarChart3 className="w-4 h-4" />
     },
     {
-      title: 'Events',
-      url: '/events',
+      title: 'Area Management',
+      url: '/area-management',
       icon: <Calendar className="w-4 h-4" />,
       items: [
         {
