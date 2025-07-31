@@ -1,13 +1,30 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, LogOut } from 'lucide-react';
 import NavigationMenu from './NavigationMenu';
+import { Button } from './ui/button';
+import { authInterceptor } from '../services/authInterceptor';
 
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Use authInterceptor to handle logout (clears both tokens)
+      await authInterceptor.logout();
+      
+      // Redirect to login page
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if logout fails, redirect to login
+      navigate('/login');
+    }
   };
 
   return (
@@ -43,6 +60,15 @@ const Header: React.FC = () => {
             >
               Get Started
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -79,6 +105,16 @@ const Header: React.FC = () => {
                 >
                   Get Started
                 </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors py-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
               </div>
             </div>
           </div>

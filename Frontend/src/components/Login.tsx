@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../services/backend';
 import styles from './Register.module.css'; // Reuse the same CSS module
 
 export default function LoginPage() {
   const nav = useNavigate();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Please enter both email and password');
+    const handleLogin = async () => {
+    if (!username || !password) {
+      setError('Please enter both username and password');
       return;
     }
 
@@ -19,24 +20,17 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:1313'}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.token || '');
-        localStorage.setItem('user', JSON.stringify(data.user || {}));
+      const result = await login(username, password);
+      
+      if (result) {
+        localStorage.setItem('token', result.accessToken);
         nav('/');
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Login failed');
+        setError('Invalid username or password');
       }
     } catch (err) {
-        console.error(err);
-        setError('Network error. Please try again.');
+      console.error(err);
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -61,13 +55,13 @@ export default function LoginPage() {
               )}
 
               <div className={styles['form-group']}>
-                <label htmlFor="email">Email</label>
+                <label htmlFor="username">Username</label>
                 <input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                 />
               </div>
 
