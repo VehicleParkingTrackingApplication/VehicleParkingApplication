@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut } from 'lucide-react';
 import NavigationMenu from './NavigationMenu';
 import { Button } from './ui/button';
-import { logout } from '../services/backend';
-import { deleteCookie } from '../utils/cookies';
+import { authInterceptor } from '../services/authInterceptor';
 
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -16,21 +15,15 @@ const Header: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // Call logout API
-      await logout();
+      // Use authInterceptor to handle logout (clears both tokens)
+      await authInterceptor.logout();
       
-      // Clear cookies and localStorage
-      deleteCookie('token');
-      localStorage.removeItem('user');
-      
-      // Redirect to home
-      navigate('/');
+      // Redirect to login page
+      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if API call fails, clear local data
-      deleteCookie('token');
-      localStorage.removeItem('user');
-      navigate('/');
+      // Even if logout fails, redirect to login
+      navigate('/login');
     }
   };
 
