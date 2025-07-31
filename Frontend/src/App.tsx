@@ -5,6 +5,7 @@ import RegisterPage from './components/Register';
 import LoginPage from './components/Login';
 import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
+import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -17,7 +18,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/signin" element={<LoginPage />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/account" element={<AccountPage />} />
             <Route 
                 path="/area-management" 
                 element={
