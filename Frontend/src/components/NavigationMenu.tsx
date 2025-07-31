@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Home, Users, Settings, HelpCircle, FileText, Calendar, BarChart3 } from 'lucide-react';
+import { ChevronDown, Home, Users, Settings, HelpCircle, FileText, Calendar, BarChart3, Car, ParkingCircle } from 'lucide-react';
 
 interface MenuItem {
   title: string;
@@ -25,31 +25,15 @@ const NavigationMenu: React.FC<NavigationMenuProps> = ({ className = '' }) => {
     },
     {
       title: 'Dashboard',
-      url: '/dashboard',
+      url: '/',
       icon: <BarChart3 className="w-4 h-4" />
     },
     {
-      title: 'Events',
-      url: '/events',
-      icon: <Calendar className="w-4 h-4" />,
-      items: [
-        {
-          title: 'All Events',
-          url: '/events',
-          description: 'Browse all available events'
-        },
-        {
-          title: 'My Events',
-          url: '/events/my',
-          description: 'View your registered events'
-        },
-        {
-          title: 'Create Event',
-          url: '/events/create',
-          description: 'Create a new event'
-        }
-      ]
-    },
+  title: 'Area Management',
+  url: '/area-management',
+  icon: <ParkingCircle className="w-4 h-4" />
+},
+
     {
       title: 'Users',
       url: '/users',

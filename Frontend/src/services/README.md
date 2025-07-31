@@ -1,213 +1,93 @@
-# API Services Documentation
+# Authentication & Token Refresh System
 
-This directory contains the API service layer for the Frontend application, following the same pattern as the CSIT314 project.
+This system automatically handles JWT token refresh when the access token expires, using the refresh token stored in HTTP-only cookies.
 
-## 📁 File Structure
+## How It Works
 
-```
-services/
-├── api.ts          # Low-level HTTP client (similar to api.js)
-├── backend.ts      # High-level business logic API (similar to backend.js)
-└── README.md       # This documentation
-```
+### 1. Login Flow
+1. User logs in with username/password
+2. Backend returns `accessToken` in response body
+3. Frontend stores `accessToken` in localStorage
+4. Backend sets `refreshToken` as HTTP-only cookie
 
-## 🔧 Architecture
+### 2. Token Refresh Flow
+1. When making authenticated API calls, if the response is 401 (Unauthorized)
+2. The system automatically calls the refresh endpoint using the refresh token from cookies
+3. Backend validates the refresh token and returns a new `accessToken`
+4. Frontend updates the stored `accessToken`
+5. The original API call is retried with the new token
 
-### `api.ts` - Low-Level HTTP Client
-**Purpose:** Provides foundational HTTP communication layer
+### 3. Automatic Token Management
+- **Access Token**: Stored in localStorage, used for API authentication
+- **Refresh Token**: Stored in HTTP-only cookie, used to get new access tokens
+- **Automatic Refresh**: Happens transparently when tokens expire
 
-**Key Functions:**
-- `fetchApi()` - GET requests
-- `postApi()` - POST requests  
-- `putApi()` - PUT requests
-- `deleteApi()` - DELETE requests
-- `getApiUrl()` - URL construction with return URL handling
+## Usage
 
-**Features:**
-- Environment-aware base URLs (development vs production)
-- Automatic credential handling (cookies/sessions)
-- Query parameter management
-- Return URL preservation for authentication flows
-
-### `backend.ts` - High-Level Business Logic API
-**Purpose:** Provides domain-specific functions that use `api.ts` under the hood
-
-**Key Functions:**
-- Vehicle management: `getVehicles()`, `createVehicle()`, `updateVehicle()`, `deleteVehicle()`
-- Area management: `getAreas()`, `createArea()`, `updateArea()`, `deleteArea()`
-- Record management: `getRecords()`, `createRecord()`, `updateRecord()`
-- User management: `getUsers()`, `createUser()`, `updateUser()`, `deleteUser()`
-- Authentication: `login()`, `register()`, `logout()`, `getCurrentUser()`
-- Statistics: `getStatistics()`
-
-## 🚀 Usage Examples
-
-### Basic Data Fetching
+### For Public Endpoints (No Authentication Required)
 ```typescript
-import { getVehicles, getAreas, getStatistics } from '../services/backend';
+import { fetchApi, postApi } from './api';
 
-// Fetch vehicles
-const vehicles = await getVehicles();
-
-// Fetch areas
-const areas = await getAreas();
-
-// Fetch statistics
-const stats = await getStatistics();
+// These don't require authentication
+const response = await fetchApi('public-endpoint');
+const response = await postApi('public-endpoint', {}, data);
 ```
 
-### Creating New Records
+### For Protected Endpoints (Authentication Required)
 ```typescript
-import { createVehicle, createArea } from '../services/backend';
+import { fetchAuthApi, postAuthApi } from './api';
 
-// Create a new vehicle
-const newVehicle = await createVehicle({
-  plateNumber: 'ABC123',
-  ownerName: 'John Doe',
-  vehicleType: 'Car',
-  areaId: 'area123',
-  isActive: true
-});
-
-// Create a new area
-const newArea = await createArea({
-  name: 'Parking Lot A',
-  location: 'Downtown',
-  capacity: 50,
-  isActive: true
-});
+// These automatically handle token refresh
+const response = await fetchAuthApi('protected-endpoint');
+const response = await postAuthApi('protected-endpoint', {}, data);
 ```
 
-### Authentication
+### Using the Auth Interceptor Directly
 ```typescript
-import { login, register, getCurrentUser } from '../services/backend';
+import { authInterceptor } from './authInterceptor';
 
-// Login
-const authResult = await login('username', 'password');
-if (authResult) {
-  const { user, token } = authResult;
-  // Store token in localStorage or state
+// Check if user is authenticated
+if (authInterceptor.isAuthenticated()) {
+  // User has valid token
 }
 
-// Register
-const registerResult = await register('username', 'email@example.com', 'password');
-
-// Get current user
-const currentUser = await getCurrentUser();
+// Logout user
+authInterceptor.logout();
 ```
 
-### Error Handling
+### Protected Routes
 ```typescript
-import { getVehicles } from '../services/backend';
+import ProtectedRoute from '../components/ProtectedRoute';
 
-try {
-  const vehicles = await getVehicles();
-  // Handle success
-} catch (error) {
-  // Handle error
-  console.error('Failed to fetch vehicles:', error);
-}
+// Wrap protected components
+<ProtectedRoute>
+  <YourProtectedComponent />
+</ProtectedRoute>
 ```
 
-## 📊 Type Definitions
+## API Functions
 
-The service includes TypeScript interfaces for all data types:
+### Public API Functions
+- `fetchApi(path, query?)` - GET requests
+- `postApi(path, query?, body?)` - POST requests
+- `putApi(path, query?, body?)` - PUT requests
+- `deleteApi(path, query?)` - DELETE requests
 
-```typescript
-interface Vehicle {
-  _id: string;
-  plateNumber: string;
-  ownerId: string;
-  ownerName: string;
-  vehicleType: string;
-  entryTime: string;
-  exitTime?: string;
-  areaId: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+### Authenticated API Functions
+- `fetchAuthApi(path, query?)` - GET requests with auto-refresh
+- `postAuthApi(path, query?, body?)` - POST requests with auto-refresh
+- `putAuthApi(path, query?, body?)` - PUT requests with auto-refresh
+- `deleteAuthApi(path, query?)` - DELETE requests with auto-refresh
 
-interface Area {
-  _id: string;
-  name: string;
-  description?: string;
-  location: string;
-  capacity: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+## Error Handling
 
-interface ParkingRecord {
-  _id: string;
-  vehicleId: string;
-  areaId: string;
-  entryTime: string;
-  exitTime?: string;
-  duration?: number;
-  fee?: number;
-  createdAt: string;
-  updatedAt: string;
-}
+- **401 Unauthorized**: Automatically triggers token refresh
+- **Token Refresh Failed**: User is logged out and redirected to login
+- **Network Errors**: Handled gracefully with user-friendly messages
 
-interface User {
-  _id: string;
-  username: string;
-  email: string;
-  role: 'admin' | 'user' | 'moderator';
-  createdAt: string;
-  updatedAt: string;
-}
+## Security Features
 
-interface Statistics {
-  totalVehicles: number;
-  totalAreas: number;
-  totalRecords: number;
-  totalRevenue: number;
-  activeVehicles: number;
-  dailyStats: Array<{
-    date: string;
-    vehicles: number;
-    revenue: number;
-  }>;
-}
-```
-
-## 🔄 Relationship & Architecture
-
-```
-Frontend Components
-        ↓
-    backend.ts (Business Logic)
-        ↓
-    api.ts (HTTP Layer)
-        ↓
-    Backend API Server (localhost:1313)
-```
-
-## 💡 Benefits
-
-- **Separation of Concerns**: HTTP logic vs business logic
-- **Reusability**: `api.ts` functions can be used anywhere
-- **Maintainability**: API changes only affect `backend.ts`
-- **Type Safety**: Full TypeScript support with interfaces
-- **Error Handling**: Centralized in `api.ts`
-- **Environment Support**: Automatic dev/prod URL switching
-
-## 🛠️ Configuration
-
-The API base URL is automatically configured based on the environment:
-
-- **Development**: `http://localhost:1313/api/`
-- **Production**: `/api/`
-
-This is handled in the `api.ts` file and can be modified as needed.
-
-## 📝 Notes
-
-- All functions return `Promise<T>` for async operations
-- Functions that can fail return `Promise<T | null>` or `Promise<boolean>`
-- Error handling is consistent across all functions
-- TypeScript interfaces provide full IntelliSense support
-- JSDoc comments provide additional documentation 
+- **HTTP-only Cookies**: Refresh tokens are secure and not accessible via JavaScript
+- **Automatic Cleanup**: Invalid tokens are automatically removed
+- **Request Queuing**: Multiple requests during refresh are queued and retried
+- **Secure Headers**: All requests include proper CORS and security headers 

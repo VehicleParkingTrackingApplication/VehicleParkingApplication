@@ -1,62 +1,55 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { Input } from './ui/input';
 import { Footer } from './Footer';
+import { login } from '../services/backend';
 
 export default function LoginPage() {
-    const nav = useNavigate();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+  const nav = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-    const handleLogin = async () => {
-        if (!email || !password) {
-            setError('Please enter both email and password');
-            return;
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const result = await login(email, password);
+      
+      if (result && result.accessToken) {
+        // In a real app, you would store the token securely
+        localStorage.setItem('accessToken', result.accessToken);
+        if(result.refreshToken) {
+          localStorage.setItem('refreshToken', result.refreshToken);
         }
-
-        setIsLoading(true);
-        setError('');
-
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:1313'}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email,
-                    password
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Store token or user data if needed
-                localStorage.setItem('token', data.token || '');
-                localStorage.setItem('user', JSON.stringify(data.user || {}));
-                nav('/');
-            } else {
-                const errorData = await response.json();
-                setError(errorData.message || 'Login failed');
-            }
-        } catch (err) {
-            setError('Network error. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        nav('/');
+      } else {
+        setError(result.message || 'Invalid username or password');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
     return (
         <>
-            <div className="flex flex-col md:flex-row min-h-screen">
+            <div className="flex flex-col md:flex-row min-h-screen bg-black text-white">
                 <div className="flex-1 bg-gray-800 flex items-center justify-center p-8">
-                    <Card className="w-full max-w-md bg-gray-700">
-                    <CardContent className="space-y-6">
-                        <h3 className="text-2xl font-semibold text-center">Sign in</h3>
+                    <Card className="w-full max-w-md bg-gray-700 border-gray-600">
+                    <CardContent className="space-y-6 pt-6">
+                        <h3 className="text-2xl font-semibold text-center text-white">Sign in</h3>
                         {error && (
                             <div className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded">
                                 {error}
@@ -67,6 +60,7 @@ export default function LoginPage() {
                             placeholder="Email" 
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                         />
                         <Input 
                             type="password" 
@@ -78,10 +72,11 @@ export default function LoginPage() {
                                     handleLogin();
                                 }
                             }}
+                            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                         />
                         <Button 
                             size="lg" 
-                            className="w-full" 
+                            className="w-full bg-blue-600 hover:bg-blue-700" 
                             onClick={handleLogin}
                             disabled={isLoading}
                         >
@@ -89,7 +84,7 @@ export default function LoginPage() {
                         </Button>
                         <Button 
                             variant="ghost" 
-                            className="w-full" 
+                            className="w-full text-gray-300 hover:text-white" 
                             onClick={() => nav('/register')}
                         >
                             Don't have an account? Register
@@ -103,7 +98,7 @@ export default function LoginPage() {
                     <p>An AI-driven car park monitoring solution tailored for SMEs — seamlessly integrating Real-Time Occupancy Tracking, Smart Vehicle Analytics, and Automated Visitor Insights. Unlock next-level efficiency by transforming parking spaces into data-powered growth hubs.</p>
                     <Button 
                         variant="outline" 
-                        className="mt-4" 
+                        className="mt-4 bg-transparent border-white text-white hover:bg-white hover:text-black" 
                         onClick={() => nav('/')}
                     >
                         Back to Home

@@ -6,6 +6,8 @@ import LoginPage from './components/Login';
 import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
 import AccountPage from './components/AccountPage';
+import AreaManagement from './components/AreaManagement';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -17,6 +19,14 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/signin" element={<LoginPage />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route 
+                path="/area-management" 
+                element={
+                    <ProtectedRoute>
+                        <AreaManagement />
+                    </ProtectedRoute>
+                } 
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </div>

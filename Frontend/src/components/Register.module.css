@@ -1,0 +1,234 @@
+:root {
+    --black: #5f5f5f;
+    --gold: #E8D767;
+    --blue: #193ED8;
+    --text-light: #F5F5F7;
+    --text-muted: rgba(245, 245, 247, 0.6);
+}
+
+body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--black);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    color: var(--text-light);
+}
+
+.container {
+    background: linear-gradient(135deg, rgba(25, 25, 25, 0.9) 0%, rgba(10, 10, 10, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(245, 245, 247, 0.08);
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    overflow: hidden;
+}
+
+.container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle at 30% 50%,
+        rgba(25, 62, 216, 0.15) 0%,
+        transparent 50%
+    );
+    pointer-events: none;
+}
+
+.container::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    right: -20%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        circle at 100% 80%,
+        rgba(232, 215, 103, 0.1) 0%,
+        transparent 60%
+    );
+    pointer-events: none;
+}
+
+.logo {
+    margin-bottom: 36px;
+    position: relative;
+    z-index: 2;
+}
+
+.logo h1 {
+    color: var(--text-light);
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+.logo p {
+    color: var(--text-muted);
+    margin: 8px 0 0;
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+}
+
+h2 {
+    color: var(--text-light);
+    margin-bottom: 15px;
+    margin-top: 60px;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: 0.2px;
+    position: relative;
+    z-index: 2;
+}
+
+.form-group {
+    margin-bottom: 28px;
+    text-align: left;
+    position: relative;
+    z-index: 2;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.2px;
+}
+
+input {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(245, 245, 247, 0.05);
+    border: 1px solid rgba(245, 245, 247, 0.1);
+    border-radius: 12px;
+    box-sizing: border-box;
+    font-size: 14px;
+    color: var(--text-light);
+    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+input:hover {
+    background: rgba(245, 245, 247, 0.08);
+    border-color: rgba(245, 245, 247, 0.15);
+}
+
+input:focus {
+    outline: none;
+    background: rgba(245, 245, 247, 0.1);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 4px rgba(232, 215, 103, 0.15);
+}
+
+input::placeholder {
+    color: rgba(245, 245, 247, 0.4);
+    font-weight: 300;
+    font-size: 13px;
+}
+
+button {
+    background: linear-gradient(to right, var(--blue), var(--blue));
+    color: var(--text-light);
+    border: none;
+    padding: 12px;
+    width: 80%;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    box-shadow: 
+        0 4px 20px rgba(25, 62, 216, 0.3),
+        inset 0 0 0 1px rgba(245, 245, 247, 0.1);
+}
+
+button:hover {
+    background: linear-gradient(to right, #1a45e8, #1a45e8);
+    box-shadow: 
+        0 8px 24px rgba(25, 62, 216, 0.4),
+        inset 0 0 0 1px rgba(245, 245, 247, 0.15);
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+    background: linear-gradient(to right, #1538c0, #1538c0);
+}
+
+button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        rgba(232, 215, 103, 0) 0%,
+        rgba(232, 215, 103, 0.1) 50%,
+        rgba(232, 215, 103, 0) 100%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+button:hover::after {
+    transform: translateX(100%);
+}
+
+.page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+/* Split screen container */
+.split-container {
+    display: flex;
+    height: 600px;
+    width: 900px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Left panel for MoniPark branding */
+.left-panel {
+    background: linear-gradient(to bottom right, #193ED8 -50%, #000000 45%, #E8D767 250%);
+    text-align: center;
+    padding: 60px;
+    color: var(--text-light);
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Right panel for the form */
+.right-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+

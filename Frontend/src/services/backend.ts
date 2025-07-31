@@ -1,6 +1,6 @@
 // @ts-check
 
-import { deleteApi, fetchApi, postApi, putApi } from "./api";
+import { deleteApi, fetchApi, postApi, putApi, fetchAuthApi, postAuthApi, putAuthApi, deleteAuthApi } from "./api";
 
 // Type definitions for your application
 export interface User {
@@ -430,11 +430,22 @@ export async function getStatistics(startDate?: Date, endDate?: Date): Promise<S
 }
 
 /**
+ * @returns {Promise<{ message: string; accessToken: string } | null>}
+ */
+export async function refreshToken(): Promise<{ message: string; accessToken: string } | null> {
+  const response = await postApi("auth/refresh");
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+/**
  * @param {string} username
  * @param {string} password
- * @returns {Promise<{ user: User; token: string } | null>}
+ * @returns {Promise<{ message: string; accessToken: string } | null>}
  */
-export async function login(username: string, password: string): Promise<{ user: User; token: string } | null> {
+export async function login(username: string, password: string): Promise<{ message: string; accessToken: string } | null> {
   const response = await postApi("auth/login", {}, JSON.stringify({ username, password }));
   if (!response.ok) {
     return null;
@@ -446,9 +457,9 @@ export async function login(username: string, password: string): Promise<{ user:
  * @param {string} username
  * @param {string} email
  * @param {string} password
- * @returns {Promise<{ user: User; token: string } | null>}
+ * @returns {Promise<{ message: string; accessToken: string } | null>}
  */
-export async function register(username: string, email: string, password: string): Promise<{ user: User; token: string } | null> {
+export async function register(username: string, email: string, password: string): Promise<{ message: string; accessToken: string } | null> {
   const response = await postApi("auth/register", {}, JSON.stringify({ username, email, password }));
   if (!response.ok) {
     return null;
@@ -468,7 +479,7 @@ export async function logout(): Promise<boolean> {
  * @returns {Promise<User | null>}
  */
 export async function getCurrentUser(): Promise<User | null> {
-  const response = await fetchApi("auth/me");
+  const response = await fetchAuthApi("auth/me");
   if (!response.ok) {
     return null;
   }
