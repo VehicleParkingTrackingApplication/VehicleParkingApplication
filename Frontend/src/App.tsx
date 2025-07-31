@@ -5,6 +5,7 @@ import RegisterPage from './components/Register';
 import LoginPage from './components/Login';
 import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
+import AccountPage from './components/AccountPage';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/signin" element={<LoginPage />} />
+            <Route path="/account" element={<AccountPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </div>
