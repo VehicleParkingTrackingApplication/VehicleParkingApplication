@@ -7,6 +7,8 @@ import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
 import AreaManagement from './components/AreaManagement';
 
+import ViewAllVehicles from './components/ViewAllVehicles';
+
 export default function App() {
   return (
     <div>
@@ -18,6 +20,7 @@ export default function App() {
             <Route path="/signin" element={<LoginPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
             <Route path="/area-management" element={<AreaManagement />} />
+            <Route path="/area/:areaId/vehicles" element={<ViewAllVehicles />} />
         </Routes>
     </div>
   );
