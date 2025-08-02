@@ -108,6 +108,81 @@ export async function deleteApi(path: string, query?: URLSearchParams | Record<s
   return response;
 }
 
+// Authenticated API functions that automatically handle token refresh
+import { authInterceptor } from './authInterceptor';
+
+/**
+ * @param {string} path
+ * @param {URLSearchParams | Record<string, any>=} query
+ * @returns {Promise<Response>}
+ */
+export async function fetchAuthApi(path: string, query?: URLSearchParams | Record<string, any>): Promise<Response> {
+  const url = getApiUrlInternal(path, query);
+  
+  return authInterceptor.makeAuthenticatedRequest(url.toString(), {
+    credentials: env() === "development" ? "include" : "same-origin",
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+}
+
+/**
+ * @param {string} path
+ * @param {URLSearchParams | Record<string, any>=} query
+ * @param {BodyInit=} body
+ * @returns {Promise<Response>}
+ */
+export async function postAuthApi(path: string, query?: URLSearchParams | Record<string, any>, body?: BodyInit): Promise<Response> {
+  const url = getApiUrlInternal(path, query);
+  
+  return authInterceptor.makeAuthenticatedRequest(url.toString(), {
+    credentials: env() === "development" ? "include" : "same-origin",
+    method: "POST",
+    redirect: "manual",
+    body: body,
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+}
+
+/**
+ * @param {string} path
+ * @param {URLSearchParams | Record<string, any>=} query
+ * @param {BodyInit=} body
+ * @returns {Promise<Response>}
+ */
+export async function putAuthApi(path: string, query?: URLSearchParams | Record<string, any>, body?: BodyInit): Promise<Response> {
+  const url = getApiUrlInternal(path, query);
+  
+  return authInterceptor.makeAuthenticatedRequest(url.toString(), {
+    credentials: env() === "development" ? "include" : "same-origin",
+    method: "PUT",
+    body: body,
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+}
+
+/**
+ * @param {string} path
+ * @param {URLSearchParams | Record<string, any>=} query
+ * @returns {Promise<Response>}
+ */
+export async function deleteAuthApi(path: string, query?: URLSearchParams | Record<string, any>): Promise<Response> {
+  const url = getApiUrlInternal(path, query);
+  
+  return authInterceptor.makeAuthenticatedRequest(url.toString(), {
+    credentials: env() === "development" ? "include" : "same-origin",
+    method: "DELETE",
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+}
+
 /**
  * @param {string} path
  * @param {URLSearchParams | Record<string, any>=} query

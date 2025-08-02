@@ -5,7 +5,9 @@ import RegisterPage from './components/Register';
 import LoginPage from './components/Login';
 import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
+import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import ViewAllVehicles from './components/ViewAllVehicles';
 
@@ -18,9 +20,19 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/signin" element={<LoginPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route 
+                path="/area-management" 
+                element={
+                    <ProtectedRoute>
+                        <AreaManagement />
+                    </ProtectedRoute>
+                } 
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
             <Route path="/area-management" element={<AreaManagement />} />
             <Route path="/area/:areaId/vehicles" element={<ViewAllVehicles />} />
+
         </Routes>
     </div>
   );
