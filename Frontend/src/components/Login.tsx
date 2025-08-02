@@ -27,10 +27,11 @@ export default function LoginPage() {
       
       if (result && result.accessToken) {
         // In a real app, you would store the token securely
-        localStorage.setItem('accessToken', result.accessToken);
+        localStorage.setItem('token', result.accessToken);
         if(result.refreshToken) {
           localStorage.setItem('refreshToken', result.refreshToken);
         }
+        window.dispatchEvent(new CustomEvent('authChange'));
         nav('/');
       } else {
         setError(result.message || 'Invalid username or password');

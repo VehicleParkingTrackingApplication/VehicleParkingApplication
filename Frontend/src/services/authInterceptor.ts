@@ -142,6 +142,8 @@ class AuthInterceptor {
         } finally {
             // Always clear access token from localStorage
             localStorage.removeItem('token');
+            // Dispatch custom event to notify components of auth state change
+            window.dispatchEvent(new CustomEvent('authChange'));
         }
     }
 }
