@@ -39,6 +39,8 @@ router.post('/area/input-area', requireAuth, area.inputParkingArea);
 // POST /api/parking/area/input-ftpserver
 router.post('/area/input-ftpserver', requireAuth, area.inputFtpServer);
 
+// PUT /api/parking/area/update-ftpserver
+
 // POST /api/parking/area/input-vehicle
 // router.post('/area/input-vehicle', area.inputVehicle);
 

@@ -12,7 +12,7 @@ import cors from 'cors';
 import serverless from 'serverless-http';
 
 // Import scheduler service
-// import { initializeScheduler } from './src/app/services/schedulerService.js';
+import { ScheduledFtpService } from './src/app/services/scheduledFtpService.js';
 
 dotenv.config();
 
@@ -27,7 +27,8 @@ dbConnect();
 
 // ============= INITIALIZE SCHEDULER SERVICE =============
 // Initialize scheduler if not in test environment
-// initializeScheduler();
+const scheduledFtpService = new ScheduledFtpService();
+scheduledFtpService.startScheduledProcessing();
 // ============= END SCHEDULER INITIALIZATION =============
 
 // CORS configuration for development
