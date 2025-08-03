@@ -70,7 +70,8 @@ class authController {
         // Clear the refresh token cookie
         res.clearCookie('refreshToken', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            // secure: process.env.NODE_ENV === 'production',
+            secure: true,
             sameSite: 'Strict'
         });
         

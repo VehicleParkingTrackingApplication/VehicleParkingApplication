@@ -166,17 +166,6 @@ export default function AreaManagement() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await authInterceptor.logout();
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Even if logout API fails, still redirect to login
-      window.location.href = '/login';
-    }
-  };
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1); // Reset to first page when searching
@@ -216,13 +205,6 @@ export default function AreaManagement() {
         <header className="text-center">
           <h1 className="text-4xl font-bold tracking-tight">MoniPark</h1>
           <p className="text-sm text-muted mt-2">"From Parked Cars to Smart Starts"</p>
-          <Button 
-            onClick={handleLogout}
-            className="mt-4"
-            variant="outline"
-          >
-            Logout
-          </Button>
         </header>
 
         {error && (

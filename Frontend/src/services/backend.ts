@@ -471,7 +471,11 @@ export async function register(username: string, email: string, password: string
  * @returns {Promise<boolean>}
  */
 export async function logout(): Promise<boolean> {
+  console.log('=== Backend logout function called ===');
+  console.log('Making POST request to /api/auth/logout');
   const response = await postApi("auth/logout");
+  console.log('Logout response status:', response.status);
+  console.log('Logout response ok:', response.ok);
   return response.ok;
 }
 
