@@ -146,7 +146,8 @@ class AuthInterceptor {
             console.log('Clearing access token from localStorage...');
             // Always clear access token from localStorage
             localStorage.removeItem('token');
-            console.log('Logout completed');
+            // Dispatch custom event to notify components of auth state change
+            window.dispatchEvent(new CustomEvent('authChange'));
         }
     }
 }
