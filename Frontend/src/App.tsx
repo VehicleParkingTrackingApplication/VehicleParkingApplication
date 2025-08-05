@@ -9,7 +9,8 @@ import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 
-import ViewAllVehicles from './components/ViewAllVehicles';
+import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
+import ViewAllRecords from './components/ViewAllRecords';
 
 export default function App() {
   return (
@@ -32,7 +33,8 @@ export default function App() {
             />
             <Route path="*" element={<Navigate to="/" replace />} />
             <Route path="/area-management" element={<AreaManagement />} />
-            <Route path="/area/:areaId/vehicles" element={<ViewAllVehicles />} />
+            <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
+            <Route path="/area/:areaId/records" element={<ViewAllRecords />} />
 
         </Routes>
     </div>
