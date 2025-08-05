@@ -9,6 +9,9 @@ import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
+import ViewAllRecords from './components/ViewAllRecords';
+
 export default function App() {
   return (
     <div>
@@ -18,6 +21,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/signin" element={<LoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/account" element={<AccountPage />} />
             <Route 
                 path="/area-management" 
@@ -28,6 +32,10 @@ export default function App() {
                 } 
             />
             <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/area-management" element={<AreaManagement />} />
+            <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
+            <Route path="/area/:areaId/records" element={<ViewAllRecords />} />
+
         </Routes>
     </div>
   );

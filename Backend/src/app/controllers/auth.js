@@ -15,7 +15,8 @@ class authController {
             });
             res.json({
                 message: 'Login successful',
-                accessToken: result.accessToken
+                accessToken: result.accessToken,
+                role: result.role
             });        
         } else {
             return res.status(result.status).json({ message: result.message });
@@ -70,7 +71,8 @@ class authController {
         // Clear the refresh token cookie
         res.clearCookie('refreshToken', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            // secure: process.env.NODE_ENV === 'production',
+            secure: true,
             sameSite: 'Strict'
         });
         

@@ -134,12 +134,16 @@ class AuthInterceptor {
 
     // Helper method to logout
     async logout(): Promise<void> {
+        console.log('=== Logout function called ===');
         try {
+            console.log('Calling backend logout endpoint...');
             // Call backend logout endpoint to clear refresh token cookie
-            await logoutApi();
+            const result = await logoutApi();
+            console.log('Backend logout response:', result);
         } catch (error) {
             console.error('Logout API call failed:', error);
         } finally {
+            console.log('Clearing access token from localStorage...');
             // Always clear access token from localStorage
             localStorage.removeItem('token');
             // Dispatch custom event to notify components of auth state change

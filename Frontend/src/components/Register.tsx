@@ -8,9 +8,8 @@ import { register } from '../services/backend';
 
 export default function RegisterPage() {
     const nav = useNavigate();
-    const [name, setName] = useState('');
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -18,7 +17,7 @@ export default function RegisterPage() {
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (!name || !email || !password || !phone) {
+        if (!username || !email || !password) {
           setError('Please fill in all fields');
           return;
         }
@@ -27,16 +26,13 @@ export default function RegisterPage() {
         setError('');
     
         try {
-          const result = await register(name, email, password);
+          const result = await register(username, email, password);
           
           if (result && result.accessToken) {
-            localStorage.setItem('accessToken', result.accessToken);
-            if(result.refreshToken) {
-              localStorage.setItem('refreshToken', result.refreshToken);
-            }
+            localStorage.setItem('token', result.accessToken);
             nav('/');
           } else {
-            setError(result.message || 'Registration failed. Please try again.');
+            setError(result?.message || 'Registration failed. Please try again.');
           }
         } catch (err: any) {
           console.error(err);
@@ -72,9 +68,9 @@ export default function RegisterPage() {
                             </div>
                         )}
                         <Input 
-                            placeholder="Name" 
-                            value={name} 
-                            onChange={(e) => setName(e.target.value)} 
+                            placeholder="Username" 
+                            value={username} 
+                            onChange={(e) => setUsername(e.target.value)} 
                             className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                         />
                         <Input 
@@ -82,13 +78,6 @@ export default function RegisterPage() {
                             placeholder="Email" 
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)} 
-                            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                        />
-                        <Input 
-                            type="tel" 
-                            placeholder="Phone number" 
-                            value={phone} 
-                            onChange={(e) => setPhone(e.target.value)} 
                             className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                         />
                         <Input 

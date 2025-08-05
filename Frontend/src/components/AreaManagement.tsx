@@ -1,92 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { authInterceptor } from '../services/authInterceptor';
-import { fetchAuthApi } from '../services/api';
+import { Plus, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface Area {
-  _id: string;
-  businessId: string;
-  name: string;
-  capacity: number;
-  location: string;
-  policy: string;
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-  ftpServer: string;
-  savedTimestamp: string;
-}
+import {
+  getAllParkingAreas,
+  getRecentRecords,
+} from '@/services/parking';
 
 interface ParkingRecord {
-  _id: string;
-  vehicleId: string;
-  areaId: string;
-  entryTime: string;
-  exitTime?: string;
-  duration?: number;
-  fee?: number;
-  createdAt: string;
-  updatedAt: string;
+  plate: string;
+  action: 'ENTRY' | 'EXIT';
+  time: string;
+  date: string;
 }
 
-interface AreaResponse {
-  success: boolean;
-  data: Area[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+
+interface ParkingArea {
+  _id: string;
+  name: string;
+  records: ParkingRecord[];
 }
 
 export default function AreaManagement() {
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [records, setRecords] = useState<ParkingRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  
-  // Pagination and search state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [limit] = useState(5);
-  const [search, setSearch] = useState('');
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalAreas, setTotalAreas] = useState(0);
+  const [areas, setAreas] = useState<ParkingArea[]>([]);
 
-  // Verify authentication first
   useEffect(() => {
-    const verifyAuth = async () => {
+    const fetchData = async () => {
       try {
-        // Check if user has a token
-        if (!authInterceptor.isAuthenticated()) {
-          console.log('No token found, redirecting to login');
-          setIsAuthenticated(false);
-          return;
+        const response = await getAllParkingAreas();
+        console.log('✅ API returned:', response);
+        // Check if the response is successful and has data
+        if (response.success && response.data) {
+          const enriched = await Promise.all(
+            response.data.map(async (area: ParkingArea) => {
+              try {
+                console.log('✅ Area:', area._id);
+                const recordsResponse = await getRecentRecords(area._id);
+                console.log('✅ Records response:', recordsResponse);
+                // Extract the data array from the response
+                const records = recordsResponse.success && recordsResponse.data ? recordsResponse.data : [];
+                return { ...area, records };
+              } catch (error) {
+                console.error(`Error fetching records for area ${area._id}:`, error);
+                return { ...area, records: [] };
+              }
+            })
+          );
+          setAreas(enriched);
+        } else {
+          console.error('No areas found or API error:', response);
+          setAreas([]);
         }
 
-        console.log('Token found, proceeding with data fetch');
-        setIsAuthenticated(true);
-        
-        // Skip /auth/me verification since endpoint doesn't exist
-        // Just assume token is valid if it exists
-        
       } catch (error) {
-        console.error('Auth verification failed:', error);
-        setIsAuthenticated(false);
+        console.error('Error fetching areas:', error);
       }
     };
-
-    verifyAuth();
+    fetchData();
+    console.log('✅ Areas:', areas);
   }, []);
 
   // Fetch areas data when authenticated

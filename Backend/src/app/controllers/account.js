@@ -2,16 +2,52 @@ import User from '../models/User.js';
 import Business from '../models/Business.js';
 
 class accountController {
-    index(req, res) {
-        return res.json({message: "Hello account"});
-        // const user = req.session.checkUsername;
-        // if (!user) {
-        //     return res.redirect('/account/login');
-        // }
-        // return res.render('account', { 
-        //     checkUsername: req.session.checkUsername,
-        //     user: user
-        // });
+    async index(req, res) {
+        try {
+            // Get user ID from the authenticated request
+            const userId = req.user.id;
+            
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not authenticated'
+                });
+            }
+
+            // Fetch user data from database, excluding password
+            const user = await User.findById(userId).select('-password');
+            
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            // Return user account data
+            res.json({
+                success: true,
+                message: 'Account data retrieved successfully',
+                data: {
+                    _id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role,
+                    businessId: user.businessId,
+                    createAt: user.createAt,
+                    updateAt: user.updateAt
+                }
+            });
+        } catch (error) {
+            console.error('Error fetching account data:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: error.message
+            });
+        }
     }
 
     

@@ -34,7 +34,7 @@ export default function LoginPage() {
         window.dispatchEvent(new CustomEvent('authChange'));
         nav('/');
       } else {
-        setError(result.message || 'Invalid username or password');
+        setError(result?.message || 'Invalid username or password');
       }
     } catch (err: any) {
       console.error(err);

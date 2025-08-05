@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
+import { authInterceptor } from '../services/authInterceptor';
 
 interface AccountPopupProps {
   onClose: () => void;
@@ -15,11 +16,18 @@ export const AccountPopup: React.FC<AccountPopupProps> = ({ onClose }) => {
     onClose();
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/signin');
-    onClose();
+  const handleLogout = async () => {
+    try {
+      console.log('AccountPopup: Logout button clicked');
+      await authInterceptor.logout();
+      navigate('/signin');
+      onClose();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if logout fails, still redirect to signin
+      navigate('/signin');
+      onClose();
+    }
   };
 
   return (
