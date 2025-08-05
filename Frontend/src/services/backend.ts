@@ -10,6 +10,8 @@ export interface User {
   role: 'admin' | 'user' | 'moderator';
   createdAt: string;
   updatedAt: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface Area {
@@ -484,4 +486,4 @@ export async function getCurrentUser(): Promise<User | null> {
     return null;
   }
   return await response.json();
-} 
+}

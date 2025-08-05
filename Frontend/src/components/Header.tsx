@@ -4,15 +4,31 @@ import { Bell } from 'lucide-react';
 import { Button } from './ui/button';
 import { AccountPopup } from './AccountPopup';
 import { authInterceptor } from '../services/authInterceptor';
+import { getCurrentUser } from '../services/backend';
 
 export const Header: React.FC = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(authInterceptor.isAuthenticated());
+  const [userRole, setUserRole] = useState<string>('Admin');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleAuthChange = () => {
-      setIsAuthenticated(authInterceptor.isAuthenticated());
+    const handleAuthChange = async () => {
+      const authenticated = authInterceptor.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      if (authenticated) {
+        try {
+          const user = await getCurrentUser();
+          if (user && user.role) {
+            setUserRole(user.role.charAt(0).toUpperCase() + user.role.slice(1));
+          } else {
+            setUserRole('Admin');
+          }
+        } catch (error) {
+          console.error('Failed to fetch user role:', error);
+          setUserRole('Admin');
+        }
+      }
     };
 
     window.addEventListener('authChange', handleAuthChange);
@@ -39,9 +55,8 @@ export const Header: React.FC = () => {
     <header className="bg-black text-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/assets/logo.png" alt="MoniPark" className="w-10 h-10" />
-            <span className="text-xl font-bold">MoniPark</span>
+          <Link to="/" className="flex items-center">
+            <img src="/assets/Logo.png" alt="MoniPark" className="w-20 h-20 object-contain" />
           </Link>
 
           {isAuthenticated ? (
@@ -55,6 +70,7 @@ export const Header: React.FC = () => {
               </nav>
 
               <div className="hidden lg:flex items-center space-x-4">
+                <span className="text-gray-300 font-semibold">{userRole}</span>
                 <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white">
                   <Bell className="h-6 w-6" />
                 </Button>

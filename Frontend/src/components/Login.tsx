@@ -8,14 +8,14 @@ import { login } from '../services/backend';
 
 export default function LoginPage() {
   const nav = useNavigate();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Please enter both email and password');
+    if (!username || !password) {
+      setError('Please enter both username and password');
       return;
     }
 
@@ -23,7 +23,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await login(email, password);
+      const result = await login(username, password);
       
       if (result && result.accessToken) {
         // In a real app, you would store the token securely
@@ -57,10 +57,10 @@ export default function LoginPage() {
                             </div>
                         )}
                         <Input 
-                            type="email" 
-                            placeholder="Email" 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            type="text" 
+                            placeholder="Username" 
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
                             className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                         />
                         <Input 
