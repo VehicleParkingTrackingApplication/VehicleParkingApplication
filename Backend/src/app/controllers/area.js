@@ -2,13 +2,14 @@ import Area from '../models/Area.js';
 import FtpServer from '../models/FtpServer.js';
 
 class parkingAreaController {
+    // not use this function
     async index(req, res) {
         const parkingArea = await Area.find({});
         return res.json(parkingArea);
     }
 
     // get all parking areas of a business
-    async getParkingAreaByBusiness(req, res) {
+    async getAreaByBusiness(req, res) {
         try {
             const businessId = req.user.businessId;
             if (!businessId) {
@@ -69,51 +70,6 @@ class parkingAreaController {
         }
     }
 
-    // POST: add new parking area, input the parking area information 
-    // async ParkingAreaPost(req, res) {
-    //     try{}
-    // }
-
-
-    // get all vehicles in a specific parking area
-    async getVehiclesByParkingArea(req, res) {
-        try {
-            const { parkingAreaId } = req.params;
-            if (!parkingAreaId) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Parking area ID is required'
-                });
-            }
-            
-            const parkingAreaExists = await Area.findById(parkingAreaId);
-            if (!parkingAreaExists) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Parking area not found'
-                });
-            }
-            // get all vehicles in the parking area
-            const vehicles = await parkingVehicleSchema.find({
-                parkingAreaId: parkingAreaId
-            });
-
-            return res.status(200).json({ 
-                success: true,
-                parkingArea: parkingAreaExists,
-                vehicles
-            });
-            
-        } catch (error) {
-            console.error("Error in getVehiclesByParkingArea:", error);
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching vehicles',
-                error: error.message
-            });
-        }
-    }
-
     // input parking area for business
     async inputParkingArea(req, res) {
         try {
@@ -161,6 +117,7 @@ class parkingAreaController {
         }
     }
 
+    // input the info of ftp server for a specific area
     async inputFtpServer(req,res) {
         try {
             const {areaId, host, port, user, password, secure, secureOptions } = req.body;
@@ -210,25 +167,6 @@ class parkingAreaController {
             });
         }
     }
-    // get all parking areas of all business (use to check the database)
-    // async getParkingArea(req, res) {
-    //     try {
-    //         const parkingAreas = await Area.find();
-    //         return res.status(200).json({
-    //             success: true,
-    //             data: parkingAreas
-    //         });
-    //     } catch (error) {
-    //         console.error("Error in getParkingArea:", error);
-    //         return res.status(500).json({ 
-    //             success: false,
-    //             message: 'Error fetching parking areas', 
-    //             error: error.message 
-    //         });
-    //     }
-    // }
-
-
 }
 
 export default new parkingAreaController();

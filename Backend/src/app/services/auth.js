@@ -89,7 +89,8 @@ export const handleLogin = async (req, res) => {
         status: 200, 
         message: 'Login successful',
         accessToken,
-        refreshToken
+        refreshToken,
+        role: currentUser.role
     };
 }
 

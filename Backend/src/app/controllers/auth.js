@@ -15,7 +15,8 @@ class authController {
             });
             res.json({
                 message: 'Login successful',
-                accessToken: result.accessToken
+                accessToken: result.accessToken,
+                role: result.role
             });        
         } else {
             return res.status(result.status).json({ message: result.message });

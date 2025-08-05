@@ -7,6 +7,10 @@ const Vehicle = new Schema({
         ref: 'areas',
         required: true
     },
+    datetime:{
+        type: Date,
+        default: null
+    },
     plateNumber: {
         type: String,
         required: true
@@ -21,10 +25,7 @@ const Vehicle = new Schema({
         required: true,
         default: "image.jpg"
     },
-    datetime:{
-        type: Date,
-        default: null
-    }
+    status: { type: String, required: true}
 });
 
 export default moongoose.model('vehicles', Vehicle)
