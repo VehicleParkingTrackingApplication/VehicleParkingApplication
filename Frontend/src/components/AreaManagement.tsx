@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Plus, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import {
   getAllParkingAreas,
   getRecentRecords,
-  updateFtpServer,
 } from '@/services/parking';
 
 interface ParkingRecord {
@@ -18,72 +15,53 @@ interface ParkingRecord {
   date: string;
 }
 
-interface FtpServer {
-  protocol: string;
-  encryption: string;
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-}
 
 interface ParkingArea {
-  id: string;
+  _id: string;
   name: string;
-  ftp?: FtpServer;
   records: ParkingRecord[];
 }
 
 export default function AreaManagement() {
   const [areas, setAreas] = useState<ParkingArea[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const allAreas = await getAllParkingAreas();
-         console.log('✅ API returned:', allAreas);
-        const enriched = await Promise.all(
-          allAreas.map(async (area: ParkingArea) => {
-            const records = await getRecentRecords(area.id);
-            return { ...area, records };
-          })
-        );
-        setAreas(enriched);
+        const response = await getAllParkingAreas();
+        console.log('✅ API returned:', response);
+        // Check if the response is successful and has data
+        if (response.success && response.data) {
+          const enriched = await Promise.all(
+            response.data.map(async (area: ParkingArea) => {
+              try {
+                console.log('✅ Area:', area._id);
+                const recordsResponse = await getRecentRecords(area._id);
+                console.log('✅ Records response:', recordsResponse);
+                // Extract the data array from the response
+                const records = recordsResponse.success && recordsResponse.data ? recordsResponse.data : [];
+                return { ...area, records };
+              } catch (error) {
+                console.error(`Error fetching records for area ${area._id}:`, error);
+                return { ...area, records: [] };
+              }
+            })
+          );
+          setAreas(enriched);
+        } else {
+          console.error('No areas found or API error:', response);
+          setAreas([]);
+        }
+
       } catch (error) {
         console.error('Error fetching areas:', error);
       }
     };
     fetchData();
+    console.log('✅ Areas:', areas);
   }, []);
 
-  const handleOpenFtpModal = (areaId: string) => {
-    setSelectedAreaId(areaId);
-    setIsModalOpen(true);
-  };
-
   const navigate = useNavigate();
-
-
-  const handleSaveFtp = async (ftp: FtpServer) => {
-    if (!selectedAreaId) return;
-    try {
-      await updateFtpServer(selectedAreaId, ftp);
-      const updatedRecords = await getRecentRecords(selectedAreaId);
-      setAreas((prev) =>
-        prev.map((area) =>
-          area.id === selectedAreaId
-            ? { ...area, ftp, records: updatedRecords }
-            : area
-        )
-      );
-    } catch (err) {
-      console.error('Failed to update FTP server:', err);
-    }
-    setIsModalOpen(false);
-    setSelectedAreaId(null);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black to-neutral-900 text-white p-8">
@@ -100,18 +78,14 @@ export default function AreaManagement() {
 
         {/* Parking Area Cards */}
         {areas.map((area) => (
-          <div key={area.id} className="bg-neutral-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+          <div key={area._id} className="bg-neutral-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <MapPin size={18} />
                 <h2 className="text-lg font-semibold">{area.name}</h2>
               </div>
 
-              {area.ftp && (
-                <p className="text-sm text-blue-300 mb-2">
-                  FTP: {area.ftp.protocol}://{area.ftp.host}:{area.ftp.port}
-                </p>
-              )}
+
 
               <table className="w-full text-sm text-left mt-2 mb-4 border border-gray-700 rounded-md overflow-hidden">
                 <thead>
@@ -123,7 +97,7 @@ export default function AreaManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {area.records?.slice(0, 10).map((record, idx) => (
+                  {Array.isArray(area.records) && area.records.slice(0, 10).map((record, idx) => (
                     <tr key={idx} className="border-t border-gray-700">
                       <td className="p-2">{record.plate}</td>
                       <td className="p-2">{record.action}</td>
@@ -139,63 +113,27 @@ export default function AreaManagement() {
               <Button
                 variant="secondary"
                 className="w-full"
-                onClick={() => console.log(`View all records for ${area.name}`)}
+                onClick={() => navigate(`/area/${area._id}/records`, { 
+                  state: { areaName: area.name } 
+                })}
               >
                 View All Records
               </Button>
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => navigate(`/area/${area.id}/vehicles`)}
+                onClick={() => navigate(`/area/${area._id}/vehicles`, { 
+                  state: { areaName: area.name } 
+                })}
               >
                 View Existing Cars
-              </Button>
-              <Button variant="ghost" onClick={() => handleOpenFtpModal(area.id)}>
-                Set FTP
               </Button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* FTP Configuration Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="bg-neutral-900 text-white border border-gray-700">
-          <DialogHeader>
-            <DialogTitle>Configure FTP Server</DialogTitle>
-          </DialogHeader>
-          <form
-            className="space-y-4 mt-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const form = e.currentTarget;
-              const formData = new FormData(form);
-              const ftp: FtpServer = {
-                protocol: formData.get('protocol') as string,
-                encryption: formData.get('encryption') as string,
-                host: formData.get('host') as string,
-                port: parseInt(formData.get('port') as string),
-                user: formData.get('user') as string,
-                password: formData.get('password') as string,
-              };
-              handleSaveFtp(ftp);
-            }}
-          >
-            <Input name="protocol" placeholder="Protocol" defaultValue="FTP" required />
-            <Input name="encryption" placeholder="Encryption" defaultValue="TLS/SSL Explicit" required />
-            <Input name="host" placeholder="Host" defaultValue="acudcs001.tcsinstruments.com.au" required />
-            <Input name="port" placeholder="Port" type="number" defaultValue={21} required />
-            <Input name="user" placeholder="User" defaultValue="UoWTeamUsr" required />
-            <Input name="password" placeholder="Password" type="password" defaultValue="U0WT3@mAcc355!" required />
-            <div className="flex justify-end gap-2 mt-4">
-              <Button type="submit">Save</Button>
-              <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }
