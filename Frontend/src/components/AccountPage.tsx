@@ -3,13 +3,13 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { fetchApi, putApi } from '../services/api';
+import { getCurrentUser } from '../services/backend';
+import { putApi } from '../services/api';
 
 export default function AccountPage() {
     const [user, setUser] = useState({
         firstName: '',
         lastName: '',
-        phoneNumber: '',
         email: '',
         username: ''
     });
@@ -23,20 +23,37 @@ export default function AccountPage() {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                const response = await fetchApi('/account/details'); // Example endpoint
-                if (response.ok) {
-                    const data = await response.json();
+                console.log('Fetching user data...');
+                
+                // Check if user is authenticated
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    setError('You are not logged in. Please log in to view your account details.');
+                    setIsLoading(false);
+                    return;
+                }
+                
+                const data = await getCurrentUser();
+                console.log('User data received:', data);
+                
+                if (data) {
                     setUser({
                         firstName: data.firstName || '',
                         lastName: data.lastName || '',
-                        phoneNumber: data.phoneNumber || '',
+                        email: data.email || '',
+                        username: data.username || ''
+                    });
+                    console.log('User state updated:', {
+                        firstName: data.firstName || '',
+                        lastName: data.lastName || '',
                         email: data.email || '',
                         username: data.username || ''
                     });
                 } else {
-                    setError('Failed to fetch user data.');
+                    setError('Failed to fetch user data. Please log in again or check your authentication.');
                 }
             } catch (err) {
+                console.error('Error fetching user data:', err);
                 setError('Network error. Please try again.');
             } finally {
                 setIsLoading(false);
@@ -118,10 +135,6 @@ export default function AccountPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
                                     <Label htmlFor="lastName" className="sm:text-right">Last name:</Label>
                                     <Input id="lastName" value={user.lastName} onChange={handleUserChange} className="sm:col-span-2 bg-gray-700 border-gray-600" />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
-                                    <Label htmlFor="phoneNumber" className="sm:text-right">Phone number:</Label>
-                                    <Input id="phoneNumber" type="tel" value={user.phoneNumber} onChange={handleUserChange} className="sm:col-span-2 bg-gray-700 border-gray-600" />
                                 </div>
                             </div>
 
