@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -11,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { authInterceptor } from '../services/authInterceptor';
 import { fetchAuthApi } from '../services/api';
+import { getExistingVehicles } from '@/services/parking';
 
 interface Area {
   _id: string;
@@ -24,6 +26,7 @@ interface Area {
   __v: number;
   ftpServer: string;
   savedTimestamp: string;
+  currentVehicles?: number;
 }
 
 interface ParkingRecord {
@@ -55,6 +58,7 @@ export default function AreaManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const navigate = useNavigate();
   
   // Pagination and search state
   const [currentPage, setCurrentPage] = useState(1);
@@ -120,14 +124,31 @@ export default function AreaManagement() {
       console.log('Areas response status:', areasResponse.status);
       console.log('Areas response headers:', Object.fromEntries(areasResponse.headers.entries()));
       
-      if (areasResponse.ok) {
-        const areasData: AreaResponse = await areasResponse.json();
-        console.log('Areas data received:', areasData);
-        console.log('Number of areas:', areasData.data?.length || 0);
-        setAreas(areasData.data);
-        setTotalPages(areasData.pagination.totalPages);
-        setTotalAreas(areasData.pagination.total);
-      } else {
+             if (areasResponse.ok) {
+         const areasData: AreaResponse = await areasResponse.json();
+         console.log('Areas data received:', areasData);
+         console.log('Number of areas:', areasData.data?.length || 0);
+         
+         // Fetch current vehicles count for each area
+         const enrichedAreas = await Promise.all(
+           areasData.data.map(async (area: Area) => {
+             try {
+               console.log('✅ Fetching current vehicles for area:', area._id);
+               const vehiclesResponse = await getExistingVehicles(area._id, 1, 1);
+               console.log('✅ Vehicles response:', vehiclesResponse);
+               const currentVehicles = vehiclesResponse.success && vehiclesResponse.pagination ? vehiclesResponse.pagination.total : 0;
+               return { ...area, currentVehicles };
+             } catch (error) {
+               console.error(`Error fetching vehicles for area ${area._id}:`, error);
+               return { ...area, currentVehicles: 0 };
+             }
+           })
+         );
+         
+         setAreas(enrichedAreas);
+         setTotalPages(areasData.pagination.totalPages);
+         setTotalAreas(areasData.pagination.total);
+       } else {
         const errorText = await areasResponse.text();
         console.error('Areas API error:', areasResponse.status, errorText);
         console.error('Error response headers:', Object.fromEntries(areasResponse.headers.entries()));
@@ -166,16 +187,7 @@ export default function AreaManagement() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await authInterceptor.logout();
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Even if logout API fails, still redirect to login
-      window.location.href = '/login';
-    }
-  };
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,6 +196,14 @@ export default function AreaManagement() {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+  };
+
+  // Helper function to get occupancy color
+  const getOccupancyColor = (current: number, capacity: number) => {
+    const percentage = (current / capacity) * 100;
+    if (percentage < 50) return 'bg-blue-600';
+    if (percentage >= 50 && percentage < 75) return 'bg-yellow-600';
+    return 'bg-red-600';
   };
 
   // Show loading while checking authentication
@@ -238,18 +258,11 @@ export default function AreaManagement() {
       
       <div className="relative z-10 px-4 py-10">
         <div className="max-w-5xl mx-auto space-y-10">
-          {/* Header */}
-          <header className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight">MoniPark</h1>
-            <p className="text-sm text-muted mt-2">"From Parked Cars to Smart Starts"</p>
-            <Button 
-              onClick={handleLogout}
-              className="mt-4"
-              variant="outline"
-            >
-              Logout
-            </Button>
-          </header>
+                     {/* Header */}
+           <header className="text-center">
+             <h1 className="text-4xl font-bold tracking-tight">MoniPark</h1>
+             <p className="text-sm text-muted mt-2">"From Parked Cars to Smart Starts"</p>
+           </header>
 
           {error && (
             <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">
@@ -356,12 +369,12 @@ export default function AreaManagement() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {areas.map((area) => (
                   <div key={area._id} className="bg-neutral-700 rounded-lg p-4 border border-neutral-600">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-semibold text-lg text-white">{area.name}</h3>
-                      <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                        {area.capacity} spots
-                      </span>
-                    </div>
+                                         <div className="flex justify-between items-start mb-3">
+                       <h3 className="font-semibold text-lg text-white">{area.name}</h3>
+                       <span className={`${getOccupancyColor(area.currentVehicles || 0, area.capacity)} text-white text-xs px-2 py-1 rounded`}>
+                         {area.currentVehicles || 0}/{area.capacity} spots
+                       </span>
+                     </div>
                     
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start">
@@ -398,26 +411,30 @@ export default function AreaManagement() {
                       </div>
                     </div>
                     
-                    <div className="mt-4 pt-3 border-t border-neutral-600">
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1 text-xs"
-                          onClick={() => console.log('View details for:', area._id)}
-                        >
-                          View Details
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1 text-xs"
-                          onClick={() => console.log('Edit area:', area._id)}
-                        >
-                          Edit
-                        </Button>
-                      </div>
-                    </div>
+                                         <div className="mt-4 pt-3 border-t border-neutral-600">
+                       <div className="flex gap-2">
+                         <Button 
+                           size="sm" 
+                           variant="outline" 
+                           className="flex-1 text-xs"
+                           onClick={() => navigate(`/area/${area._id}/records`, { 
+                             state: { areaName: area.name } 
+                           })}
+                         >
+                           All Records
+                         </Button>
+                         <Button 
+                           size="sm" 
+                           variant="outline" 
+                           className="flex-1 text-xs"
+                           onClick={() => navigate(`/area/${area._id}/vehicles`, { 
+                             state: { areaName: area.name } 
+                           })}
+                         >
+                           Existing Vehicles
+                         </Button>
+                       </div>
+                     </div>
                   </div>
                 ))}
               </div>

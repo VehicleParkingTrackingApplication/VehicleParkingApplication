@@ -1,17 +1,6 @@
 import moongoose from 'mongoose';
 const Schema = moongoose.Schema;
 
-// const Location = new Schema(
-//   {
-//     address: { type: String, required: true },
-//     suburb: { type: String, required: true },
-//     city: { type: String, required: true },
-//     state: { type: String, required: true },
-//     postcode: { type: String, required: true },
-//   },
-//   { _id: false },
-// );
-
 const Area = new Schema(
   {
     businessId: {

@@ -3,7 +3,6 @@
 node_modules/
 preprocessing_data/
 public/
-scripts/
 
 npm-debug.log
 .env
