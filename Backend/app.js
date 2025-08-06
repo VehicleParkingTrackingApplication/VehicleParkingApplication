@@ -27,8 +27,8 @@ dbConnect();
 
 // ============= INITIALIZE SCHEDULER SERVICE =============
 // Initialize scheduler if not in test environment
-// const scheduledFtpService = new ScheduledFtpService();
-// scheduledFtpService.startScheduledProcessing();
+const scheduledFtpService = new ScheduledFtpService();
+scheduledFtpService.startScheduledProcessing();
 // ============= END SCHEDULER INITIALIZATION =============
 
 // CORS configuration for development

@@ -1,5 +1,19 @@
 import { FtpService } from './ftpService.js';
 
+// Helper function to format date in Australian timezone for logging
+function formatAustralianTime(date) {
+    return date.toLocaleString('en-AU', {
+        timeZone: 'Australia/Sydney',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+}
+
 class ScheduledFtpService {
     constructor() {
         this.scheduler = null;
@@ -18,7 +32,7 @@ class ScheduledFtpService {
             return;
         }
 
-        console.log(`[${new Date().toISOString()}] 🚀 Starting scheduled FTP processing every ${intervalMinutes} minutes`);
+        console.log(`[${formatAustralianTime(new Date())}] 🚀 Starting scheduled FTP processing every ${intervalMinutes} minutes`);
 
         // Process immediately on startup
         this.runFtpProcessing();
@@ -45,7 +59,7 @@ class ScheduledFtpService {
     // Run FTP processing for configured areas
     async runFtpProcessing() {
         if (this.isRunning) {
-            console.log(`[${new Date().toISOString()}] ⚠️ FTP processing already running, skipping...`);
+            console.log(`[${formatAustralianTime(new Date())}] ⚠️ FTP processing already running, skipping...`);
             return;
         }
 
@@ -53,14 +67,14 @@ class ScheduledFtpService {
         this.lastRun = new Date();
 
         try {
-            console.log(`[${new Date().toISOString()}] 🔄 Starting scheduled FTP data fetch...`);
+            console.log(`[${formatAustralianTime(new Date())}] 🔄 Starting scheduled FTP data fetch...`);
             
             // Get area IDs from environment or use default
             const areaIds = process.env.FTP_AREA_IDS ? 
                 process.env.FTP_AREA_IDS.split(',') : 
                 ['687dde8379e977f9d2aaf8ef'];
 
-            console.log(`[${new Date().toISOString()}] 📋 Processing areas: ${areaIds.join(', ')}`);
+            console.log(`[${formatAustralianTime(new Date())}] 📋 Processing areas: ${areaIds.join(', ')}`);
 
             // Process all areas
             const results = await FtpService.processAllAreas(areaIds);
@@ -69,19 +83,19 @@ class ScheduledFtpService {
             const validResults = results.filter(r => r !== undefined && r !== null);
             if (validResults.length > 0) {
                 const successCount = validResults.filter(r => r.success).length;
-                console.log(`[${new Date().toISOString()}] ✅ Scheduled FTP processing completed: ${successCount}/${validResults.length} areas successful`);
+                console.log(`[${formatAustralianTime(new Date())}] ✅ Scheduled FTP processing completed: ${successCount}/${validResults.length} areas successful`);
                 
                 // Log any errors
                 const errors = validResults.filter(r => !r.success);
                 if (errors.length > 0) {
-                    console.error(`[${new Date().toISOString()}] ❌ Areas with errors:`, errors.map(e => `${e.areaId}: ${e.error}`));
+                    console.error(`[${formatAustralianTime(new Date())}] ❌ Areas with errors:`, errors.map(e => `${e.areaId}: ${e.error}`));
                 }
             } else {
-                console.log(`[${new Date().toISOString()}] ⚠️ No valid results to process`);
+                console.log(`[${formatAustralianTime(new Date())}] ⚠️ No valid results to process`);
             }
 
         } catch (error) {
-            console.error(`[${new Date().toISOString()}] ❌ Error during scheduled FTP processing:`, error);
+            console.error(`[${formatAustralianTime(new Date())}] ❌ Error during scheduled FTP processing:`, error);
         } finally {
             this.isRunning = false;
             this.calculateNextRun(parseInt(process.env.FTP_SCHEDULE_INTERVAL) || 60);
@@ -108,7 +122,7 @@ class ScheduledFtpService {
 
     // Manually trigger processing
     async triggerManualProcessing() {
-        console.log(`[${new Date().toISOString()}] 🔧 Manual FTP processing triggered`);
+        console.log(`[${formatAustralianTime(new Date())}] 🔧 Manual FTP processing triggered`);
         await this.runFtpProcessing();
     }
 }
