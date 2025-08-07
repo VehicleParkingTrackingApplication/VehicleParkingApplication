@@ -18,7 +18,6 @@ const Dashboard: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [records, setRecords] = useState<ParkingRecord[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +28,7 @@ const Dashboard: React.FC = () => {
         setError(null);
 
         // Fetch all data in parallel
-        const [vehiclesData, areasData, recordsData, statsData, usersData] = await Promise.all([
+        const [vehiclesData, areasData, recordsData, statsData] = await Promise.all([
           getVehicles(),
           getAreas(),
           getRecords(),
@@ -41,7 +40,6 @@ const Dashboard: React.FC = () => {
         setAreas(areasData);
         setRecords(recordsData);
         setStatistics(statsData);
-        setUsers(usersData);
       } catch (err) {
         setError('Failed to load dashboard data');
         console.error('Dashboard data fetch error:', err);

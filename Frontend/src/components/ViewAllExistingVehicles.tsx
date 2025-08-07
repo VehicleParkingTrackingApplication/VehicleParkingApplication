@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import {
   Table,
@@ -10,6 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { getExistingVehicles } from '@/services/parking';
+import { useState, useEffect } from 'react';
 
 interface VehicleRecord {
   _id: string;
