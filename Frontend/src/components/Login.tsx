@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/input';
 import { Footer } from './Footer';
 import { login } from '../services/backend';
+import { useState } from 'react';
 
 export default function LoginPage() {
   const nav = useNavigate();
@@ -28,9 +28,6 @@ export default function LoginPage() {
       if (result && result.accessToken) {
         // In a real app, you would store the token securely
         localStorage.setItem('token', result.accessToken);
-        if(result.refreshToken) {
-          localStorage.setItem('refreshToken', result.refreshToken);
-        }
         window.dispatchEvent(new CustomEvent('authChange'));
         nav('/');
       } else {

@@ -1,6 +1,6 @@
 // @ts-check
 
-import { deleteApi, fetchApi, postApi, putApi, fetchAuthApi, postAuthApi, putAuthApi, deleteAuthApi } from "./api";
+import { deleteApi, fetchApi, postApi, putApi, fetchAuthApi } from "./api";
 
 // Type definitions for your application
 export interface User {

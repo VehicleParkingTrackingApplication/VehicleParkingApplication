@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Home, Users, Settings, HelpCircle, FileText, Calendar, BarChart3, Car, ParkingCircle } from 'lucide-react';
+import { ChevronDown, Home, Users, Settings, HelpCircle, FileText, BarChart3, ParkingCircle } from 'lucide-react';
 
 interface MenuItem {
   title: string;
