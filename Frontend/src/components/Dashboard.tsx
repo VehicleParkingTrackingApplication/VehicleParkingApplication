@@ -4,7 +4,6 @@ import {
   getAreas, 
   getRecords, 
   getStatistics, 
-  getUsers,
   type Vehicle,
   type Area,
   type ParkingRecord,
@@ -31,8 +30,7 @@ const Dashboard: React.FC = () => {
           getVehicles(),
           getAreas(),
           getRecords(),
-          getStatistics(),
-          getUsers()
+          getStatistics()
         ]);
 
         setVehicles(vehiclesData);
