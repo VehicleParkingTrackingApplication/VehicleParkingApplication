@@ -4,14 +4,12 @@ import {
   getAreas, 
   getRecords, 
   getStatistics, 
-  getUsers,
   type Vehicle,
   type Area,
   type ParkingRecord,
   type Statistics,
-  type User
 } from '../services/backend';
-import { Car, MapPin, FileText, Users, TrendingUp, AlertCircle } from 'lucide-react';
+import { Car, MapPin, FileText, TrendingUp, AlertCircle } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -32,8 +30,7 @@ const Dashboard: React.FC = () => {
           getVehicles(),
           getAreas(),
           getRecords(),
-          getStatistics(),
-          getUsers()
+          getStatistics()
         ]);
 
         setVehicles(vehiclesData);
