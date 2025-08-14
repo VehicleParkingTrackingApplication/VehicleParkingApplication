@@ -11,6 +11,9 @@ router.get('/', requireAuth, accountController.index)
 // POST /api/account/businessAccount
 router.post('/input-business-account', requireAuth, accountController.inputBusiness);
 
+// PUT /api/account/update-name
+router.put('/update-name', requireAuth, accountController.updateName);
+
 // Body: {email, phonenumber, businessName, location}
 // PUT /api/account/businessAccount
 // router.post('/updateBusinessAccount', (req, res) => {
