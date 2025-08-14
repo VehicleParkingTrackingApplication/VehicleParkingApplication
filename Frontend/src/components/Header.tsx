@@ -62,11 +62,18 @@ export const Header: React.FC = () => {
           {isAuthenticated ? (
             <>
               <nav className="hidden lg:flex items-center space-x-4">
-                <Link to="/attendance" className="text-gray-300 hover:text-white transition-colors">Attendance</Link>
-                <Link to="/parking" className="text-gray-300 hover:text-white transition-colors">Parking</Link>
-                <Link to="/cup" className="text-gray-300 hover:text-white transition-colors">CUP</Link>
-                <Link to="/area-management" className="text-gray-300 hover:text-white transition-colors">Area Management</Link>
-                <Link to="/analytics" className="text-gray-300 hover:text-white transition-colors">Analytics</Link>
+                {userRole === 'Admin' ? (
+                  <>
+                    <Link to="/area-management" className="text-gray-300 hover:text-white transition-colors">Area Management</Link>
+                    <Link to="/staff-management" className="text-gray-300 hover:text-white transition-colors">Staff Management</Link>
+                    <Link to="/visualization-dashboard/" className="text-gray-300 hover:text-white transition-colors">Visualization Dashboard</Link>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/area-management" className="text-gray-300 hover:text-white transition-colors">Area Management</Link>
+                    <Link to="/visualization-dashboard/" className="text-gray-300 hover:text-white transition-colors">Visualization Dashboard</Link>
+                  </>
+                )}
               </nav>
 
               <div className="hidden lg:flex items-center space-x-4">
