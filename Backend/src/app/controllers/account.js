@@ -101,6 +101,45 @@ class accountController {
         }
     }
 
+    async updateName(req, res) {
+        try {
+            // get own user id
+            const userID = req.user.id;
+
+            // retrieve data from request
+            const firstName = req.body.firstName;
+            const lastName = req.body.lastName;
+
+            if (!firstName || !lastName) return res.status(400).json({ message:"Names cannot be empty" });
+
+            const updatedUser = await User.findByIdAndUpdate(
+                userID,
+                {
+                    $set: {firstName, lastName, updateAt: Date.now()}
+                },
+                {new: true}
+            );
+
+            if (!updatedUser) return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+
+            res.json({
+                success: true,
+                message: "Updated successfully"
+            });
+
+        } catch(err) {
+            console.log('Error in accountController.updateName: ', err);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: error.message
+            });
+        }
+    }
+
     // async getCurrentUser(req, res) {
     //     try {
     //         const user = await User.findById(req.user.id).select('-password');
