@@ -3,6 +3,7 @@ import accountRouter from './account.js';
 import parkingRouter from './parking.js';
 import userRouter from './user.js';
 import authRouter from './auth.js';
+import staffRouter from './staff.js';
 
 function route(app) {
     // API routes
@@ -16,6 +17,9 @@ function route(app) {
     
     // User routes
     app.use('/api/users', userRouter);
+
+    // Staff routes
+    app.use('/api/staff', staffRouter);
     
     // Home routes (should be last)
     app.use('/api/home', homeRouter);
