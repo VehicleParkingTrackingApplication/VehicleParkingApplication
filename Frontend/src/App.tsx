@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard';
 import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
 import ProtectedRoute from './components/ProtectedRoute';
+import StaffManagement from './components/StaffManagement';
 
 import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
 import ViewAllRecords from './components/ViewAllRecords';
@@ -28,6 +29,14 @@ export default function App() {
                 element={
                     <ProtectedRoute>
                         <AreaManagement />
+                    </ProtectedRoute>
+                } 
+            />
+            <Route 
+                path="/staff-management" 
+                element={
+                    <ProtectedRoute>
+                        <StaffManagement />
                     </ProtectedRoute>
                 } 
             />
