@@ -3,7 +3,7 @@
 
 services:
   car-parking:
-    image: brandonng/car-parking:v1
+    image: brandonng/car-parking:latest
     ports:
       - "1313:1313"
     env_file:
