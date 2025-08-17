@@ -158,11 +158,75 @@ class parkingVehicleController {
             const page = parseInt(req.query.page) - 1 || 0;
             const limit = parseInt(req.query.limit) || 10;
             
-            // Get total count for pagination
-            const total = await Record.countDocuments({ areaId });
+            // Get filter parameters from URL query
+            const { startDate, endDate, startTime, endTime, status } = req.query;
+            
+            // Build filter object
+            const filter = { areaId };
+            
+            // Add date range filter if provided
+            if (startDate || endDate) {
+                filter.datetime = {};
+                if (startDate) {
+                    let startDateTime = new Date(startDate);
+                    // If startTime is provided, add it to the start date
+                    if (startTime) {
+                        const [hours, minutes, seconds = '00'] = startTime.split(':');
+                        startDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
+                    }
+                    filter.datetime.$gte = startDateTime;
+                }
+                if (endDate) {
+                    let endDateTime = new Date(endDate);
+                    // If endTime is provided, add it to the end date, otherwise set to end of day
+                    if (endTime) {
+                        const [hours, minutes, seconds = '59'] = endTime.split(':');
+                        endDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 999);
+                    } else {
+                        endDateTime.setHours(23, 59, 59, 999);
+                    }
+                    filter.datetime.$lte = endDateTime;
+                }
+            } else if (startTime || endTime) {
+                // If only time filters are provided (without date), apply to today
+                const today = new Date();
+                const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+                
+                filter.datetime = {};
+                if (startTime) {
+                    let startDateTime = new Date(todayStr);
+                    const [hours, minutes, seconds = '00'] = startTime.split(':');
+                    startDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
+                    filter.datetime.$gte = startDateTime;
+                }
+                if (endTime) {
+                    let endDateTime = new Date(todayStr);
+                    const [hours, minutes, seconds = '59'] = endTime.split(':');
+                    endDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 999);
+                    filter.datetime.$lte = endDateTime;
+                }
+            }
+            
+            // Add status filter if provided
+            if (status) {
+                if (status === 'ENTRY') {
+                    filter.status = 'APPROACHING';
+                } else if (status === 'EXIT') {
+                    filter.status = 'LEAVING';
+                } else {
+                    // If status is not recognized, return error
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Invalid status filter. Use "ENTRY" or "EXIT"'
+                    });
+                }
+            }
+            
+            // Get total count for pagination with filters
+            const total = await Record.countDocuments(filter);
 
-            // Get records with pagination
-            const records = await Record.find({ areaId })
+            // Get records with pagination and filters
+            const records = await Record.find(filter)
                 .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
                 .skip(page * limit)
                 .limit(limit)
@@ -197,6 +261,13 @@ class parkingVehicleController {
                     page: page + 1,
                     limit,
                     totalPages: Math.ceil(total / limit)
+                },
+                filters: {
+                    startDate: startDate || null,
+                    endDate: endDate || null,
+                    startTime: startTime || null,
+                    endTime: endTime || null,
+                    status: status || null
                 }
             });
 
