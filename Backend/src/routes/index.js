@@ -4,6 +4,7 @@ import parkingRouter from './parking.js';
 import userRouter from './user.js';
 import authRouter from './auth.js';
 import staffRouter from './staff.js';
+import recordsRouter from './records.js'; // <-- 1. IMPORT your new route
 
 function route(app) {
     // API routes
@@ -23,6 +24,8 @@ function route(app) {
     
     // Home routes (should be last)
     app.use('/api/home', homeRouter);
+    
+    app.use('/api/records', recordsRouter); 
 }
 
 // module.exports = route;

@@ -7,7 +7,9 @@ import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
 import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
+import Analytics from './components/ParkingDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import StaffManagement from './components/StaffManagement';
 
 import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
 import ViewAllRecords from './components/ViewAllRecords';
@@ -31,8 +33,17 @@ export default function App() {
                     </ProtectedRoute>
                 } 
             />
+            <Route 
+                path="/staff-management" 
+                element={
+                    <ProtectedRoute>
+                        <StaffManagement />
+                    </ProtectedRoute>
+                } 
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
             <Route path="/area-management" element={<AreaManagement />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
             <Route path="/area/:areaId/records" element={<ViewAllRecords />} />
 
