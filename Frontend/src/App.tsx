@@ -42,7 +42,6 @@ export default function App() {
                 } 
             />
             <Route path="*" element={<Navigate to="/" replace />} />
-            <Route path="/area-management" element={<AreaManagement />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
             <Route path="/area/:areaId/records" element={<ViewAllRecords />} />

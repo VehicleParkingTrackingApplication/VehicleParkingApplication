@@ -18,6 +18,13 @@ export interface AreaPayload {
   name: string;
 }
 
+export interface CreateAreaPayload {
+  name: string;
+  capacity: number;
+  location: string;
+  policy?: string;
+}
+
 export const getAllParkingAreas = async () => {
   const res = await fetchAuthApi('parking/area');
   if (!res.ok) throw new Error('Failed to fetch parking areas');
@@ -26,6 +33,12 @@ export const getAllParkingAreas = async () => {
 
 export const createParkingArea = async (payload: AreaPayload) => {
   const res = await postAuthApi('parking/area', undefined, JSON.stringify(payload));
+  if (!res.ok) throw new Error('Failed to create parking area');
+  return res.json();
+};
+
+export const inputParkingArea = async (payload: CreateAreaPayload) => {
+  const res = await postAuthApi('parking/area/input-area', undefined, JSON.stringify(payload));
   if (!res.ok) throw new Error('Failed to create parking area');
   return res.json();
 };
