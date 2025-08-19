@@ -1,6 +1,6 @@
 // @ts-check
 
-import { deleteApi, fetchApi, postApi, putApi, fetchAuthApi } from "./api";
+import { deleteApi, fetchApi, postApi, putApi, fetchAuthApi, postAuthApi, putAuthApi, deleteAuthApi } from "./api";
 
 // Type definitions for your application
 export interface User {
@@ -12,6 +12,48 @@ export interface User {
   updatedAt: string;
   firstName?: string;
   lastName?: string;
+}
+
+export interface Staff {
+  _id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'admin' | 'staff';
+  businessId: string;
+  createAt: string;
+  updateAt: string;
+}
+
+export interface CreateStaffData {
+  username: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role?: string;
+  businessId?: string;
+}
+
+export interface UpdateStaffData {
+  userId: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  businessId?: string;
+}
+
+export interface StaffListResponse {
+  message: string;
+  staff: Staff[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalStaff: number;
+    limit: number;
+  };
 }
 
 export interface Area {
@@ -488,6 +530,72 @@ export async function getCurrentUser(): Promise<User | null> {
   const response = await fetchAuthApi("auth/me");
   if (!response.ok) {
     return null;
+  }
+  return await response.json();
+}
+
+// Staff Management Functions
+
+/**
+ * @param {CreateStaffData} staffData
+ * @returns {Promise<{ message: string } | null>}
+ */
+export async function createStaff(staffData: CreateStaffData): Promise<{ message: string } | null> {
+  const response = await postAuthApi("staff/create-staff", {}, JSON.stringify(staffData));
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to create staff' }));
+    throw new Error(errorData.message || 'Failed to create staff');
+  }
+  return await response.json();
+}
+
+/**
+ * @param {UpdateStaffData} staffData
+ * @returns {Promise<{ message: string; user: Staff } | null>}
+ */
+export async function updateStaff(staffData: UpdateStaffData): Promise<{ message: string; user: Staff } | null> {
+  const response = await putAuthApi("staff/update-staff", {}, JSON.stringify(staffData));
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to update staff' }));
+    throw new Error(errorData.message || 'Failed to update staff');
+  }
+  return await response.json();
+}
+
+/**
+ * @param {string} userId
+ * @returns {Promise<{ message: string } | null>}
+ */
+export async function deleteStaff(userId: string): Promise<{ message: string } | null> {
+  const response = await deleteAuthApi("staff/delete-staff", { userId });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to delete staff' }));
+    throw new Error(errorData.message || 'Failed to delete staff');
+  }
+  return await response.json();
+}
+
+/**
+ * @param {Object} params
+ * @param {string=} params.businessId
+ * @param {number=} params.page
+ * @param {number=} params.limit
+ * @returns {Promise<StaffListResponse | null>}
+ */
+export async function listStaff(params?: {
+  businessId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<StaffListResponse | null> {
+  const queryParams: Record<string, string> = {};
+  if (params?.businessId) queryParams.businessId = params.businessId;
+  if (params?.page) queryParams.page = params.page.toString();
+  if (params?.limit) queryParams.limit = params.limit.toString();
+
+  const response = await fetchAuthApi("staff/list-staff", queryParams);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Failed to fetch staff list' }));
+    throw new Error(errorData.message || 'Failed to fetch staff list');
   }
   return await response.json();
 }

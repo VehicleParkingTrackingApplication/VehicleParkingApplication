@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -10,6 +10,8 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import AreaCreatePopup from '@/components/AreaCreatePopup';
 import { authInterceptor } from '../services/authInterceptor';
 import { fetchAuthApi } from '../services/api';
 import { getExistingVehicles } from '@/services/parking';
@@ -59,13 +61,24 @@ export default function AreaManagement() {
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
-  // Pagination and search state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [limit] = useState(5);
-  const [search, setSearch] = useState('');
+  // Pagination and search state - initialize from URL params
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get('page');
+    return page ? parseInt(page) : 1;
+  });
+  const [limit, setLimit] = useState(() => {
+    const limitParam = searchParams.get('limit');
+    return limitParam ? parseInt(limitParam) : 3;
+  });
+  // Applied search term used for fetching/URL
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
+  // Input box value, does not affect URL/fetch until Search is pressed
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('search') || '');
   const [totalPages, setTotalPages] = useState(0);
   const [totalAreas, setTotalAreas] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Verify authentication first
   useEffect(() => {
@@ -93,12 +106,41 @@ export default function AreaManagement() {
     verifyAuth();
   }, []);
 
+  // Update URL when state changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('page', currentPage.toString());
+    params.set('limit', limit.toString());
+    if (search.trim()) params.set('search', search.trim());
+    
+    setSearchParams(params, { replace: true });
+  }, [currentPage, limit, search, setSearchParams]);
+
+  // Handle URL parameter changes (when user navigates directly to URL with params)
+  useEffect(() => {
+    const pageParam = searchParams.get('page');
+    const limitParam = searchParams.get('limit');
+    const searchParam = searchParams.get('search');
+
+    if (pageParam && parseInt(pageParam) !== currentPage) {
+      setCurrentPage(parseInt(pageParam));
+    }
+    if (limitParam && parseInt(limitParam) !== limit) {
+      setLimit(parseInt(limitParam));
+    }
+    if (searchParam !== search) {
+      const applied = searchParam || '';
+      setSearch(applied);
+      setSearchInput(applied);
+    }
+  }, [searchParams, currentPage, search, limit]);
+
   // Fetch areas data when authenticated
   useEffect(() => {
     if (isAuthenticated === true) {
       fetchAreasData();
     }
-  }, [isAuthenticated, currentPage, search]);
+  }, [isAuthenticated, currentPage, limit, search]);
 
   const fetchAreasData = async () => {
     try {
@@ -108,12 +150,23 @@ export default function AreaManagement() {
       console.log('=== Starting fetchAreasData ===');
       console.log('Current token:', localStorage.getItem('token'));
 
-      // Build query parameters
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: limit.toString(),
-        search: search
-      });
+             // Build query parameters
+       const params = new URLSearchParams();
+       
+       // Add page parameter (backend expects 1-based page numbers)
+       if (currentPage > 0) {
+         params.append('page', currentPage.toString());
+       }
+       
+       // Add limit parameter
+       if (limit > 0) {
+         params.append('limit', limit.toString());
+       }
+       
+       // Add search parameter only if it's not empty
+       if (search.trim()) {
+         params.append('search', search.trim());
+       }
 
       console.log('Fetching areas with params:', params.toString());
       console.log('API URL will be: /api/parking/area?' + params.toString());
@@ -189,14 +242,26 @@ export default function AreaManagement() {
 
 
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1); // Reset to first page when searching
-  };
+        const handleSearch = (e: React.FormEvent) => {
+     e.preventDefault();
+     setCurrentPage(1); // Reset to first page when searching
+     setSearch(searchInput.trim()); // triggers effect to fetch
+   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
+   const handleClearSearch = () => {
+     setSearchInput('');
+     setCurrentPage(1); // Reset to first page when clearing
+     setSearch(''); // triggers effect to fetch
+   };
+
+   const handlePageChange = (newPage: number) => {
+     setCurrentPage(newPage);
+   };
+
+   const handleLimitChange = (newLimit: number) => {
+     setLimit(newLimit);
+     setCurrentPage(1); // Reset to first page when changing limit
+   };
 
   // Helper function to get occupancy color
   const getOccupancyColor = (current: number, capacity: number) => {
@@ -304,18 +369,42 @@ export default function AreaManagement() {
           {/* Search and Pagination Controls */}
           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <form onSubmit={handleSearch} className="flex gap-2 flex-1">
-                <Input
-                  type="text"
-                  placeholder="Search areas..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-neutral-700 border-neutral-600 text-white"
-                />
-                <Button type="submit" variant="outline">
-                  Search
-                </Button>
-              </form>
+                             <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+                 <Input
+                   type="text"
+                   placeholder="Search areas..."
+                   value={searchInput}
+                   onChange={(e) => setSearchInput(e.target.value)}
+                   className="bg-neutral-700 border-neutral-600 text-white"
+                 />
+                 <Button type="submit" variant="outline">
+                   Search
+                 </Button>
+                 {searchInput && (
+                   <Button 
+                     type="button" 
+                     variant="outline" 
+                     onClick={handleClearSearch}
+                   >
+                     Clear
+                   </Button>
+                 )}
+               </form>
+               
+               <div className="flex items-center gap-2">
+                 <span className="text-sm text-gray-300">Per page:</span>
+                 <Select value={String(limit)} onValueChange={(val) => handleLimitChange(parseInt(val))}>
+                   <SelectTrigger className="w-[100px] bg-neutral-700 border-neutral-600 text-white">
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent className="bg-neutral-800 text-white border-neutral-700">
+                     <SelectItem value="3">3</SelectItem>
+                     <SelectItem value="5">5</SelectItem>
+                     <SelectItem value="10">10</SelectItem>
+                     <SelectItem value="20">20</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
               
               <div className="text-sm text-gray-300">
                 Showing {areas.length} of {totalAreas} areas
@@ -355,7 +444,7 @@ export default function AreaManagement() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Parking Areas ({totalAreas} total)</h2>
               <Button 
-                onClick={() => console.log('Add new area')}
+                onClick={() => setCreateOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Add New Area
@@ -496,6 +585,15 @@ export default function AreaManagement() {
           </div>
         </div>
       </div>
+      <AreaCreatePopup
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => {
+          setCreateOpen(false);
+          setCurrentPage(1);
+          fetchAreasData();
+        }}
+      />
     </div>
   );
 }

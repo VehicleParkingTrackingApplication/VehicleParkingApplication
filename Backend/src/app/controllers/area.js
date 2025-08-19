@@ -167,6 +167,89 @@ class parkingAreaController {
             });
         }
     }
+
+    // update the info of ftp server for a specific area
+    async updateFtpServer(req, res) {
+        try {
+            const { areaId, host, port, user, password, secure, secureOptions } = req.body;
+            
+            if (!areaId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Area ID is required"
+                });
+            }
+
+            // Check if the area exists and belongs to the current user's business
+            const area = await Area.findById(areaId);
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Area not found"
+                });
+            }
+
+            // Verify the area belongs to the current user's business
+            if (area.businessId.toString() !== req.user.businessId.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Access denied. You can only update FTP servers for areas in your business"
+                });
+            }
+
+            // Check if the area has an existing FTP server
+            if (!area.ftpServer) {
+                return res.status(400).json({
+                    success: false,
+                    message: "No FTP server configured for this area. Use input-ftpserver endpoint instead."
+                });
+            }
+
+            // Update the existing FTP server
+            const updateData = {};
+            if (host !== undefined) updateData.host = host;
+            if (port !== undefined) updateData.port = port;
+            if (user !== undefined) updateData.user = user;
+            if (password !== undefined) updateData.password = password;
+            if (secure !== undefined) updateData.secure = secure;
+            if (secureOptions !== undefined) updateData.secureOptions = secureOptions;
+
+            // Check if at least one field is provided for update
+            if (Object.keys(updateData).length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "At least one field must be provided for update"
+                });
+            }
+
+            const updatedFtpServer = await FtpServer.findByIdAndUpdate(
+                area.ftpServer,
+                updateData,
+                { new: true, runValidators: true }
+            );
+
+            if (!updatedFtpServer) {
+                return res.status(404).json({
+                    success: false,
+                    message: "FTP server not found"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "FTP server updated successfully",
+                ftpServer: updatedFtpServer
+            });
+
+        } catch (error) {
+            console.error("Error in updateFtpServer:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error",
+                error: error.message
+            });
+        }
+    }
 }
 
 export default new parkingAreaController();
