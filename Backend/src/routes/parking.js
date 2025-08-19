@@ -30,6 +30,7 @@ router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentReco
 // GET /api/parking/vehicle/:areaId/all-records
 router.get('/vehicle/:areaId/all-records', requireAuth, vehicle.getAllRecordsByArea);
 
+
 // POST /api/parking/simulate
 router.post('/simulate', vehicle.handleSimulation);
 

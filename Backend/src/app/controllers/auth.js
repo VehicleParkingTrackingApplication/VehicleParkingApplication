@@ -1,4 +1,5 @@
 import { handleLogin, handleRegister, handleRefresh } from '../services/auth.js';
+import User from '../models/User.js';
 
 class authController {
     // POST /api/auth/login
@@ -79,6 +80,45 @@ class authController {
         return res.status(200).json({
             message: 'Logged out successfully'
         });
+    }
+
+    // GET /api/auth/me
+    async me(req, res) {
+        try {
+            // req.user is set by the requireAuth middleware
+            if (!req.user) {
+                return res.status(401).json({ message: 'Not authenticated' });
+            }
+
+            // Get user data from database (excluding sensitive fields)
+            // return res.status(200).json({
+            //     message: 'User data retrieved successfully',
+            //     user: req.user
+            // });
+            const user = await User.findById(req.user.id).select('-password -loggedSessions');
+            
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            return res.status(200).json({
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                businessId: user.businessId,
+                createAt: user.createAt,
+                updateAt: user.updateAt
+            });
+
+        } catch (err) {
+            return res.status(500).json({
+                status: 500,
+                message: err.message
+            });
+        }
     }
 }
 
