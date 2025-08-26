@@ -36,9 +36,9 @@ export default function App() {
             <Route 
                 path="/staff-management" 
                 element={
-                    <ProtectedRoute>
+                    // <ProtectedRoute>
                         <StaffManagement />
-                    </ProtectedRoute>
+                    // </ProtectedRoute>
                 } 
             />
             <Route path="*" element={<Navigate to="/" replace />} />
