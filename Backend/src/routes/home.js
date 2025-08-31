@@ -20,15 +20,15 @@ const router = express.Router();
 //     }
 // });
 
-router.post('/import-data', requireAuth, async (req, res) =>
-    homeController.importData(req, res)
-);
-router.post('/import-business-data', requireAuth, async (req, res) =>
-    homeController.importBusinessData(req, res)
-);
-router.post('/import-parking-area-data', requireAuth, async (req, res) => 
-    homeController.importParkingAreaData(req, res)
-);
+// router.post('/import-data', requireAuth, async (req, res) =>
+//     homeController.importData(req, res)
+// );
+// router.post('/import-business-data', requireAuth, async (req, res) =>
+//     homeController.importBusinessData(req, res)
+// );
+// router.post('/import-parking-area-data', requireAuth, async (req, res) => 
+//     homeController.importParkingAreaData(req, res)
+// );
 
 // GET api/home
 router.get('/', homeController.index);

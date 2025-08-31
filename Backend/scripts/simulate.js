@@ -4,14 +4,26 @@ import fs from 'fs';
 import path from 'path';
 import Table from 'cli-table3';
 import mongoose from 'mongoose';
-import Area from '../../src/app/models/Area.js';
+import Area from '../src/app/models/Area.js';
 
 dotenv.config();
 
+// Check for required environment variables
+if (!process.env.CONNECTION_STRING) {
+    console.error('❌ CONNECTION_STRING environment variable is required!');
+    console.log('Please create a .env file with your MongoDB connection string:');
+    console.log('CONNECTION_STRING=mongodb://localhost:27017/your_database_name');
+    console.log('Or set it as an environment variable before running the script.');
+    process.exit(1);
+}
+
 // Connect to MongoDB
 mongoose.connect(process.env.CONNECTION_STRING)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .then(() => console.log('✅ Connected to MongoDB'))
+    .catch(err => {
+        console.error('❌ MongoDB connection error:', err);
+        process.exit(1);
+    });
 
 // ============= SIMULATION CONFIGURATION =============
 const TIME_MULTIPLIER = 1; // 1 real second = 1 hour simulation time
@@ -137,23 +149,32 @@ async function createAreaDirectories(areas) {
     }
 }
 
-// Handle script termination
-// process.on('SIGINT', async () => {
-//     console.log('\n\nClearing simulation data...');
-//     try {
-//         const areas = await Area.find();
-//         for (const area of areas) {
-//             const areaDir = path.join(process.cwd(), 'src', 'public', 'simulation', `${area.name}_${area._id.toString()}`);
-//             const csvFilePath = path.join(areaDir, `${today}.csv`);
-//             const header = 'date,time,parkingAreaId,plateNumber,country,confidence,angle,image,status\n';
-//             fs.writeFileSync(csvFilePath, header);
-//         }
-//         console.log('Simulation data cleared successfully.');
-//     } catch (error) {
-//         console.error('Error clearing simulation data:', error);
-//     }
-//     process.exit(0);
-// });
+// Function to parse location string and extract suburb and city
+function parseLocation(locationString) {
+    if (!locationString) {
+        return { suburb: 'Unknown', city: 'Unknown' };
+    }
+    
+    // Try to parse as JSON first (in case it's stored as JSON string)
+    try {
+        const parsed = JSON.parse(locationString);
+        if (parsed.suburb && parsed.city) {
+            return { suburb: parsed.suburb, city: parsed.city };
+        }
+    } catch (e) {
+        // Not JSON, treat as string
+    }
+    
+    // If it's a string, try to extract suburb and city
+    const parts = locationString.split(',').map(part => part.trim());
+    if (parts.length >= 2) {
+        return { suburb: parts[0], city: parts[1] };
+    } else if (parts.length === 1) {
+        return { suburb: parts[0], city: 'Unknown' };
+    }
+    
+    return { suburb: 'Unknown', city: 'Unknown' };
+}
 
 // Generate a random plate number
 function generatePlateNumber() {
@@ -204,18 +225,22 @@ async function displayParkingStatus() {
         
         // Display parking areas information
         console.log('\n=== Parking Areas Information ===');
-        console.table(Array.from(areaStatuses.values()).map(areaStatus => ({
-            'Area Name': areaStatus.name,
-            'Location': `${areaStatus.location.suburb}, ${areaStatus.location.city}`,
-            'Capacity': areaStatus.capacity,
-            'Current Usage': `${areaStatus.plates.size}/${areaStatus.capacity}`,
-            'Status': areaStatus.plates.size >= areaStatus.capacity ? 'FULL' : 'AVAILABLE'
-        })));
+        console.table(Array.from(areaStatuses.values()).map(areaStatus => {
+            const location = parseLocation(areaStatus.location);
+            return {
+                'Area Name': areaStatus.name,
+                'Location': `${location.suburb}, ${location.city}`,
+                'Capacity': areaStatus.capacity,
+                'Current Usage': `${areaStatus.plates.size}/${areaStatus.capacity}`,
+                'Status': areaStatus.plates.size >= areaStatus.capacity ? 'FULL' : 'AVAILABLE'
+            };
+        }));
         
         // Display current vehicles in areas
         console.log('\n=== Current Vehicles in Areas ===');
         areaStatuses.forEach((areaStatus, areaId) => {
-            console.log(`\n${areaStatus.name} (${areaStatus.location.suburb}):`);
+            const location = parseLocation(areaStatus.location);
+            console.log(`\n${areaStatus.name} (${location.suburb}):`);
             if (areaStatus.plates.size > 0) {
                 areaStatus.plates.forEach((status, plate) => {
                     console.log(`  - ${plate} (${status})`);
@@ -243,77 +268,86 @@ async function displayParkingStatus() {
 async function runSimulation() {
     if (!isMainThread) return;
     
-    console.log('Starting traffic simulation...');
-    console.log(`Time scale: 1 real second = ${TIME_MULTIPLIER} simulation seconds`);
-    console.log(`Event interval: ${EVENT_INTERVAL} simulation seconds (${simulationToRealTime(EVENT_INTERVAL)} real seconds)`);
+    console.log('🚀 Starting traffic simulation...');
+    console.log(`⏱️  Time scale: 1 real second = ${TIME_MULTIPLIER} simulation seconds`);
+    console.log(`🔄 Event interval: ${EVENT_INTERVAL} simulation seconds (${simulationToRealTime(EVENT_INTERVAL)} real seconds)`);
     
-    // Get all parking areas
-    const areas = await Area.find();
-    console.log(`Found ${areas.length} parking areas`);
-    
-    // Create directories for each area
-    await createAreaDirectories(areas);
-    
-    // Initialize status tracking for each area
-    for (const area of areas) {
-        areaStatuses.set(area._id.toString(), {
-            ...area.toObject(),
-            plates: new Map()
-        });
-    }
-    
-    initializeStatusTable();
-    simulationStartTime = Date.now();
-    
-    // Create workers once at the start
-    const workers = new Map();
-    for (const area of areas) {
-        const areaData = {
-            _id: area._id.toString(),
-            name: area.name,
-            capacity: area.capacity,
-            location: {
-                suburb: area.location?.suburb || 'Unknown',
-                city: area.location?.city || 'Unknown'
-            }
-        };
-
-        const worker = new Worker(new URL(import.meta.url), {
-            workerData: { 
-                area: areaData,
-                areaStatuses: Array.from(areaStatuses.entries())
-            }
-        });
+    try {
+        // Get all parking areas except the excluded one
+        const excludedAreaId = "687dde8379e977f9d2aaf8ef";
+        const areas = await Area.find({ _id: { $ne: excludedAreaId } });
+        console.log(`📍 Found ${areas.length} parking areas (excluding area ${excludedAreaId})`);
+        if (areas.length === 0) {
+            console.log('⚠️  No parking areas found in the database (after exclusion). Please create some areas first.');
+            process.exit(1);
+        }
         
-        worker.on('message', (message) => {
-            if (message.type === 'updateStatus') {
-                areaStatuses = new Map(message.areaStatuses);
-                displayParkingStatus();
-            }
-        });
+        // Create directories for each area
+        await createAreaDirectories(areas);
         
-        worker.on('error', console.error);
-        worker.on('exit', (code) => {
-            if (code !== 0) console.error(`Worker stopped with exit code ${code}`);
-        });
-
-        workers.set(area._id.toString(), worker);
-    }
-    
-    while (true) {
-        const simTime = calculateSimulationTime();
-        
-        // Update all workers with current simulation time
-        for (const [areaId, worker] of workers) {
-            worker.postMessage({
-                type: 'updateTime',
-                simTime: simTime
+        // Initialize status tracking for each area
+        for (const area of areas) {
+            areaStatuses.set(area._id.toString(), {
+                ...area.toObject(),
+                plates: new Map()
             });
         }
         
-        // Wait for the real time equivalent of EVENT_INTERVAL simulation seconds
-        const realInterval = simulationToRealTime(EVENT_INTERVAL);
-        await new Promise(resolve => setTimeout(resolve, realInterval * 1000));
+        initializeStatusTable();
+        simulationStartTime = Date.now();
+        
+        // Create workers once at the start
+        const workers = new Map();
+        for (const area of areas) {
+            const areaData = {
+                _id: area._id.toString(),
+                name: area.name,
+                capacity: area.capacity,
+                location: area.location
+            };
+
+            const worker = new Worker(new URL(import.meta.url), {
+                workerData: { 
+                    area: areaData,
+                    areaStatuses: Array.from(areaStatuses.entries())
+                }
+            });
+            
+            worker.on('message', (message) => {
+                if (message.type === 'updateStatus') {
+                    areaStatuses = new Map(message.areaStatuses);
+                    displayParkingStatus();
+                }
+            });
+            
+            worker.on('error', console.error);
+            worker.on('exit', (code) => {
+                if (code !== 0) console.error(`Worker stopped with exit code ${code}`);
+            });
+
+            workers.set(area._id.toString(), worker);
+        }
+        
+        console.log('✅ Simulation started successfully! Press Ctrl+C to stop.');
+        
+        while (true) {
+            const simTime = calculateSimulationTime();
+            
+            // Update all workers with current simulation time
+            for (const [areaId, worker] of workers) {
+                worker.postMessage({
+                    type: 'updateTime',
+                    simTime: simTime
+                });
+            }
+            
+            // Wait for the real time equivalent of EVENT_INTERVAL simulation seconds
+            const realInterval = simulationToRealTime(EVENT_INTERVAL);
+            await new Promise(resolve => setTimeout(resolve, realInterval * 1000));
+        }
+    } catch (error) {
+        console.error('❌ Error in simulation:', error);
+        process.exit(1);
     }
 }
 
@@ -332,10 +366,7 @@ if (isMainThread) {
             _id: area._id,
             name: area.name,
             capacity: area.capacity,
-            location: {
-                suburb: area.location?.suburb || 'Unknown',
-                city: area.location?.city || 'Unknown'
-            },
+            location: area.location,
             plates: new Map()
         });
     }
@@ -398,7 +429,6 @@ if (isMainThread) {
                 const skipMessage = `SKIP [${date} ${time}] APPROACHING event for plate ${finalPlateNumber} - parking area at capacity (${areaStatus.plates.size}/${area.capacity})`;
                 console.log(skipMessage);
                 eventHistory.push(skipMessage);
-                // displayParkingStatus();
                 return false;
             }
             
@@ -406,7 +436,6 @@ if (isMainThread) {
                 const skipMessage = `SKIP [${date} ${time}] APPROACHING event for plate ${finalPlateNumber} - already in parking area`;
                 console.log(skipMessage);
                 eventHistory.push(skipMessage);
-                // displayParkingStatus();
                 return false;
             }
         }
@@ -417,7 +446,6 @@ if (isMainThread) {
                 const skipMessage = `SKIP [${date} ${time}] LEAVING event for plate ${finalPlateNumber} - not found in parking area`;
                 console.log(skipMessage);
                 eventHistory.push(skipMessage);
-                // displayParkingStatus();
                 return false;
             }
         }
@@ -434,7 +462,7 @@ if (isMainThread) {
             status: status
         };
         
-        const eventMessage = `[${date} ${time}] ${status} event for plate ${event.plateNumber} in area ${area.name} (${area.location.suburb})`;
+        const eventMessage = `[${date} ${time}] ${status} event for plate ${event.plateNumber} in area ${area.name}`;
         console.log(eventMessage);
         eventHistory.push(eventMessage);
         
@@ -453,7 +481,6 @@ if (isMainThread) {
             }
             
             updateMainThread();
-            displayParkingStatus();
             return true;
         } catch (error) {
             console.error('Error writing to CSV:', error);

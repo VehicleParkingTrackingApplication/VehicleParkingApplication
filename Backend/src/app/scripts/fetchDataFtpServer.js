@@ -5,7 +5,6 @@ import mongoose from "mongoose";
 import Area from "../models/Area.js";
 import Record from "../models/Record.js";
 import Vehicle from "../models/Vehicle.js";
-import { uploadImageToS3, imageExistsInS3 } from "../services/s3Service.js";
 import dotenv from 'dotenv';
 
 // load environment variables
@@ -75,48 +74,6 @@ async function updateAreaCapacity(areaId, isEntering) {
     } catch (error) {
         console.error('Error updating area capacity:', error);
         return null;
-    }
-}
-
-// Function to download image from FTP and upload to S3
-async function processImage(client, csvDate, imageFileName, areaId) {
-    let originalPath = null;
-    try {
-        // Check if image already exists in S3
-        const exists = await imageExistsInS3(imageFileName, areaId);
-        if (exists) {
-            console.log(`Image ${imageFileName} already exists in S3, skipping upload`);
-            return `https://${process.env.S3_BUCKET_NAME || 'parking-system-images'}.s3.${process.env.AWS_REGION || 'ap-southeast-2'}.amazonaws.com/areas/${areaId}/${imageFileName}`;
-        }
-
-        // Store current path to return to later
-        originalPath = await client.pwd();
-
-        // Navigate to the date folder (same name as CSV file)
-        const imageFolder = csvDate;
-        await client.cd(imageFolder);
-        
-        // Download the image file
-        const imageBuffer = await client.downloadToBuffer(imageFileName);
-        
-        // Upload to S3
-        const s3Url = await uploadImageToS3(imageBuffer, imageFileName, areaId);
-        
-        console.log(`Successfully processed image: ${imageFileName} -> ${s3Url}`);
-        return s3Url;
-    } catch (error) {
-        console.error(`Error processing image ${imageFileName}:`, error);
-        // Return the original image filename as fallback
-        return imageFileName;
-    } finally {
-        // Always return to the original path
-        if (originalPath) {
-            try {
-                await client.cd(originalPath);
-            } catch (cdError) {
-                console.error('Error returning to original path:', cdError);
-            }
-        }
     }
 }
 
@@ -196,17 +153,6 @@ export async function fetchDataFtpServer(areaId) {
                                 // Log datetime and plateNumber for tracking
                                 console.log(`Processing: datetime=${formatAustralianTime(rowDateTime)} (AEST), plateNumber=${row.plateNumber}`);
                                                                 
-                                // Process image first
-                                let imageUrl = row.image; // Default to original image name
-                                if (row.image && row.image.trim() !== '') {
-                                    try {
-                                        imageUrl = await processImage(client, row.date, row.image, areaId);
-                                    } catch (imageError) {
-                                        console.error(`Failed to process image ${row.image}:`, imageError);
-                                        // Continue with original image name
-                                    }
-                                }
-
                                 // Insert into Records collection
                                 if (!row.plateNumber || row.plateNumber.trim() === "") {
                                     console.error('Failed to import record: plateNumber is missing.', row);
@@ -220,7 +166,7 @@ export async function fetchDataFtpServer(areaId) {
                                         country: row.country || 'AUS',
                                         confidence: Number(row.confidence) || 85,
                                         angle: Number(row.angle) || 0,
-                                        image: imageUrl,
+                                        image: row.image,
                                         status: row.status
                                     });
                                     console.log('Success: Imported record for plateNumber', row.plateNumber);
@@ -238,11 +184,8 @@ export async function fetchDataFtpServer(areaId) {
                                         } catch (err) {
                                             console.error('Failed to remove existing vehicle:', err.message, row);
                                         }
-                                    } else {
-                                        // New vehicle entering - increment capacity
-                                        await updateAreaCapacity(areaId, true);
                                     }
-                                    
+      
                                     // Create new vehicle record (whether it existed before or not)
                                     try {
                                         await Vehicle.create({
@@ -250,8 +193,11 @@ export async function fetchDataFtpServer(areaId) {
                                             plateNumber: row.plateNumber,
                                             country: row.country || 'AUS',
                                             image: row.image,
-                                            datetime: rowDateTime
+                                            datetime: rowDateTime,
+                                            status: row.status
                                         });
+                                         // New vehicle entering - increment capacity
+                                        await updateAreaCapacity(areaId, true);
                                         console.log('Success: Added vehicle for plateNumber', row.plateNumber);
                                     } catch (err) {
                                         console.error('Failed to add vehicle:', err.message, row);

@@ -18,17 +18,22 @@ class parkingAreaController {
                     message: 'Business ID is required'
                 });
             }
+
+            // Fix: Get pagination parameters from req.query instead of req.params
             const page = parseInt(req.query.page) - 1 || 0;
             const limit = parseInt(req.query.limit) || 3;
             const search = req.query.search || "";
+            
             // Create RegExp object for the search
-            const searchRegex = new RegExp(search, 'i'); // i for case-sensitive
-            //sorting
+            const searchRegex = new RegExp(search, 'i'); // i for case-insensitive
+            
+            // Sorting
             let sortField = req.query.sortBy || "createdAt";
-            let sortOrder =  req.query.sortOrder === "desc" ? -1 : 1;
+            let sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
             const sort = { [sortField]: sortOrder };
 
             console.log("Searching with params:", { businessId, page, limit, search, sort });
+            
             const parkingArea = await Area.find(
                 {  
                     businessId: businessId, 
@@ -39,17 +44,26 @@ class parkingAreaController {
                 .sort(sort);
                 
             console.log("Found parking areas:", parkingArea);
+            
             const total = await Area.countDocuments({
                 businessId: businessId, 
                 name: { $regex: searchRegex }
             });
 
             if (!parkingArea || parkingArea.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'No parking areas registered for this business!!!'
+                return res.status(200).json({
+                    success: true,
+                    data: [],
+                    pagination: {
+                        total: 0,
+                        page: page + 1,
+                        limit,
+                        totalPages: 0
+                    },
+                    message: 'No parking areas found for this business'
                 });
             }
+            
             return res.status(200).json({
                 success: true,
                 data: parkingArea,
