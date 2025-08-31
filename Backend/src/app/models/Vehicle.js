@@ -1,5 +1,5 @@
-import moongoose from 'mongoose';
-const Schema = moongoose.Schema;
+import mongoose from 'mongoose';
+const Schema = mongoose.Schema;
 
 const Vehicle = new Schema({
     areaId: {
@@ -28,4 +28,4 @@ const Vehicle = new Schema({
     status: { type: String, required: true}
 });
 
-export default moongoose.model('vehicles', Vehicle)
+export default mongoose.model('vehicles', Vehicle)

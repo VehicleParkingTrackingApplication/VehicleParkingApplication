@@ -5,7 +5,8 @@ import userRouter from './user.js';
 import authRouter from './auth.js';
 import staffRouter from './staff.js';
 import recordsRouter from './records.js';
-import notificationRouter from './notification.js'; // Add this import
+import notificationRouter from './notification.js';
+import schedulerRouter from './scheduler.js';
 
 function route(app) {
     // API routes
@@ -28,6 +29,9 @@ function route(app) {
     
     // Records routes
     app.use('/api/records', recordsRouter);
+    
+    // Scheduler routes
+    app.use('/api/scheduler', schedulerRouter);
     
     // Home routes (should be last)
     app.use('/api/home', homeRouter);

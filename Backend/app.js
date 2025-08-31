@@ -11,8 +11,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import serverless from 'serverless-http';
 
-// Import scheduler service
+// Import scheduler services
 import { ScheduledFtpService } from './src/app/services/scheduledFtpService.js';
+import { ScheduledSimulationService } from './src/app/services/scheduledSimulationService.js';
 
 dotenv.config();
 
@@ -25,8 +26,11 @@ const PORT = process.env.PORT || 1313;
 // Connect to DB
 dbConnect();
 
-// ============= INITIALIZE SCHEDULER SERVICE =============
-// Initialize scheduler if not in test environment
+// ============= INITIALIZE SCHEDULER SERVICES =============
+// Initialize schedulers if not in test environment
+const scheduledSimulationService = new ScheduledSimulationService();
+scheduledSimulationService.startScheduledProcessing();
+
 // const scheduledFtpService = new ScheduledFtpService();
 // scheduledFtpService.startScheduledProcessing();
 // ============= END SCHEDULER INITIALIZATION =============
