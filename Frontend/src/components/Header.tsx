@@ -3,13 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { Button } from './ui/button';
 import { AccountPopup } from './AccountPopup';
+import { NotificationPopup } from './NotificationPopup';
 import { authInterceptor } from '../services/authInterceptor';
 import { getCurrentUser } from '../services/backend';
 
 export const Header: React.FC = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(authInterceptor.isAuthenticated());
   const [userRole, setUserRole] = useState<string>('Admin');
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,10 +27,15 @@ export const Header: React.FC = () => {
           } else {
             setUserRole('Admin');
           }
+          
+          // Set mock count for demonstration (will be replaced with real API call)
+          setUnreadCount(3);
         } catch (error) {
           console.error('Failed to fetch user role:', error);
           setUserRole('Admin');
         }
+      } else {
+        setUnreadCount(0);
       }
     };
 
@@ -43,6 +51,14 @@ export const Header: React.FC = () => {
 
   const togglePopup = () => {
     setIsPopupOpen(!isPopupOpen);
+  };
+
+  const toggleNotificationPopup = () => {
+    setIsNotificationOpen(!isNotificationOpen);
+    // Close account popup if open
+    if (isPopupOpen) {
+      setIsPopupOpen(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -78,9 +94,28 @@ export const Header: React.FC = () => {
 
               <div className="hidden lg:flex items-center space-x-4">
                 <span className="text-gray-300 font-semibold">{userRole}</span>
-                <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white">
-                  <Bell className="h-6 w-6" />
-                </Button>
+                
+                {/* Notification Bell */}
+                <div className="relative">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-gray-300 hover:text-white relative"
+                    onClick={toggleNotificationPopup}
+                  >
+                    <Bell className="h-6 w-6" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                  {isNotificationOpen && (
+                    <NotificationPopup onClose={() => setIsNotificationOpen(false)} />
+                  )}
+                </div>
+
+                {/* Account Popup */}
                 <div className="relative">
                   <Button 
                     variant="outline" 
@@ -91,6 +126,7 @@ export const Header: React.FC = () => {
                   </Button>
                   {isPopupOpen && <AccountPopup onClose={() => setIsPopupOpen(false)} />}
                 </div>
+                
                 <Button onClick={handleLogout} className="text-white hover:bg-gray-800">
                   Logout
                 </Button>
