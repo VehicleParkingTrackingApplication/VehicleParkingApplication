@@ -1,12 +1,61 @@
 import express from 'express';
 import { ScheduledFtpService } from '../app/services/scheduledFtpService.js';
 import { ScheduledSimulationService } from '../app/services/scheduledSimulationService.js';
+import { WebSocketService } from '../app/services/webSocketService.js';
 
 const router = express.Router();
 
 // Initialize scheduler instances
 const scheduledFtpService = new ScheduledFtpService();
 const scheduledSimulationService = new ScheduledSimulationService();
+const webSocketService = new WebSocketService();
+
+// ============= Websocket ROUTES =============
+// WebSocket status
+router.get('/websocket/status', (req, res) => {
+    try {
+        const status = {
+            connectedClients: webSocketService.getConnectedClientsCount(),
+            activeRooms: webSocketService.getActiveRooms()
+        };
+        
+        res.json({
+            success: true,
+            data: status
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Manually trigger WebSocket processing for an area
+router.post('/websocket/trigger/:areaId', async (req, res) => {
+    try {
+        const { areaId } = req.params;
+        const result = await webSocketService.triggerAreaProcessing(areaId);
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                message: result.message
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 
 // ============= FTP SCHEDULER ROUTES =============
 

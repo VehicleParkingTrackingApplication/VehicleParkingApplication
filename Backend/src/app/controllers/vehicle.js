@@ -30,6 +30,7 @@ class parkingVehicleController {
             }
         } catch (error) {
             console.error(`Error updating area capacity for ${areaId}:`, error);
+            return;
         }
     }
 
@@ -75,7 +76,6 @@ class parkingVehicleController {
                         totalCapacity
                     });
                     
-                    console.log(`Capacity notification created for area ${areaId}: ${message}`);
                 }
             }
         } catch (error) {
@@ -299,7 +299,6 @@ class parkingVehicleController {
                 .select('plateNumber status datetime image country angle confidence') // Include angle and confidence
                 .lean(); // Convert to plain JavaScript objects for better performance
                 
-            console.log('Records found:', records.length);
             
             // Format the response to match the frontend expectations
             const formattedRecords = records.map(record => ({
@@ -342,7 +341,6 @@ class parkingVehicleController {
             });
 
         } catch (error) {
-            console.error('Error fetching all records:', error);
             return res.status(500).json({
                 success: false,
                 message: 'Error fetching all records',
@@ -639,8 +637,6 @@ class parkingVehicleController {
                     // Vehicle already exists - camera missed the previous LEAVING event
                     // Delete the old record first
                     await Vehicle.deleteOne({ areaId, plateNumber });
-                    console.log(`Removed existing vehicle for plateNumber ${plateNumber} (camera missed previous LEAVING event)`);
-                    // Don't update capacity since we're replacing, not adding
                 } else {
                     // New vehicle entering - increment capacity
                     await this.updateAreaCapacity(areaId, true);
@@ -655,7 +651,6 @@ class parkingVehicleController {
                     datetime
                 };
                 await Vehicle.create(vehicleData);
-                console.log(`Added vehicle for plateNumber ${plateNumber}`);
             } else if (status === "LEAVING") {
                 // For leaving vehicles, we need to calculate duration
                 
@@ -687,10 +682,6 @@ class parkingVehicleController {
 
                     // Update the leaving record with duration information
                     await Record.create(recordData);
-
-                    console.log(`Vehicle ${plateNumber} parked for ${durationHours}h ${remainingMinutes}m`);
-                } else {
-                    console.warn(`No approaching record found for vehicle ${plateNumber} - cannot calculate duration`);
                 }
 
                 // Remove the vehicle from Vehicle collection (it's no longer in the parking area)

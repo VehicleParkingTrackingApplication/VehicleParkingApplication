@@ -31,8 +31,6 @@ class parkingAreaController {
             let sortField = req.query.sortBy || "createdAt";
             let sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
             const sort = { [sortField]: sortOrder };
-
-            console.log("Searching with params:", { businessId, page, limit, search, sort });
             
             const parkingArea = await Area.find(
                 {  
@@ -42,8 +40,6 @@ class parkingAreaController {
                 .skip(page * limit)
                 .limit(limit)
                 .sort(sort);
-                
-            console.log("Found parking areas:", parkingArea);
             
             const total = await Area.countDocuments({
                 businessId: businessId, 
@@ -75,7 +71,6 @@ class parkingAreaController {
                 }
             });
         } catch (error) {
-            console.error("Error in getParkingAreaByBusiness:", error);
             return res.status(500).json({
                 success: false,
                 message: 'Error fetching parking areas',
@@ -98,7 +93,6 @@ class parkingAreaController {
             }
 
             const existingArea = Area.findOne({ name: name });
-            console.log(existingArea.name);
             if (!existingArea) {
                 return res.status(400).json({
                     success: false,
@@ -122,7 +116,6 @@ class parkingAreaController {
             });
 
         } catch (error) {
-            console.log("Error in input area: ", error);
             res.status(500).json({
                 success: false,
                 message: "Internal server error",
@@ -151,15 +144,12 @@ class parkingAreaController {
             });
 
             const savedFtpServer = await newFtpServer.save();
-            console.log(savedFtpServer);
             // update area with new ftp server;
             const updatedArea = await Area.findByIdAndUpdate(
                 areaId,
                 { ftpServer: savedFtpServer._id },
                 { new: true }
             )
-            
-            console.log(updatedArea);
             
             if (!updatedArea) {
                 return res.status(404).json({
@@ -256,7 +246,6 @@ class parkingAreaController {
             });
 
         } catch (error) {
-            console.error("Error in updateFtpServer:", error);
             return res.status(500).json({
                 success: false,
                 message: "Internal server error",

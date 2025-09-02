@@ -1,10 +1,9 @@
 import dotenv from 'dotenv';
-import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 import fs from 'fs';
 import path from 'path';
-import Table from 'cli-table3';
 import mongoose from 'mongoose';
 import Area from '../src/app/models/Area.js';
+import Vehicle from '../src/app/models/Vehicle.js';
 
 dotenv.config();
 
@@ -27,39 +26,11 @@ mongoose.connect(process.env.CONNECTION_STRING)
 
 // ============= SIMULATION CONFIGURATION =============
 const TIME_MULTIPLIER = 1; // 1 real second = 1 hour simulation time
-const EVENT_INTERVAL = 5; // Generate events every 30 seconds
-const SCALE = 1;
-const TRAFFIC_VOLUME = 50 * SCALE; // total vehicles per day
-
-// Traffic multipliers for each hour (24 hours)
-const HOUR_TRAFFIC = [
-    0.1, 0.1, 0.1, 0.1,  // 00:00-03:59
-    0.2, 0.3, 0.5, 0.7,  // 04:00-07:59
-    0.9, 0.9, 0.8, 0.7,  // 08:00-11:59
-    0.6, 0.5, 0.4, 0.4,  // 12:00-15:59
-    0.5, 0.6, 0.7, 0.8,  // 16:00-19:59
-    0.6, 0.4, 0.3, 0.2   // 20:00-23:59
-];
-
-// Traffic multipliers for each day of the week (0 = Sunday, 6 = Saturday)
-const WEEKDAY_TRAFFIC = [
-    0.7,  // Sunday
-    1.5,  // Monday
-    1.4,  // Tuesday
-    1.3,  // Wednesday
-    1.4,  // Thursday
-    1.2,  // Friday
-    0.8   // Saturday
-];
-
-// Parking duration configuration (in milliseconds)
-const MIN_PARKING_DURATION = 60 * 60 * 1000; // 1 hour in ms
-const MAX_PARKING_DURATION = 24 * 60 * 60 * 1000; // 1 day in ms
+const EVENT_INTERVAL = 5; // Generate events every 5 simulation seconds
 
 // Plate number configuration
 const PLATE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const PLATE_NUMBERS = '0123456789';
-const PLATE_LENGTH = 6; // 3 letters + 3 numbers
 
 // Confidence score configuration
 const MIN_CONFIDENCE = 80;
@@ -67,9 +38,8 @@ const MAX_CONFIDENCE = 100;
 
 // ============= END SIMULATION CONFIGURATION =============
 
-// Map to track plate numbers and their status for each area
+// Map to track area information
 let areaStatuses = new Map();
-let statusTable;
 
 // Add simulation time tracking
 let simulationStartTime;
@@ -119,17 +89,6 @@ function realToSimulationTime(realSeconds) {
 // Function to convert simulation time to real time
 function simulationToRealTime(simulationSeconds) {
     return simulationSeconds / TIME_MULTIPLIER;
-}
-
-// Initialize the status table
-function initializeStatusTable() {
-    statusTable = new Table({
-        head: ['Area Name', 'Location', 'Capacity', 'Status'],
-        style: {
-            head: ['cyan'],
-            border: ['gray']
-        }
-    });
 }
 
 // Get the current date and time in Sydney timezone
@@ -203,19 +162,7 @@ function generateConfidence() {
     return Math.floor(Math.random() * (MAX_CONFIDENCE - MIN_CONFIDENCE + 1) + MIN_CONFIDENCE).toString();
 }
 
-// Calculate traffic volume for current time
-function calculateTrafficVolume() {
-    const now = new Date();
-    const hour = now.getHours();
-    const day = now.getDay();
-    
-    return Math.round(TRAFFIC_VOLUME * HOUR_TRAFFIC[hour] * WEEKDAY_TRAFFIC[day]);
-}
 
-// Generate random parking duration in milliseconds (1 hour to 1 day)
-function generateParkingDuration() {
-    return Math.floor((Math.random() * (MAX_PARKING_DURATION - MIN_PARKING_DURATION) + MIN_PARKING_DURATION) / TIME_MULTIPLIER);
-}
 
 // Display current parking status
 async function displayParkingStatus() {
@@ -225,30 +172,60 @@ async function displayParkingStatus() {
         
         // Display parking areas information
         console.log('\n=== Parking Areas Information ===');
-        console.table(Array.from(areaStatuses.values()).map(areaStatus => {
-            const location = parseLocation(areaStatus.location);
-            return {
-                'Area Name': areaStatus.name,
-                'Location': `${location.suburb}, ${location.city}`,
-                'Capacity': areaStatus.capacity,
-                'Current Usage': `${areaStatus.plates.size}/${areaStatus.capacity}`,
-                'Status': areaStatus.plates.size >= areaStatus.capacity ? 'FULL' : 'AVAILABLE'
-            };
-        }));
+        const areaInfo = [];
+        
+        for (const [areaId, areaStatus] of areaStatuses) {
+            try {
+                const location = parseLocation(areaStatus.location);
+                const currentVehicleCount = await Vehicle.countDocuments({ 
+                    areaId: areaId, 
+                    status: 'APPROACHING' 
+                });
+                
+                areaInfo.push({
+                    'Area Name': areaStatus.name,
+                    'Location': `${location.suburb}, ${location.city}`,
+                    'Capacity': areaStatus.capacity,
+                    'Current Usage': `${currentVehicleCount}/${areaStatus.capacity}`,
+                    'Status': currentVehicleCount >= areaStatus.capacity ? 'FULL' : 'AVAILABLE'
+                });
+            } catch (error) {
+                console.error(`Error getting info for area ${areaStatus.name}:`, error);
+            }
+        }
+        
+        console.table(areaInfo);
         
         // Display current vehicles in areas
         console.log('\n=== Current Vehicles in Areas ===');
-        areaStatuses.forEach((areaStatus, areaId) => {
+        for (const [areaId, areaStatus] of areaStatuses) {
             const location = parseLocation(areaStatus.location);
             console.log(`\n${areaStatus.name} (${location.suburb}):`);
-            if (areaStatus.plates.size > 0) {
-                areaStatus.plates.forEach((status, plate) => {
-                    console.log(`  - ${plate} (${status})`);
+            
+            try {
+                // Get actual vehicle count from database
+                const vehicleCount = await Vehicle.countDocuments({ 
+                    areaId: areaId, 
+                    status: 'APPROACHING' 
                 });
-            } else {
-                console.log('  No vehicles currently parked');
+                
+                if (vehicleCount > 0) {
+                    // Get actual vehicles from database
+                    const vehicles = await Vehicle.find({ 
+                        areaId: areaId, 
+                        status: 'APPROACHING' 
+                    });
+                    
+                    vehicles.forEach(vehicle => {
+                        console.log(`  - ${vehicle.plateNumber} (APPROACHING)`);
+                    });
+                } else {
+                    console.log('  No vehicles currently parked');
+                }
+            } catch (error) {
+                console.log('  Error fetching vehicles from database');
             }
-        });
+        }
         
         // Display vehicle event history
         console.log('\n=== Vehicle Event History ===');
@@ -266,8 +243,6 @@ async function displayParkingStatus() {
 
 // Main simulation loop
 async function runSimulation() {
-    if (!isMainThread) return;
-    
     console.log('🚀 Starting traffic simulation...');
     console.log(`⏱️  Time scale: 1 real second = ${TIME_MULTIPLIER} simulation seconds`);
     console.log(`🔄 Event interval: ${EVENT_INTERVAL} simulation seconds (${simulationToRealTime(EVENT_INTERVAL)} real seconds)`);
@@ -288,58 +263,35 @@ async function runSimulation() {
         // Initialize status tracking for each area
         for (const area of areas) {
             areaStatuses.set(area._id.toString(), {
-                ...area.toObject(),
-                plates: new Map()
+                ...area.toObject()
             });
         }
         
-        initializeStatusTable();
         simulationStartTime = Date.now();
         
-        // Create workers once at the start
-        const workers = new Map();
-        for (const area of areas) {
-            const areaData = {
-                _id: area._id.toString(),
-                name: area.name,
-                capacity: area.capacity,
-                location: area.location
-            };
-
-            const worker = new Worker(new URL(import.meta.url), {
-                workerData: { 
-                    area: areaData,
-                    areaStatuses: Array.from(areaStatuses.entries())
-                }
-            });
-            
-            worker.on('message', (message) => {
-                if (message.type === 'updateStatus') {
-                    areaStatuses = new Map(message.areaStatuses);
-                    displayParkingStatus();
-                }
-            });
-            
-            worker.on('error', console.error);
-            worker.on('exit', (code) => {
-                if (code !== 0) console.error(`Worker stopped with exit code ${code}`);
-            });
-
-            workers.set(area._id.toString(), worker);
-        }
-        
         console.log('✅ Simulation started successfully! Press Ctrl+C to stop.');
+        console.log('📝 Note: Events are being written to CSV files only. Use a separate script to import CSV data into the database.');
         
         while (true) {
             const simTime = calculateSimulationTime();
             
-            // Update all workers with current simulation time
-            for (const [areaId, worker] of workers) {
-                worker.postMessage({
-                    type: 'updateTime',
-                    simTime: simTime
-                });
+            // Randomly choose one area for this simulation second
+            const randomAreaIndex = Math.floor(Math.random() * areas.length);
+            const chosenArea = areas[randomAreaIndex];
+            
+            // Randomly choose between Option 1 (approaching) and Option 2 (leaving)
+            const shouldApproach = Math.random() < 0.5; // 50% chance for each option
+            
+            if (shouldApproach) {
+                // Option 1: Generate approaching event
+                await generateApproachingEvent(chosenArea);
+            } else {
+                // Option 2: Generate leaving event
+                await generateLeavingEvent(chosenArea);
             }
+            
+            // Update display
+            await displayParkingStatus();
             
             // Wait for the real time equivalent of EVENT_INTERVAL simulation seconds
             const realInterval = simulationToRealTime(EVENT_INTERVAL);
@@ -351,140 +303,102 @@ async function runSimulation() {
     }
 }
 
-// Worker thread code
-if (isMainThread) {
-    runSimulation().catch(console.error);
-} else {
-    const { area, areaStatuses: workerAreaStatuses } = workerData;
-    
-    // Initialize areaStatuses in worker thread
-    areaStatuses = new Map(workerAreaStatuses);
-    
-    // Ensure the area exists in the status map with proper structure
-    if (!areaStatuses.has(area._id)) {
-        areaStatuses.set(area._id, {
-            _id: area._id,
-            name: area.name,
-            capacity: area.capacity,
-            location: area.location,
-            plates: new Map()
-        });
-    }
-    
-    function updateMainThread() {
-        parentPort.postMessage({
-            type: 'updateStatus',
-            areaStatuses: Array.from(areaStatuses.entries())
-        });
-    }
-    
-    // Listen for time updates from main thread
-    parentPort.on('message', async (message) => {
-        if (message.type === 'updateTime') {
-            await simulateVehicleEvent();
-        }
-    });
-    
-    // Simulate a single vehicle event (either approaching or leaving)
-    async function simulateVehicleEvent() {
-        const areaStatus = areaStatuses.get(area._id.toString());
-        if (!areaStatus) {
-            console.error(`No status found for area ${area._id}`);
-            return;
-        }
+// Function to generate approaching event
+async function generateApproachingEvent(area) {
+    try {
+        // Check if area is full by counting vehicles in Vehicle collection
 
-        const hasVehicles = areaStatus.plates.size > 0;
-        
-        // Randomly decide whether to generate an approaching vehicle or make an existing vehicle leave
-        const shouldApproach = !hasVehicles || Math.random() < 0.7; // 70% chance of approaching if there are vehicles
-        
-        if (shouldApproach) {
-            // Generate a new plate number for approaching vehicle
-            const plateNumber = generatePlateNumber();
-            await generateVehicleEvent(area, 'APPROACHING', plateNumber);
-        } else {
-            // Select a random vehicle to leave
-            const plates = Array.from(areaStatus.plates.keys());
-            if (plates.length > 0) {
-                const randomPlate = plates[Math.floor(Math.random() * plates.length)];
-                await generateVehicleEvent(area, 'LEAVING', randomPlate);
-            }
-        }
-    }
+        const currentVehicleCount = area.currentCapacity;
 
-    // Generate a vehicle event
-    async function generateVehicleEvent(area, status, plateNumber = null) {
-        const now = new Date();
-        const date = now.toISOString().split('T')[0];
-        const time = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-        
-        const areaStatus = areaStatuses.get(area._id.toString());
-        
-        // Generate a new plate number if not provided
-        const finalPlateNumber = plateNumber || generatePlateNumber();
-        
-        // For APPROACHING events, check capacity and if plate already exists
-        if (status === 'APPROACHING') {
-            if (areaStatus.plates.size >= area.capacity) {
-                const skipMessage = `SKIP [${date} ${time}] APPROACHING event for plate ${finalPlateNumber} - parking area at capacity (${areaStatus.plates.size}/${area.capacity})`;
-                console.log(skipMessage);
-                eventHistory.push(skipMessage);
-                return false;
-            }
-            
-            if (areaStatus.plates.has(finalPlateNumber)) {
-                const skipMessage = `SKIP [${date} ${time}] APPROACHING event for plate ${finalPlateNumber} - already in parking area`;
-                console.log(skipMessage);
-                eventHistory.push(skipMessage);
-                return false;
-            }
-        }
-        
-        // For LEAVING events, check if plate exists and is APPROACHING
-        if (status === 'LEAVING') {
-            if (!areaStatus.plates.has(finalPlateNumber) || areaStatus.plates.get(finalPlateNumber) !== 'APPROACHING') {
-                const skipMessage = `SKIP [${date} ${time}] LEAVING event for plate ${finalPlateNumber} - not found in parking area`;
-                console.log(skipMessage);
-                eventHistory.push(skipMessage);
-                return false;
-            }
-        }
-        
-        const event = {
-            date,
-            time,
-            parkingAreaId: area._id,
-            plateNumber: finalPlateNumber,
-            country: 'AUS',
-            confidence: generateConfidence(),
-            angle: generateAngle(),
-            image: `${date}_${time}_${finalPlateNumber}.jpg`,
-            status: status
-        };
-        
-        const eventMessage = `[${date} ${time}] ${status} event for plate ${event.plateNumber} in area ${area.name}`;
-        console.log(eventMessage);
-        eventHistory.push(eventMessage);
-        
-        try {
-            // Write to CSV file
-            const areaDir = path.join(process.cwd(), 'public', 'simulation', `${area.name}_${area._id.toString()}`);
-            const csvFilePath = path.join(areaDir, `${today}.csv`);
-            const csvLine = `${event.date},${event.time},${event.parkingAreaId},${event.plateNumber},${event.country},${event.confidence},${event.angle},${event.image},${event.status}\n`;
-            fs.appendFileSync(csvFilePath, csvLine);
-            
-            // Update parking status after successful write
-            if (status === 'APPROACHING') {
-                areaStatus.plates.set(finalPlateNumber, 'APPROACHING');
-            } else if (status === 'LEAVING') {
-                areaStatus.plates.delete(finalPlateNumber);
-            }
-            
-            updateMainThread();
-            return true;
-        } catch (error) {
-            console.error('Error writing to CSV:', error);
+        if (currentVehicleCount >= area.capacity) {
+            const skipMessage = `SKIP [${new Date().toISOString().split('T')[0]} ${new Date().toTimeString().split(' ')[0].replace(/:/g, '-')}] APPROACHING event for area ${area.name} - parking area at capacity (${currentVehicleCount}/${area.capacity})`;
+            console.log(skipMessage);
+            eventHistory.push(skipMessage);
             return false;
         }
+        
+        // Generate approaching event
+        const plateNumber = generatePlateNumber();
+        const event = await generateVehicleEvent(area, 'APPROACHING', plateNumber);
+        
+        return event;
+    } catch (error) {
+        console.error('Error generating approaching event:', error);
+        return false;
     }
 }
+
+// Function to generate leaving event
+async function generateLeavingEvent(area) {
+    try {
+        console.log(area.currentCapacity, area);
+        if (area.currentCapacity === 0) {
+            const skipMessage = `SKIP [${new Date().toISOString().split('T')[0]} ${new Date().toTimeString().split(' ')[0].replace(/:/g, '-')}] LEAVING event for area ${area.name} - no vehicles currently parked`;
+            console.log(skipMessage);
+            eventHistory.push(skipMessage);
+            return false;
+        }
+        
+        // Find all existing vehicles in the chosen area from database
+        const existingVehicles = await Vehicle.find({ 
+            areaId: area._id, 
+            status: 'APPROACHING' 
+        });
+        
+        // Randomly choose one of the existing vehicles
+        const randomVehicleIndex = Math.floor(Math.random() * existingVehicles.length);
+        const chosenVehicle = existingVehicles[randomVehicleIndex];
+        
+        // Generate leaving event for the chosen vehicle
+        const event = await generateVehicleEvent(area, 'LEAVING', chosenVehicle.plateNumber);
+        
+        return event;
+    } catch (error) {
+        console.error('Error generating leaving event:', error);
+        return false;
+    }
+}
+
+// Generate a vehicle event
+async function generateVehicleEvent(area, status, plateNumber = null) {
+    const now = new Date();
+    const date = now.toISOString().split('T')[0];
+    const time = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+    
+    // Generate a new plate number if not provided
+    const finalPlateNumber = plateNumber || generatePlateNumber();
+    
+    const event = {
+        date,
+        time,
+        parkingAreaId: area._id,
+        plateNumber: finalPlateNumber,
+        country: 'AUS',
+        confidence: generateConfidence(),
+        angle: generateAngle(),
+        image: `${date}_${time}_${finalPlateNumber}.jpg`,
+        status: status
+    };
+    
+    const eventMessage = `[${date} ${time}] ${status} event for plate ${event.plateNumber} in area ${area.name}`;
+    console.log(eventMessage);
+    eventHistory.push(eventMessage);
+    
+    try {
+        // Write to CSV file
+        const areaDir = path.join(process.cwd(), 'public', 'simulation', `${area.name}_${area._id.toString()}`);
+        const csvFilePath = path.join(areaDir, `${today}.csv`);
+        const csvLine = `${event.date},${event.time},${event.parkingAreaId},${event.plateNumber},${event.country},${event.confidence},${event.angle},${event.image},${event.status}\n`;
+        fs.appendFileSync(csvFilePath, csvLine);
+        
+
+        
+        return true;
+    } catch (error) {
+        console.error('Error writing to CSV:', error);
+        return false;
+    }
+}
+
+// Start the simulation
+runSimulation().catch(console.error);

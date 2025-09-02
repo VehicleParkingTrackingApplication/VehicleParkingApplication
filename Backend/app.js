@@ -10,10 +10,12 @@ import dbConnect from './src/config/db/index.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import serverless from 'serverless-http';
+import { createServer } from 'http';
 
 // Import scheduler services
 import { ScheduledFtpService } from './src/app/services/scheduledFtpService.js';
 import { ScheduledSimulationService } from './src/app/services/scheduledSimulationService.js';
+import { WebSocketService } from './src/app/services/webSocketService.js';
 
 dotenv.config();
 
@@ -21,19 +23,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 1313;
 
 // Connect to DB
 dbConnect();
 
-// ============= INITIALIZE SCHEDULER SERVICES =============
-// Initialize schedulers if not in test environment
-const scheduledSimulationService = new ScheduledSimulationService();
-scheduledSimulationService.startScheduledProcessing();
+// Init web socket service
+const webSocketService = new WebSocketService();
+webSocketService.initialize(server);
 
+
+// Init schedulers services for data simulation processing
+// const scheduledSimulationService = new ScheduledSimulationService();
+// scheduledSimulationService.startScheduledProcessing();
+
+// Init schedulers services for data FTP
 // const scheduledFtpService = new ScheduledFtpService();
 // scheduledFtpService.startScheduledProcessing();
-// ============= END SCHEDULER INITIALIZATION =============
 
 // CORS configuration for development
 // app.use(cors());
