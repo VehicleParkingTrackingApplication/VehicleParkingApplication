@@ -3,8 +3,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { getCurrentUser } from '../services/backend';
-import { putApi } from '../services/api';
+import { fetchAuthApi, putAuthApi } from '../services/api';
 
 export default function AccountPage() {
     const [user, setUser] = useState({
@@ -19,6 +18,7 @@ export default function AccountPage() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -27,34 +27,80 @@ export default function AccountPage() {
                 
                 // Check if user is authenticated
                 const token = localStorage.getItem('token');
+                console.log('Token exists:', !!token);
                 if (!token) {
                     setError('You are not logged in. Please log in to view your account details.');
                     setIsLoading(false);
                     return;
                 }
                 
-                const data = await getCurrentUser();
-                console.log('User data received:', data);
+                // Try using the auth interceptor first
+                console.log('Calling fetchAuthApi with auth/me...');
+                let response = await fetchAuthApi('auth/me');
+                console.log('Auth response status:', response.status);
+                console.log('Auth response ok:', response.ok);
                 
-                if (data) {
+                // If auth interceptor fails, try manual token approach
+                if (!response.ok) {
+                    console.log('Auth interceptor failed, trying manual token approach...');
+                    const manualResponse = await fetch('http://localhost:1313/api/auth/me', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include'
+                    });
+                    
+                    if (manualResponse.ok) {
+                        response = manualResponse;
+                        console.log('Manual token approach succeeded');
+                    } else {
+                        const errorText = await response.text();
+                        console.log('Error response:', errorText);
+                        if (response.status === 401) {
+                            setError('Authentication failed. Please log in again.');
+                        } else if (response.status === 404) {
+                            setError('Backend endpoint not found. The backend may need environment variables to be configured.');
+                        } else {
+                            setError(`Failed to fetch user data. Server responded with ${response.status}. Please try again.`);
+                        }
+                        setIsLoading(false);
+                        return;
+                    }
+                }
+                
+                const userData = await response.json();
+                console.log('User data received:', userData);
+                
+                if (userData && userData.username) {
                     setUser({
-                        firstName: data.firstName || '',
-                        lastName: data.lastName || '',
-                        email: data.email || '',
-                        username: data.username || ''
+                        firstName: userData.firstName || '',
+                        lastName: userData.lastName || '',
+                        email: userData.email || '',
+                        username: userData.username || ''
                     });
                     console.log('User state updated:', {
-                        firstName: data.firstName || '',
-                        lastName: data.lastName || '',
-                        email: data.email || '',
-                        username: data.username || ''
+                        firstName: userData.firstName || '',
+                        lastName: userData.lastName || '',
+                        email: userData.email || '',
+                        username: userData.username || ''
                     });
+                    setError(''); // Clear any previous errors
                 } else {
-                    setError('Failed to fetch user data. Please log in again or check your authentication.');
+                    setError('Failed to fetch user data. Please log in again or check your authentication. If the problem persists, the backend may need environment variables to be configured.');
                 }
             } catch (err) {
                 console.error('Error fetching user data:', err);
-                setError('Network error. Please try again.');
+                const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+                console.error('Error details:', errorMessage);
+                
+                // Check if it's a network error
+                if (errorMessage.includes('fetch')) {
+                    setError('Cannot connect to server. Please make sure the backend is running.');
+                } else {
+                    setError('Network error. Please try again.');
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -62,6 +108,34 @@ export default function AccountPage() {
 
         fetchUserData();
     }, []);
+
+    const testConnection = async () => {
+        setIsTestingConnection(true);
+        try {
+            const response = await fetch('http://localhost:1313/api/auth/me', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+            
+            console.log('Test connection response:', response.status, response.statusText);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Test connection data:', data);
+                alert('Connection successful! Check console for details.');
+            } else {
+                alert(`Connection failed: ${response.status} ${response.statusText}`);
+            }
+        } catch (err) {
+            console.error('Test connection error:', err);
+            alert('Connection test failed. Check console for details.');
+        } finally {
+            setIsTestingConnection(false);
+        }
+    };
 
     const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
@@ -85,19 +159,31 @@ export default function AccountPage() {
         setError('');
 
         try {
-            const response = await putApi('/account/update', {}, JSON.stringify(user));
-            if (!response.ok) {
-                const errorData = await response.json();
-                setError(errorData.message || 'Failed to update details.');
+            // Update user name using the proper endpoint
+            const nameResponse = await putAuthApi('account/update-name', {}, JSON.stringify({
+                firstName: user.firstName,
+                lastName: user.lastName
+            }));
+            
+            if (!nameResponse.ok) {
+                const errorData = await nameResponse.json();
+                setError(errorData.message || 'Failed to update name.');
+                return;
             }
-            // Optionally update passwords
-            if (passwords.newPassword) {
-                const passResponse = await putApi('/account/change-password', {}, JSON.stringify(passwords));
-                if (!passResponse.ok) {
-                    throw new Error('Failed to update password.');
-                }
+
+            // Update password if provided
+            if (passwords.newPassword && passwords.oldPassword) {
+                // Password change functionality is not available
+                setError('Password change functionality is not available. Please contact support.');
+                return;
             }
+
+            // If we get here, the update was successful
+            setError(''); // Clear any previous errors
+            alert('Account updated successfully!');
+            
         } catch (err) {
+            console.error('Update error:', err);
             setError('Update failed. Please try again.');
         } finally {
             setIsLoading(false);
@@ -126,6 +212,40 @@ export default function AccountPage() {
                     </CardHeader>
                     <CardContent className="space-y-8">
                         {error && <p className="text-red-500">{error}</p>}
+                        
+                        {/* Debug section */}
+                        <div className="flex gap-4 mb-4">
+                            <Button 
+                                type="button" 
+                                onClick={testConnection}
+                                disabled={isTestingConnection}
+                                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                            >
+                                {isTestingConnection ? 'Testing...' : 'Test Connection'}
+                            </Button>
+                            <Button 
+                                type="button" 
+                                onClick={() => {
+                                    console.log('Current token:', localStorage.getItem('token'));
+                                    console.log('Current user state:', user);
+                                }}
+                                className="bg-gray-600 hover:bg-gray-700 text-white"
+                            >
+                                Debug Info
+                            </Button>
+                        </div>
+                        
+                        {/* Backend Status Info */}
+                        <div className="bg-blue-900/50 border border-blue-700 rounded-lg p-4 mb-4">
+                            <h4 className="text-blue-300 font-semibold mb-2">Backend Connection Status</h4>
+                            <p className="text-blue-200 text-sm">
+                                The backend server is running on port 1313, but it needs environment variables to be configured.
+                            </p>
+                            <p className="text-blue-200 text-sm mt-2">
+                                <strong>Required:</strong> Create a .env file in the Backend folder with ACCESS_TOKEN_SECRET and other variables.
+                            </p>
+                        </div>
+                        
                         <form onSubmit={handleUpdate}>
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
