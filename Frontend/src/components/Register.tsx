@@ -30,7 +30,7 @@ export default function RegisterPage() {
           
           if (result && result.accessToken) {
             localStorage.setItem('token', result.accessToken);
-            nav('/');
+            nav('/dashboard');
           } else {
             setError(result?.message || 'Registration failed. Please try again.');
           }
