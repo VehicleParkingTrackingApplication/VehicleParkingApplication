@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from './ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Eye, EyeOff, Edit, Trash2, X } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
+import { Eye, EyeOff, Edit, Trash2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import StaffAccountPopUp from './StaffAccountPopUp';
@@ -164,179 +165,166 @@ export default function StaffManagement() {
   };
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col">
-      <div 
-        className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
-        style={{ transform: 'translate(50%, -50%)' }}
-      ></div>
-      <div 
-        className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
-        style={{ transform: 'translate(-50%, 50%)' }}
-      ></div>
-
-      <main className="flex-grow relative z-10 p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">Staff Management</h1>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Create Staff Account
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-gray-900/95 text-white border-gray-700">
-                <StaffAccountPopUp 
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Message Display */}
-          {message && (
-            <div className={`px-4 py-2 rounded-lg ${
-              message.type === 'success' 
-                ? 'bg-green-600 text-white' 
-                : 'bg-red-600 text-white'
-            }`}>
-              {message.text}
-            </div>
-          )}
-
-          {/* Search and Pagination Controls */}
-          <section className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 shadow-md">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <form onSubmit={handleSearch} className="flex gap-2 flex-1">
-                <Input
-                  type="text"
-                  placeholder="Search staff by username, name, email, or role..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-gray-700 border-gray-600 text-white flex-1"
-                />
-                <Button type="submit" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800">
-                  Search
-                </Button>
-                {search && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={handleClearSearch}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
-                  >
-                    Clear
+    <div className="min-h-screen bg-black text-white p-6 md:p-8">
+      <div className="mx-auto w-full max-w-6xl">
+        <Card className="w-full bg-gray-700 border-gray-600">
+          <CardContent className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2">
+              <div>
+                <h1 className="text-2xl font-semibold">Staff Management</h1>
+                <p className="text-sm text-gray-300">Streamlined, secure, and consistent with your workspace</p>
+              </div>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Create Staff Account
                   </Button>
-                )}
-              </form>
-              
-              <div className="text-sm text-gray-300">
-                Showing {staffList.length} staff members
-              </div>
+                </DialogTrigger>
+                <DialogContent className="bg-gray-900/95 text-white border-gray-700">
+                  <StaffAccountPopUp 
+                    onSuccess={handleSuccess}
+                    onError={handleError}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
-          </section>
 
-          {/* Staff Table */}
-          <div className="bg-gray-900/50 rounded-lg border border-gray-700 overflow-hidden">
-            {loading ? (
-              <div className="p-8 text-center">
-                <div className="text-gray-400">Loading staff list...</div>
+            {message && (
+              <div className={`px-4 py-2 rounded-lg ${
+                message.type === 'success' 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-red-600 text-white'
+              }`}>
+                {message.text}
               </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-700">
-                    <TableHead className="text-white">Index</TableHead>
-                    <TableHead className="text-white">Username</TableHead>
-                    <TableHead className="text-white">Full Name</TableHead>
-                    <TableHead className="text-white">Password</TableHead>
-                    <TableHead className="text-white">Role</TableHead>
-                    <TableHead className="text-white">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffList.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-400 py-8">
-                        No staff members found
-                      </TableCell>
+            )}
+
+            <section className="bg-gray-800 rounded-lg border border-gray-600 p-4 md:p-6 shadow-md">
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <form onSubmit={handleSearch} className="flex gap-2 w-full">
+                  <Input
+                    type="text"
+                    placeholder="Search staff by username, name, email, or role..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="bg-gray-700 border-gray-600 text-white flex-1"
+                  />
+                  <Button type="submit" variant="outline" className="border-gray-500 text-gray-200 hover:bg-gray-900">
+                    Search
+                  </Button>
+                  {search && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleClearSearch}
+                      className="border-gray-500 text-gray-200 hover:bg-gray-900"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </form>
+                <div className="text-sm text-gray-200 w-full md:w-auto text-center md:text-right">
+                  Showing {staffList.length} staff members
+                </div>
+              </div>
+            </section>
+
+            <div className="bg-gray-800 rounded-lg border border-gray-600 overflow-hidden">
+              {loading ? (
+                <div className="p-8 text-center">
+                  <div className="text-gray-400">Loading staff list...</div>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-600">
+                      <TableHead className="text-white">Index</TableHead>
+                      <TableHead className="text-white">Username</TableHead>
+                      <TableHead className="text-white">Full Name</TableHead>
+                      <TableHead className="text-white">Password</TableHead>
+                      <TableHead className="text-white">Role</TableHead>
+                      <TableHead className="text-white">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    staffList.map((staff, index) => (
-                      <TableRow key={staff._id} className="border-gray-700 hover:bg-gray-800/50">
-                        <TableCell className="text-white">{index + 1}</TableCell>
-                        <TableCell className="text-white">{staff.username}</TableCell>
-                        <TableCell className="text-white">
-                          {`${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-mono">
-                              {showPasswords[staff._id] ? 'password123' : '••••••••'}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => togglePasswordVisibility(staff._id)}
-                              className="text-gray-400 hover:text-white"
-                            >
-                              {showPasswords[staff._id] ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            staff.role === 'admin' 
-                              ? 'bg-purple-600 text-white' 
-                              : 'bg-blue-600 text-white'
-                          }`}>
-                            {staff.role}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateStaff(staff)}
-                              className="text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-white"
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Update
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteStaff(staff._id, staff.username)}
-                              className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Remove
-                            </Button>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {staffList.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                          No staff members found
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </div>
-      </main>
+                    ) : (
+                      staffList.map((staff, index) => (
+                        <TableRow key={staff._id} className="border-gray-700 hover:bg-gray-900/40">
+                          <TableCell className="text-white">{index + 1}</TableCell>
+                          <TableCell className="text-white">{staff.username}</TableCell>
+                          <TableCell className="text-white">{`${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A'}</TableCell>
+                          <TableCell className="text-white">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-mono">
+                                {showPasswords[staff._id] ? 'password123' : '••••••••'}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => togglePasswordVisibility(staff._id)}
+                                className="text-gray-300 hover:text-white"
+                              >
+                                {showPasswords[staff._id] ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-white">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              staff.role === 'admin' 
+                                ? 'bg-purple-600 text-white' 
+                                : 'bg-blue-600 text-white'
+                            }`}>
+                              {staff.role}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-white">
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleUpdateStaff(staff)}
+                                className="text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-white"
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Update
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteStaff(staff._id, staff.username)}
+                                className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Remove
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Update Staff Dialog */}
       <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
         <DialogContent className="bg-gray-900/95 text-white border-gray-700 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">Update Staff Member</DialogTitle>
           </DialogHeader>
-          
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label htmlFor="update-username">Username</Label>
@@ -347,7 +335,6 @@ export default function StaffManagement() {
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="update-firstName">First Name</Label>
               <Input
@@ -357,7 +344,6 @@ export default function StaffManagement() {
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="update-lastName">Last Name</Label>
               <Input
@@ -367,7 +353,6 @@ export default function StaffManagement() {
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="update-email">Email</Label>
               <Input
@@ -378,7 +363,6 @@ export default function StaffManagement() {
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="update-businessId">Business ID</Label>
               <Input
@@ -388,7 +372,6 @@ export default function StaffManagement() {
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="update-password">Password</Label>
               <Input
@@ -400,7 +383,6 @@ export default function StaffManagement() {
               />
             </div>
           </div>
-          
           <div className="flex justify-end space-x-2 mt-6">
             <Button
               variant="outline"

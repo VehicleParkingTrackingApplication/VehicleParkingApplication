@@ -29,7 +29,7 @@ export default function LoginPage() {
         // In a real app, you would store the token securely
         localStorage.setItem('token', result.accessToken);
         window.dispatchEvent(new CustomEvent('authChange'));
-        nav('/');
+        nav('/dashboard');
       } else {
         setError(result?.message || 'Invalid username or password');
       }
