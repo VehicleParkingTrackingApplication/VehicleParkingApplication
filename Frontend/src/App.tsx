@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import RegisterPage from './components/Register';
 import LoginPage from './components/Login';
 import HomePage from './components/HomePage';
+import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
@@ -17,14 +18,32 @@ import ViewAllRecords from './components/ViewAllRecords';
 export default function App() {
   return (
     <div>
-        <Header/>
         <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            {/* Landing page without header */}
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* Routes with header */}
+            <Route path="/home" element={
+                <div>
+                    <Header/>
+                    <HomePage />
+                </div>
+            } />
+            <Route path="/dashboard" element={
+                <div>
+                    <Header/>
+                    <Dashboard />
+                </div>
+            } />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/signin" element={<LoginPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/account" element={<AccountPage />} />
+            <Route path="/account" element={
+                <div>
+                    <Header/>
+                    <AccountPage />
+                </div>
+            } />
             <Route 
                 path="/area-management" 
                 element={
@@ -36,16 +55,31 @@ export default function App() {
             <Route 
                 path="/staff-management" 
                 element={
-                    <ProtectedRoute>
+                    <div>
+                        <Header/>
                         <StaffManagement />
-                    </ProtectedRoute>
+                    </div>
                 } 
             />
+            <Route path="/analytics" element={
+                <div>
+                    <Header/>
+                    <Analytics />
+                </div>
+            } />
+            <Route path="/area/:areaId/vehicles" element={
+                <div>
+                    <Header/>
+                    <ViewAllExistingVehicles />
+                </div>
+            } />
+            <Route path="/area/:areaId/records" element={
+                <div>
+                    <Header/>
+                    <ViewAllRecords />
+                </div>
+            } />
             <Route path="*" element={<Navigate to="/" replace />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
-            <Route path="/area/:areaId/records" element={<ViewAllRecords />} />
-
         </Routes>
     </div>
   );

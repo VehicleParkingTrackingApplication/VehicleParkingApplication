@@ -122,18 +122,26 @@ export default function AreaManagement() {
     const limitParam = searchParams.get('limit');
     const searchParam = searchParams.get('search');
 
+    // Only update if the URL param is different from current state
+    // This prevents infinite loops
     if (pageParam && parseInt(pageParam) !== currentPage) {
-      setCurrentPage(parseInt(pageParam));
+      const newPage = parseInt(pageParam);
+      if (newPage >= 1) {
+        setCurrentPage(newPage);
+      }
     }
     if (limitParam && parseInt(limitParam) !== limit) {
-      setLimit(parseInt(limitParam));
+      const newLimit = parseInt(limitParam);
+      if (newLimit > 0) {
+        setLimit(newLimit);
+      }
     }
     if (searchParam !== search) {
       const applied = searchParam || '';
       setSearch(applied);
       setSearchInput(applied);
     }
-  }, [searchParams, currentPage, search, limit]);
+  }, [searchParams]); // Removed currentPage, search, limit from dependencies to prevent loops
 
   // Fetch areas data when authenticated
   useEffect(() => {
@@ -148,6 +156,9 @@ export default function AreaManagement() {
       setError('');
 
       console.log('=== Starting fetchAreasData ===');
+      console.log('Current page:', currentPage);
+      console.log('Limit:', limit);
+      console.log('Search:', search);
       console.log('Current token:', localStorage.getItem('token'));
 
              // Build query parameters
@@ -255,7 +266,23 @@ export default function AreaManagement() {
    };
 
    const handlePageChange = (newPage: number) => {
-     setCurrentPage(newPage);
+     console.log('handlePageChange called with:', newPage);
+     console.log('Current page before change:', currentPage);
+     console.log('Total pages:', totalPages);
+     
+     // Prevent change if already loading or invalid page
+     if (loading) {
+       console.log('Already loading, ignoring page change');
+       return;
+     }
+     
+     // Validate the new page number
+     if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
+       console.log('Setting page to:', newPage);
+       setCurrentPage(newPage);
+     } else {
+       console.log('Invalid page number or same page:', newPage);
+     }
    };
 
    const handleLimitChange = (newLimit: number) => {
@@ -416,22 +443,36 @@ export default function AreaManagement() {
               <div className="flex justify-center gap-2 mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('Previous button clicked, current page:', currentPage);
+                    if (currentPage > 1 && !loading) {
+                      handlePageChange(currentPage - 1);
+                    }
+                  }}
+                  disabled={currentPage <= 1 || loading}
                   size="sm"
+                  className="bg-neutral-700 border-neutral-600 text-white hover:bg-neutral-600 disabled:opacity-50"
                 >
                   Previous
                 </Button>
                 
-                <span className="flex items-center px-3 text-sm">
+                <span className="flex items-center px-3 text-sm text-gray-300 bg-neutral-700 rounded border border-neutral-600">
                   Page {currentPage} of {totalPages}
                 </span>
                 
                 <Button
                   variant="outline"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('Next button clicked, current page:', currentPage, 'total pages:', totalPages);
+                    if (currentPage < totalPages && !loading) {
+                      handlePageChange(currentPage + 1);
+                    }
+                  }}
+                  disabled={currentPage >= totalPages || loading}
                   size="sm"
+                  className="bg-neutral-700 border-neutral-600 text-white hover:bg-neutral-600 disabled:opacity-50"
                 >
                   Next
                 </Button>
@@ -458,43 +499,45 @@ export default function AreaManagement() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {areas.map((area) => (
                   <div key={area._id} className="bg-neutral-700 rounded-lg p-4 border border-neutral-600">
-                                         <div className="flex justify-between items-start mb-3">
-                       <h3 className="font-semibold text-lg text-white">{area.name}</h3>
-                       <span className={`${getOccupancyColor(area.currentVehicles || 0, area.capacity)} text-white text-xs px-2 py-1 rounded`}>
-                         {area.currentVehicles || 0}/{area.capacity} spots
-                       </span>
-                     </div>
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-semibold text-lg text-white truncate pr-2 flex-1" title={area.name}>
+                        {area.name}
+                      </h3>
+                      <span className={`${getOccupancyColor(area.currentVehicles || 0, area.capacity)} text-white text-xs px-2 py-1 rounded whitespace-nowrap flex-shrink-0`}>
+                        {area.currentVehicles || 0}/{area.capacity} spots
+                      </span>
+                    </div>
                     
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start">
-                        <span className="text-gray-400 w-20">Location:</span>
-                        <span className="text-gray-300 flex-1">{area.location}</span>
+                        <span className="text-gray-400 w-20 flex-shrink-0">Location:</span>
+                        <span className="text-gray-300 flex-1 truncate" title={area.location}>{area.location}</span>
                       </div>
                       
                       {area.policy && (
                         <div className="flex items-start">
-                          <span className="text-gray-400 w-20">Policy:</span>
-                          <span className="text-gray-300 flex-1">{area.policy}</span>
+                          <span className="text-gray-400 w-20 flex-shrink-0">Policy:</span>
+                          <span className="text-gray-300 flex-1 truncate" title={area.policy}>{area.policy}</span>
                         </div>
                       )}
                       
                       <div className="flex items-center">
-                        <span className="text-gray-400 w-20">FTP Server:</span>
-                        <span className="text-gray-300 text-xs font-mono bg-neutral-600 px-2 py-1 rounded">
+                        <span className="text-gray-400 w-20 flex-shrink-0">FTP Server:</span>
+                        <span className="text-gray-300 text-xs font-mono bg-neutral-600 px-2 py-1 rounded truncate flex-1" title={area.ftpServer}>
                           {area.ftpServer}
                         </span>
                       </div>
                       
                       <div className="flex items-center">
-                        <span className="text-gray-400 w-20">Created:</span>
-                        <span className="text-gray-300">
+                        <span className="text-gray-400 w-20 flex-shrink-0">Created:</span>
+                        <span className="text-gray-300 flex-1">
                           {new Date(area.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                       
                       <div className="flex items-center">
-                        <span className="text-gray-400 w-20">Updated:</span>
-                        <span className="text-gray-300">
+                        <span className="text-gray-400 w-20 flex-shrink-0">Updated:</span>
+                        <span className="text-gray-300 flex-1">
                           {new Date(area.updatedAt).toLocaleDateString()}
                         </span>
                       </div>

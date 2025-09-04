@@ -67,11 +67,15 @@ export const Header: React.FC = () => {
     navigate('/');
   };
 
+  const getLogoLink = () => {
+    return isAuthenticated ? '/dashboard' : '/';
+  };
+
   return (
     <header className="bg-black text-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center">
+          <Link to={getLogoLink()} className="flex items-center">
             <img src="/assets/Logo.png" alt="MoniPark" className="w-20 h-20 object-contain" />
           </Link>
 
