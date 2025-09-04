@@ -15,12 +15,7 @@ const Blacklist = new Schema({
         maxLength: 100 },
     createdAt: { 
         type: Date, 
-        default: Date.now },
-    addedBy: {
-        type: Schema.Types.ObjectId,
-        ref: 'users',
-        required: true,
-    }
+        default: Date.now }
 }, { timestamps: true });
 
 // Compound index for efficient lookups
