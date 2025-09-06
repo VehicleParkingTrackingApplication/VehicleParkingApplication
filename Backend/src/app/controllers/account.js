@@ -41,7 +41,6 @@ class accountController {
                 }
             });
         } catch (error) {
-            console.error('Error fetching account data:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
@@ -53,16 +52,7 @@ class accountController {
     
     async inputBusiness(req, res) {
         try {
-            console.log(req.body);
             const {email, phoneNumber, businessName, location} = req.body;
-
-            // add conditions to validate the requirement
-            // if (!conpanyName || !email || !phoneNumber) {
-            //     return res.status(400).json({
-            //         success: false,
-            //         message: 'Business name and parking area are required'
-            //     });
-            // }
 
             // check if the email already exist with another business
             const existingBusiness = await Business.findOne({ email: email.trim() });
@@ -92,7 +82,6 @@ class accountController {
                 }
             })
         } catch (error) {
-            console.log('Error in input business:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
@@ -131,26 +120,13 @@ class accountController {
             });
 
         } catch(err) {
-            console.log('Error in accountController.updateName: ', err);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
-                error: error.message
+                error: err.message
             });
         }
     }
-
-    // async getCurrentUser(req, res) {
-    //     try {
-    //         const user = await User.findById(req.user.id).select('-password');
-    //         if (!user) {
-    //             return res.status(404).json({ message: 'User not found' });
-    //         }
-    //         res.json({ user });
-    //     } catch (error) {
-    //         res.status(500).json({ message: 'Error fetching user data' });
-    //     }
-    // }
 }
 
 export default new accountController();

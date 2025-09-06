@@ -36,13 +36,6 @@ class authController {
             // After successful registration, log the user in
             const result = await handleLogin(req, res);
             if (result.status === 200) {
-                // res.cookie('refreshToken', result.refreshToken, {
-                //     httpOnly: true,
-                //     secure: process.env.NODE_ENV === 'production',
-                //     sameSite: 'Strict',
-                //     maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
-                // });
-                
                 res.json({
                     message: 'Registration and login successful',
                     accessToken: result.accessToken
@@ -90,11 +83,6 @@ class authController {
                 return res.status(401).json({ message: 'Not authenticated' });
             }
 
-            // Get user data from database (excluding sensitive fields)
-            // return res.status(200).json({
-            //     message: 'User data retrieved successfully',
-            //     user: req.user
-            // });
             const user = await User.findById(req.user.id).select('-password -loggedSessions');
             
             if (!user) {

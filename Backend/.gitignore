@@ -2,7 +2,8 @@
 
 node_modules/
 preprocessing_data/
-public/
+public/data/
+public/simulation/
 
 npm-debug.log
 .env

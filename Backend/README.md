@@ -6,24 +6,9 @@ This backend project is designed to automate the collection, processing, and man
 
 ### Key Features
 - **Automated FTP Data Collection:**
-  - Connects to FTP servers (one per parking area) to fetch camera data files.
-  - Supports secure FTP connections and customizable server settings per area.
-
 - **Data Processing Pipeline:**
-  - Processes raw camera data to extract relevant information (e.g., vehicle entries, timestamps).
-  - Handles continuous updates and ensures only new/unprocessed data is handled.
-
 - **MongoDB Storage:**
-  - Stores all processed data in a MongoDB database for efficient querying and analytics.
-  - Maintains relationships between businesses, parking areas, and their respective FTP servers.
-
 - **RESTful API Endpoints:**
-  - Exposes public API endpoints for:
-    - Business and user management
-    - Parking area and FTP server configuration
-    - Vehicle and camera data retrieval
-    - Data processing triggers and status
-  - All endpoints are accessible via `http://localhost:<port>` (default: 1313)
 
 ### High-Level Architecture
 ```
@@ -37,13 +22,6 @@ This backend project is designed to automate the collection, processing, and man
      ▼
 [MongoDB Database]
 ```
-
-### Example Public API Endpoints
-- `POST   /api/account/input-business-account` — Register a new business
-- `POST   /api/area/create` — Create a new parking area and link to FTP server
-- `POST   /api/area/input-ftp-server` — Add or update FTP server info for an area
-- `GET    /api/area/by-business/:businessId` — List all areas for a business
-- `GET    /api/vehicle/by-area/:areaId` — Get vehicle/camera data for an area
 
 ### Getting Started
 1. **Install dependencies:**
@@ -76,15 +54,6 @@ For more details, see the API documentation and code comments.
 1. Copy `env.example` to `.env`
 2. Fill in your actual values in `.env`
 3. Never commit `.env` to Git (it's already in .gitignore)
-
-### Production Deployment (App Runner)
-Set these environment variables in AWS App Runner console:
-
-- `MONGODB_URI` - Your MongoDB connection string
-- `ACCESS_TOKEN_SECRET` - JWT access token secret
-- `REFRESH_TOKEN_SECRET` - JWT refresh token secret  
-- `SESSION_SECRET` - Session encryption secret
-- `NODE_ENV` - Set to `production`
 
 ## Installation
 

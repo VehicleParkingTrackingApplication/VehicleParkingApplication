@@ -8,7 +8,7 @@ import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import AccountPage from './components/AccountPage';
 import AreaManagement from './components/AreaManagement';
-import Analytics from './components/ParkingDashboard';
+import ParkingDashboard from './components/ParkingDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import StaffManagement from './components/StaffManagement';
 
@@ -48,6 +48,7 @@ export default function App() {
                 path="/area-management" 
                 element={
                     <ProtectedRoute>
+                        <Header/>
                         <AreaManagement />
                     </ProtectedRoute>
                 } 
@@ -61,10 +62,10 @@ export default function App() {
                     </div>
                 } 
             />
-            <Route path="/analytics" element={
+            <Route path="/parking-dashboard" element={
                 <div>
                     <Header/>
-                    <Analytics />
+                    <ParkingDashboard />
                 </div>
             } />
             <Route path="/area/:areaId/vehicles" element={
