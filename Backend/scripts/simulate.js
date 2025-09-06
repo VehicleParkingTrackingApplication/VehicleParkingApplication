@@ -24,9 +24,19 @@ mongoose.connect(process.env.CONNECTION_STRING)
         process.exit(1);
     });
 
-// ============= SIMULATION CONFIGURATION =============
+// Simulation configuration
 const TIME_MULTIPLIER = 1; // 1 real second = 1 hour simulation time
 const EVENT_INTERVAL = 5; // Generate events every 5 simulation seconds
+
+// Manual list of area IDs to simulate
+const SIMULATION_AREA_IDS = [
+    '68463ea062d56405aaef9ff9', // First area ID
+    // Add more area IDs here as needed
+    // '68463ea062d56405aaef9ffa',
+    // '68463ea062d56405aaef9ffb',
+    // '68463ea062d56405aaef9ffc',
+    // '68463ea062d56405aaef9ff8'
+];
 
 // Plate number configuration
 const PLATE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -36,7 +46,7 @@ const PLATE_NUMBERS = '0123456789';
 const MIN_CONFIDENCE = 80;
 const MAX_CONFIDENCE = 100;
 
-// ============= END SIMULATION CONFIGURATION =============
+// End of simulation configuration
 
 // Map to track area information
 let areaStatuses = new Map();
@@ -249,9 +259,22 @@ async function runSimulation() {
     
     try {
         // Get all parking areas except the excluded one
-        const excludedAreaId = "687dde8379e977f9d2aaf8ef";
-        const areas = await Area.find({ _id: { $ne: excludedAreaId } });
-        console.log(`📍 Found ${areas.length} parking areas (excluding area ${excludedAreaId})`);
+        const areas = [];
+        for (const areaId of SIMULATION_AREA_IDS) {
+            try {
+                const area = await Area.findById(areaId);
+                if (area) {
+                    areas.push(area);
+                    console.log(`✅ Found area: ${area.name} (${areaId})`);
+                } else {
+                    console.log(`⚠️  Area not found: ${areaId}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error fetching area ${areaId}:`, error);
+            }
+        }
+        
+        console.log(`📍 Found ${areas.length} parking areas from manual list`);
         if (areas.length === 0) {
             console.log('⚠️  No parking areas found in the database (after exclusion). Please create some areas first.');
             process.exit(1);

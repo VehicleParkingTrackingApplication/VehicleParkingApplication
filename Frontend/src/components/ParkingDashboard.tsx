@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/card';
 import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles } from '@/services/parking';
+import { webSocketService } from '@/services/websocket';
 
 // --- INTERFACES ---
 // Represents the raw data from the backend for an existing vehicle
@@ -26,6 +28,19 @@ interface VehicleRecord {
   plateNumber: string;
   datetime: string;
   areaId: string;
+}
+
+// Represents the raw record data from the backend API
+interface RawRecord {
+  _id: string;
+  plate: string;
+  action: 'ENTRY' | 'EXIT';
+  time: string;
+  date: string;
+  image: string;
+  country: string;
+  angle: number;
+  confidence: number;
 }
 
 // Represents the enriched record object after client-side processing
@@ -122,6 +137,9 @@ const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: numbe
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function ParkingDashboard() {
+  // --- URL PARAMETER MANAGEMENT ---
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // --- STATE MANAGEMENT ---
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
@@ -137,10 +155,28 @@ export default function ParkingDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
+  const [wsConnected, setWsConnected] = useState(false);
+  const [lastDataUpdate, setLastDataUpdate] = useState<string | null>(null);
+  const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
 
   // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [overstayLimit, setOverstayLimit] = useState(60); // Default 60 minutes
+
+  // --- URL PARAMETER FUNCTIONS ---
+  const updateURLParams = (updates: Record<string, string | null>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '') {
+        newSearchParams.delete(key);
+      } else {
+        newSearchParams.set(key, value);
+      }
+    });
+    
+    setSearchParams(newSearchParams, { replace: true });
+  };
 
   // --- DATA FETCHING AND PROCESSING ---
 
@@ -154,6 +190,96 @@ export default function ParkingDashboard() {
     };
     verifyAuth();
   }, []);
+
+  // Effect to read URL parameters on component mount
+  useEffect(() => {
+    const areaId = searchParams.get('area');
+    const search = searchParams.get('search');
+    const start = searchParams.get('startDate');
+    const end = searchParams.get('endDate');
+    const filter = searchParams.get('filter');
+
+    if (areaId) setSelectedAreaId(areaId);
+    if (search) setSearchTerm(search);
+    if (start) setStartDate(start);
+    if (end) setEndDate(end);
+    if (filter) setActiveFilter(filter);
+  }, [searchParams]);
+
+  // Effect to manage WebSocket connection and events
+  useEffect(() => {
+    // Check WebSocket connection status
+    const checkConnection = () => {
+      const status = webSocketService.getConnectionStatus();
+      setWsConnected(status.isConnected);
+      setLiveUpdatesEnabled(status.liveUpdatesEnabled);
+    };
+
+    // Initial connection check
+    checkConnection();
+
+    // Set up WebSocket event listeners
+    const cleanupDataUpdated = webSocketService.addEventListener('websocket-data-updated', (data) => {
+      console.log('📊 Received data update notification:', data);
+      setLastDataUpdate(data.timestamp);
+      
+      // If the update is for the currently selected area, refresh the data
+      if (selectedAreaId && data.areaId === selectedAreaId) {
+        console.log('🔄 Refreshing data for current area due to WebSocket update');
+        // Trigger a data refresh by re-running the fetch effect
+        setDashboardLoading(true);
+        // The effect will automatically re-run when selectedAreaId changes
+        // We'll add a small delay to ensure the backend has processed the data
+        setTimeout(() => {
+          setDashboardLoading(false);
+        }, 1000);
+      }
+    });
+
+    const cleanupDataError = webSocketService.addEventListener('websocket-data-error', (data) => {
+      console.error('❌ WebSocket data error:', data);
+      if (selectedAreaId && data.areaId === selectedAreaId) {
+        setError(`Data update failed: ${data.error}`);
+      }
+    });
+
+    const cleanupRefreshComplete = webSocketService.addEventListener('websocket-refresh-complete', (data) => {
+      console.log('🔄 Refresh complete:', data);
+      if (selectedAreaId && data.areaId === selectedAreaId) {
+        if (data.success) {
+          setError(''); // Clear any previous errors
+        } else {
+          setError(`Manual refresh failed: ${data.error}`);
+        }
+      }
+    });
+
+    const cleanupLiveUpdatesToggled = webSocketService.addEventListener('websocket-live-updates-toggled', (data) => {
+      console.log('📊 Live updates toggled:', data.enabled);
+      setLiveUpdatesEnabled(data.enabled);
+    });
+
+    // Check connection status periodically
+    const connectionInterval = setInterval(checkConnection, 5000);
+
+    // Cleanup function
+    return () => {
+      cleanupDataUpdated();
+      cleanupDataError();
+      cleanupRefreshComplete();
+      cleanupLiveUpdatesToggled();
+      clearInterval(connectionInterval);
+    };
+  }, [selectedAreaId]);
+
+  // Effect to clean up WebSocket room when component unmounts
+  useEffect(() => {
+    return () => {
+      if (selectedAreaId) {
+        webSocketService.leaveArea(selectedAreaId);
+      }
+    };
+  }, [selectedAreaId]);
 
   // Effect to fetch list of parking areas
   useEffect(() => {
@@ -172,6 +298,9 @@ export default function ParkingDashboard() {
   // Effect to fetch raw data when an area is selected, then process it
   useEffect(() => {
     if (selectedAreaId) {
+      // Join WebSocket room for this area
+      webSocketService.joinArea(selectedAreaId);
+      
       const fetchDashboardData = async () => {
         setDashboardLoading(true);
         setError('');
@@ -183,19 +312,19 @@ export default function ParkingDashboard() {
             getExistingVehicles(selectedAreaId, 1, 1000)
           ]);
           
-          const rawRecords = recordsResponse.records || [];
+          const rawRecords: RawRecord[] = recordsResponse.records || [];
           
           // Process raw records into a more useful format with Date objects and duration
-          const entryMap = new Map<string, any>();
+          const entryMap = new Map<string, RawRecord>();
           const processedRecords: ProcessedRecord[] = [];
 
           // First pass: create a map of the most recent entry for each license plate
-          rawRecords.filter(r => r.action === 'ENTRY').forEach(rec => {
+          rawRecords.filter((r: RawRecord) => r.action === 'ENTRY').forEach((rec: RawRecord) => {
               entryMap.set(rec.plate, rec);
           });
 
           // Second pass: process all records, calculating duration for exits
-          rawRecords.forEach(rec => {
+          rawRecords.forEach((rec: RawRecord) => {
               const [month, day, year] = rec.date.split('/');
               const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
               
@@ -269,18 +398,31 @@ export default function ParkingDashboard() {
     if (period === 'all') {
       setStartDate('');
       setEndDate('');
+      updateURLParams({ filter: 'all', startDate: null, endDate: null });
       return;
     }
+    
     setEndDate(toYYYYMMDD(today));
+    let startDateValue = '';
+    
     if (period === 'today') {
-      setStartDate(toYYYYMMDD(today));
+      startDateValue = toYYYYMMDD(today);
+      setStartDate(startDateValue);
     } else if (period === 'week') {
       const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-      setStartDate(toYYYYMMDD(firstDayOfWeek));
+      startDateValue = toYYYYMMDD(firstDayOfWeek);
+      setStartDate(startDateValue);
     } else if (period === 'month') {
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      setStartDate(toYYYYMMDD(firstDayOfMonth));
+      startDateValue = toYYYYMMDD(firstDayOfMonth);
+      setStartDate(startDateValue);
     }
+    
+    updateURLParams({ 
+      filter: period, 
+      startDate: startDateValue, 
+      endDate: toYYYYMMDD(today) 
+    });
   };
   
   const handleClearFilters = () => {
@@ -288,6 +430,12 @@ export default function ParkingDashboard() {
     setEndDate('');
     setSearchTerm('');
     setActiveFilter('all');
+    updateURLParams({ 
+      startDate: null, 
+      endDate: null, 
+      search: null, 
+      filter: 'all' 
+    });
   };
 
   // --- MEMOIZED CHART DATA ---
@@ -316,6 +464,65 @@ export default function ParkingDashboard() {
           <header className="text-center">
              <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
              <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
+             
+             {/* WebSocket Connection Status */}
+             <div className="flex items-center justify-center gap-4 mt-4">
+               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+                 wsConnected 
+                   ? (liveUpdatesEnabled 
+                       ? 'bg-green-900/30 text-green-400 border border-green-700' 
+                       : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700')
+                   : 'bg-red-900/30 text-red-400 border border-red-700'
+               }`}>
+                 <div className={`w-2 h-2 rounded-full ${
+                   wsConnected 
+                     ? (liveUpdatesEnabled ? 'bg-green-400' : 'bg-yellow-400')
+                     : 'bg-red-400'
+                 }`}></div>
+                 {wsConnected 
+                   ? (liveUpdatesEnabled ? 'Live Updates Connected' : 'Live Updates Paused')
+                   : 'Live Updates Disconnected'
+                 }
+               </div>
+               
+               {selectedAreaId && (
+                 <>
+                   <Button 
+                     variant="outline" 
+                     size="sm"
+                     onClick={() => {
+                       webSocketService.refreshAreaData(selectedAreaId);
+                       setDashboardLoading(true);
+                       setTimeout(() => setDashboardLoading(false), 2000);
+                     }}
+                     disabled={!wsConnected || dashboardLoading}
+                     className="text-xs"
+                   >
+                     {dashboardLoading ? 'Refreshing...' : 'Manual Refresh'}
+                   </Button>
+                   
+                   <Button 
+                     variant="outline" 
+                     size="sm"
+                     onClick={() => webSocketService.toggleLiveUpdates()}
+                     disabled={!wsConnected}
+                     className={`text-xs ${
+                       liveUpdatesEnabled 
+                         ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
+                         : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
+                     }`}
+                   >
+                     {liveUpdatesEnabled ? 'Live Updates: ON' : 'Live Updates: OFF'}
+                   </Button>
+                 </>
+               )}
+               
+               {lastDataUpdate && (
+                 <div className="text-xs text-gray-400">
+                   Last update: {new Date(lastDataUpdate).toLocaleTimeString()}
+                 </div>
+               )}
+             </div>
           </header>
 
           {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}
@@ -325,25 +532,39 @@ export default function ParkingDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="area-select" className="block text-lg font-semibold mb-2">Select a Parking Area</label>
-                <select id="area-select" value={selectedAreaId || ''} onChange={(e) => setSelectedAreaId(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
+                <select id="area-select" value={selectedAreaId || ''} onChange={(e) => {
+                  setSelectedAreaId(e.target.value);
+                  updateURLParams({ area: e.target.value || null });
+                }} className="w-full bg-neutral-700 border-neutral-600 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
                     <option value="" disabled>Choose an area...</option>
                     {areas.map((area) => ( <option key={area._id} value={area._id}> {area.name} </option> ))}
                 </select>
               </div>
               <div>
                 <label htmlFor="search-bar" className="block text-lg font-semibold mb-2">Search by License Plate</label>
-                <Input id="search-bar" type="text" placeholder="e.g., ABC-123" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-neutral-700 border-neutral-600 text-white" />
+                <Input id="search-bar" type="text" placeholder="e.g., ABC-123" value={searchTerm} onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  updateURLParams({ search: e.target.value || null });
+                }} className="bg-neutral-700 border-neutral-600 text-white" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                     <label htmlFor="start-date" className="block text-sm font-medium mb-2">Start Date</label>
-                    <Input type="date" id="start-date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    <Input type="date" id="start-date" value={startDate} onChange={(e) => { 
+                      setStartDate(e.target.value); 
+                      setActiveFilter('custom');
+                      updateURLParams({ startDate: e.target.value || null, filter: 'custom' });
+                    }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="flex-1">
                     <label htmlFor="end-date" className="block text-sm font-medium mb-2">End Date</label>
-                    <Input type="date" id="end-date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    <Input type="date" id="end-date" value={endDate} onChange={(e) => { 
+                      setEndDate(e.target.value); 
+                      setActiveFilter('custom');
+                      updateURLParams({ endDate: e.target.value || null, filter: 'custom' });
+                    }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div className="flex flex-col space-y-2">

@@ -1,5 +1,8 @@
 import Area from '../models/Area.js';
 import FtpServer from '../models/FtpServer.js';
+import Notification from '../models/Notification.js';
+import { FtpService } from '../services/ftpService.js';
+import { webSocketService } from '../services/webSocketService.js';
 
 class parkingAreaController {
     // not use this function
@@ -246,6 +249,132 @@ class parkingAreaController {
             });
 
         } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error",
+                error: error.message
+            });
+        }
+    }
+
+    // Trigger FTP server for a specific area
+    async triggerFtpServer(req, res) {
+        try {
+            const { areaId } = req.params;
+            const businessId = req.user.businessId;
+
+            if (!areaId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Area ID is required"
+                });
+            }
+
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Business ID is required"
+                });
+            }
+
+            // Check if the area exists and belongs to the current user's business
+            const area = await Area.findById(areaId);
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Area not found"
+                });
+            }
+
+            // Verify the area belongs to the current user's business
+            if (area.businessId.toString() !== businessId.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Access denied. You can only trigger FTP servers for areas in your business"
+                });
+            }
+
+            // Check if the area has an FTP server configured
+            if (!area.ftpServer) {
+                return res.status(400).json({
+                    success: false,
+                    message: "No FTP server configured for this area"
+                });
+            }
+
+            // Step 1: Reset saveTimestamp and currentCapacity
+            const updatedArea = await Area.findByIdAndUpdate(
+                areaId,
+                { 
+                    savedTimestamp: '',
+                    currentCapacity: 0
+                },
+                { new: true }
+            );
+
+            if (!updatedArea) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to reset area data"
+                });
+            }
+
+            // Step 2: Trigger FTP data fetching
+            console.log(`Triggering FTP data fetch for area: ${areaId}`);
+            const ftpResult = await FtpService.processArea(areaId);
+
+            if (!ftpResult.success) {
+                return res.status(500).json({
+                    success: false,
+                    message: "FTP data fetching failed",
+                    error: ftpResult.error
+                });
+            }
+
+            // Step 3: Create notification for successful data reload
+            const notification = new Notification({
+                areaId: areaId,
+                status: 'unread',
+                message: `Data reload completed successfully for ${area.name}`,
+                type: 'system',
+                currentCapacity: updatedArea.currentCapacity,
+                totalCapacity: updatedArea.capacity
+            });
+
+            const savedNotification = await notification.save();
+
+            // Step 4: Send WebSocket notification to clients
+            webSocketService.sendToArea(areaId, 'ftp-data-reloaded', {
+                areaId: areaId,
+                areaName: area.name,
+                timestamp: new Date().toISOString(),
+                message: 'FTP data reload completed successfully',
+                notificationId: savedNotification._id,
+                currentCapacity: updatedArea.currentCapacity,
+                totalCapacity: updatedArea.capacity
+            });
+
+            console.log(`✅ FTP trigger completed successfully for area: ${areaId}`);
+            console.log(`📢 Notification created: ${savedNotification._id}`);
+            console.log(`🔔 WebSocket notification sent to area: ${areaId}`);
+
+            return res.status(200).json({
+                success: true,
+                message: "FTP server triggered successfully",
+                data: {
+                    areaId: areaId,
+                    areaName: area.name,
+                    resetData: {
+                        savedTimestamp: updatedArea.savedTimestamp,
+                        currentCapacity: updatedArea.currentCapacity
+                    },
+                    ftpResult: ftpResult,
+                    notificationId: savedNotification._id
+                }
+            });
+
+        } catch (error) {
+            console.error(`❌ Error triggering FTP server for area ${req.params.areaId}:`, error);
             return res.status(500).json({
                 success: false,
                 message: "Internal server error",

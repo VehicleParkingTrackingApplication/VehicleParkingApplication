@@ -18,6 +18,9 @@ router.post('/area/input-ftpserver', requireAuth, area.inputFtpServer);
 // PUT /api/parking/area/update-ftpserver
 router.put('/area/update-ftpserver', requireAuth, area.updateFtpServer);
 
+// POST /api/parking/area/:areaId/trigger-ftp
+router.post('/area/:areaId/trigger-ftp', requireAuth, area.triggerFtpServer);
+
 // POST /api/parking/area/input-vehicle
 router.post('/area/input-vehicle', requireAuth, vehicle.inputVehicleForm);
 

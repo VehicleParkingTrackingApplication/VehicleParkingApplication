@@ -39,8 +39,8 @@ webSocketService.initialize(server);
 // scheduledSimulationService.startScheduledProcessing();
 
 // Init schedulers services for data FTP
-// const scheduledFtpService = new ScheduledFtpService();
-// scheduledFtpService.startScheduledProcessing();
+const scheduledFtpService = new ScheduledFtpService();
+scheduledFtpService.startScheduledProcessing();
 
 // CORS configuration for development
 // app.use(cors());
@@ -91,9 +91,13 @@ app.set('views', join(__dirname, 'resources/views'));
 // routes init
 route(app);
 
-app.listen(PORT, () =>
+// start web socket server
+server.listen(PORT, () =>
     console.log(`Server is running on http://localhost:${PORT}`),
 );
+// app.listen(PORT, () =>
+//     console.log(`Server is running on http://localhost:${PORT}`),
+// );
 
 const handleRequest = serverless(app);
 export const handler = async (event, context) => {
