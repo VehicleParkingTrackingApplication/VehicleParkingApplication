@@ -1,0 +1,18 @@
+# For the web server and data handling
+pandas
+xgboost
+scikit-learn
+pymongo
+certifi
+numpy
+matplotlib
+seaborn
+python-dotenv
+Flask==2.3.3
+pandas==2.0.3
+flask-cors
+# For the machine learning model
+xgboost==2.0.3
+
+# A production-grade web server (recommended over Flask's built-in server)
+gunicorn==21.2.0
