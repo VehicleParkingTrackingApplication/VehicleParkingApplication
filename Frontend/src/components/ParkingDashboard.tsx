@@ -17,10 +17,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { authInterceptor } from '../services/authInterceptor';
-import { getAllParkingAreas, getAllRecords, getExistingVehicles } from '@/services/parking';
+import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parking';
 
 // --- INTERFACES ---
-// Represents the raw data from the backend for an existing vehicle
 interface VehicleRecord {
   _id: string;
   plateNumber: string;
@@ -28,43 +27,35 @@ interface VehicleRecord {
   areaId: string;
 }
 
-// Represents the enriched record object after client-side processing
 interface ProcessedRecord {
-    _id: string;
-    plate: string;
-    action: 'ENTRY' | 'EXIT';
-    // Raw date/time strings from backend
-    date: string;       
-    time: string;
-    // Processed Date objects for calculations
-    entryDate: Date | null;
-    exitDate: Date | null;
-    durationMinutes: number | null;
+  _id: string;
+  plate: string;
+  action: 'ENTRY' | 'EXIT';
+  date: string;
+  time: string;
+  entryDate: Date | null;
+  exitDate: Date | null;
+  durationMinutes: number | null;
 }
 
-// Represents a parking area
 interface Area {
   _id: string;
   name: string;
   capacity: number;
 }
 
-// --- HELPER FUNCTIONS FOR CHARTS ---
-
-// Processes data for the hourly entry/exit chart
+// --- HELPER FUNCTIONS ---
 const processHourlyChartData = (records: ProcessedRecord[]) => {
   const hourlyData: { [key: number]: { entries: number; exits: number } } = {};
   for (let i = 0; i < 24; i++) hourlyData[i] = { entries: 0, exits: 0 };
-  
   records.forEach(record => {
     const dateToUse = record.action === 'ENTRY' ? record.entryDate : record.exitDate;
     if (dateToUse) {
-        const hour = dateToUse.getHours();
-        if (record.action === 'ENTRY') hourlyData[hour].entries++;
-        else hourlyData[hour].exits++;
+      const hour = dateToUse.getHours();
+      if (record.action === 'ENTRY') hourlyData[hour].entries++;
+      else hourlyData[hour].exits++;
     }
   });
-
   return Object.keys(hourlyData).map(hour => ({
     hour: `${hour}:00`,
     Entries: hourlyData[parseInt(hour)].entries,
@@ -72,53 +63,42 @@ const processHourlyChartData = (records: ProcessedRecord[]) => {
   }));
 };
 
-// Processes data for the vehicle entries by period chart
 const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'weekly' | 'monthly') => {
-    const entries = records.filter(r => r.action === 'ENTRY' && r.entryDate);
-    const aggregation: { [key: string]: number } = {};
-
-    entries.forEach(record => {
-        const date = new Date(record.entryDate!); // Create a copy to avoid mutation
-        let key = '';
-
-        if (period === 'daily') {
-            key = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
-        } else if (period === 'weekly') {
-            const dayOfWeek = date.getDay();
-            const firstDay = new Date(date.setDate(date.getDate() - dayOfWeek));
-            key = `Week of ${firstDay.toLocaleDateString('en-CA')}`;
-        } else if (period === 'monthly') {
-            key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }); // e.g., Aug 2025
-        }
-
-        if (key) {
-            aggregation[key] = (aggregation[key] || 0) + 1;
-        }
-    });
-
-    return Object.keys(aggregation).sort().map(key => ({
-        period: key,
-        Entries: aggregation[key]
-    }));
+  const entries = records.filter(r => r.action === 'ENTRY' && r.entryDate);
+  const aggregation: { [key: string]: number } = {};
+  entries.forEach(record => {
+    const date = new Date(record.entryDate!);
+    let key = '';
+    if (period === 'daily') {
+      key = date.toLocaleDateString('en-CA');
+    } else if (period === 'weekly') {
+      const dayOfWeek = date.getDay();
+      const firstDay = new Date(date.setDate(date.getDate() - dayOfWeek));
+      key = `Week of ${firstDay.toLocaleDateString('en-CA')}`;
+    } else if (period === 'monthly') {
+      key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    }
+    if (key) aggregation[key] = (aggregation[key] || 0) + 1;
+  });
+  return Object.keys(aggregation).sort().map(key => ({
+    period: key,
+    Entries: aggregation[key]
+  }));
 };
 
-// Processes data for the vehicle overstay chart
 const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: number) => {
-    const overstays = records.filter(r => r.durationMinutes && r.durationMinutes > timeLimitMinutes);
-    const aggregation: { [key: string]: number } = {};
-
-    overstays.forEach(record => {
-        const date = record.entryDate!;
-        const key = date.toLocaleDateString('en-CA'); // Group by day
-        aggregation[key] = (aggregation[key] || 0) + 1;
-    });
-    
-    return Object.keys(aggregation).sort().map(key => ({
-        date: key,
-        'Overstaying Vehicles': aggregation[key]
-    }));
+  const overstays = records.filter(r => r.durationMinutes && r.durationMinutes > timeLimitMinutes);
+  const aggregation: { [key: string]: number } = {};
+  overstays.forEach(record => {
+    const date = record.entryDate!;
+    const key = date.toLocaleDateString('en-CA');
+    aggregation[key] = (aggregation[key] || 0) + 1;
+  });
+  return Object.keys(aggregation).sort().map(key => ({
+    date: key,
+    'Overstaying Vehicles': aggregation[key]
+  }));
 };
-
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function ParkingDashboard() {
@@ -137,14 +117,14 @@ export default function ParkingDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [overstayLimit, setOverstayLimit] = useState(60); // Default 60 minutes
+  const [overstayLimit, setOverstayLimit] = useState(60);
+
+  // --- ML Predictor State ---
+  const [predictedEntries, setPredictedEntries] = useState<{ period: string, Predictor: number }[]>([]);
+  const [predictLoading, setPredictLoading] = useState(false);
 
   // --- DATA FETCHING AND PROCESSING ---
-
-  // Effect for authentication check
   useEffect(() => {
     const verifyAuth = async () => {
       if (!authInterceptor.isAuthenticated()) {
@@ -155,21 +135,19 @@ export default function ParkingDashboard() {
     verifyAuth();
   }, []);
 
-  // Effect to fetch list of parking areas
   useEffect(() => {
     if (isAuthenticated) {
       const fetchAreas = async () => {
         try {
           const response = await getAllParkingAreas();
           if (response.success) setAreas(response.data || []);
-        } catch (err) { setError(err instanceof Error ? err.message : 'An unknown error occurred.'); } 
+        } catch (err) { setError(err instanceof Error ? err.message : 'An unknown error occurred.'); }
         finally { setLoading(false); }
       };
       fetchAreas();
     }
   }, [isAuthenticated]);
 
-  // Effect to fetch raw data when an area is selected, then process it
   useEffect(() => {
     if (selectedAreaId) {
       const fetchDashboardData = async () => {
@@ -182,63 +160,49 @@ export default function ParkingDashboard() {
             getAllRecords(selectedAreaId, 1, 2000),
             getExistingVehicles(selectedAreaId, 1, 1000)
           ]);
-          
           const rawRecords = recordsResponse.records || [];
-          
-          // Process raw records into a more useful format with Date objects and duration
           const entryMap = new Map<string, any>();
           const processedRecords: ProcessedRecord[] = [];
-
-          // First pass: create a map of the most recent entry for each license plate
           rawRecords.filter(r => r.action === 'ENTRY').forEach(rec => {
-              entryMap.set(rec.plate, rec);
+            entryMap.set(rec.plate, rec);
           });
-
-          // Second pass: process all records, calculating duration for exits
           rawRecords.forEach(rec => {
-              const [month, day, year] = rec.date.split('/');
-              const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
-              
-              if (rec.action === 'EXIT') {
-                  const matchingEntry = entryMap.get(rec.plate);
-                  if (matchingEntry) {
-                      const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
-                      const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
-                      const durationMs = dateObj.getTime() - entryDateObj.getTime();
-                      
-                      processedRecords.push({
-                          ...rec,
-                          entryDate: entryDateObj,
-                          exitDate: dateObj,
-                          durationMinutes: Math.floor(durationMs / 60000)
-                      });
-                      // Once matched, remove the entry to handle re-entries correctly
-                      entryMap.delete(rec.plate);
-                  }
-              } else { // Entry record
-                  processedRecords.push({
-                      ...rec,
-                      entryDate: dateObj,
-                      exitDate: null,
-                      durationMinutes: null
-                  });
+            const [month, day, year] = rec.date.split('/');
+            const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
+            if (rec.action === 'EXIT') {
+              const matchingEntry = entryMap.get(rec.plate);
+              if (matchingEntry) {
+                const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
+                const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
+                const durationMs = dateObj.getTime() - entryDateObj.getTime();
+                processedRecords.push({
+                  ...rec,
+                  entryDate: entryDateObj,
+                  exitDate: dateObj,
+                  durationMinutes: Math.floor(durationMs / 60000)
+                });
+                entryMap.delete(rec.plate);
               }
+            } else {
+              processedRecords.push({
+                ...rec,
+                entryDate: dateObj,
+                exitDate: null,
+                durationMinutes: null
+              });
+            }
           });
-          
           setAllRecords(processedRecords);
           setExistingVehicles(vehiclesResponse.vehicles || []);
-
-        } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); } 
+        } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); }
         finally { setDashboardLoading(false); }
       };
       fetchDashboardData();
     }
   }, [selectedAreaId, areas]);
 
-  // Effect to filter data whenever dates, search term, or raw data changes
   useEffect(() => {
     let records = allRecords;
-
     if (startDate) {
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
@@ -249,23 +213,65 @@ export default function ParkingDashboard() {
       end.setHours(23, 59, 59, 999);
       records = records.filter(record => record.entryDate && record.entryDate <= end);
     }
-
     if (searchTerm) {
       records = records.filter(record =>
         record.plate?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
     setFilteredRecords(records);
   }, [startDate, endDate, searchTerm, allRecords]);
 
-  // --- EVENT HANDLERS ---
+  // --- ML Predictor Effect (MODIFIED) ---
+  useEffect(() => {
+    if (filteredRecords.length === 0) {
+      setPredictedEntries([]);
+      return;
+    }
 
+    setPredictLoading(true);
+
+    // --- NEW LOGIC: Generate hourly timestamps for the next day ---
+    const lastRecordDate = new Date(Math.max(...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)));
+    const nextDay = new Date(lastRecordDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    nextDay.setHours(0, 0, 0, 0); // Start from midnight
+
+    const timestamps: string[] = [];
+    for (let i = 0; i < 24; i++) {
+        const nextHour = new Date(nextDay);
+        nextHour.setHours(i);
+        // Format to YYYY-MM-DDTHH:mm:ss as expected by backend
+        timestamps.push(nextHour.toISOString().slice(0, 19).replace('T', 'T'));
+    }
+
+    getVehicleEntryPredictions(timestamps)
+      .then(res => {
+        console.log('✅ Raw API Response:', res); // Keep for debugging
+        
+        const preds = timestamps.map(ts => {
+          const date = new Date(ts);
+          return {
+            period: `${date.getHours()}:00 (${date.toLocaleDateString('en-CA')})`, // e.g., "9:00 (2025-09-07)"
+            Predictor: Math.round(res.predictions[ts] ?? 0) // Round the prediction for cleaner display
+          };
+        });
+
+        console.log('📊 Data being set for the chart:', preds); // Keep for debugging
+        setPredictedEntries(preds);
+      })
+      .catch((err) => {
+        console.error("API call failed:", err);
+        setPredictedEntries([]);
+      })
+      .finally(() => setPredictLoading(false));
+
+  }, [filteredRecords]); // Dependency changed, entriesPeriod no longer needed for prediction
+
+  // --- EVENT HANDLERS ---
   const handlePresetFilterClick = (period: string) => {
     setActiveFilter(period);
     const today = new Date();
     const toYYYYMMDD = (date: Date) => date.toISOString().split('T')[0];
-
     if (period === 'all') {
       setStartDate('');
       setEndDate('');
@@ -282,7 +288,7 @@ export default function ParkingDashboard() {
       setStartDate(toYYYYMMDD(firstDayOfMonth));
     }
   };
-  
+
   const handleClearFilters = () => {
     setStartDate('');
     setEndDate('');
@@ -294,9 +300,28 @@ export default function ParkingDashboard() {
   const hourlyChartData = useMemo(() => processHourlyChartData(filteredRecords), [filteredRecords]);
   const entriesChartData = useMemo(() => processEntriesByPeriod(filteredRecords, entriesPeriod), [filteredRecords, entriesPeriod]);
   const overstayChartData = useMemo(() => processOverstayData(filteredRecords, overstayLimit), [filteredRecords, overstayLimit]);
+  
+  // Combine historical and predicted data for the hourly chart
+  const combinedHourlyData = useMemo(() => {
+    const historical = processHourlyChartData(filteredRecords);
+    const predicted = predictedEntries.map(p => {
+        const hourMatch = p.period.match(/^(\d+):00/);
+        const hourKey = hourMatch ? `${parseInt(hourMatch[1])}:00` : '';
+        return { hour: hourKey, Predictor: p.Predictor };
+    });
+
+    const combined = historical.map(h => {
+        const matchingPred = predicted.find(p => p.hour === h.hour);
+        return {
+            ...h,
+            Predictor: matchingPred ? matchingPred.Predictor : null
+        };
+    });
+    return combined;
+  }, [filteredRecords, predictedEntries]);
+
 
   // --- RENDER LOGIC ---
-
   if (loading || isAuthenticated === null) {
     return (
       <div className="relative min-h-screen bg-black text-white flex items-center justify-center">
@@ -310,24 +335,21 @@ export default function ParkingDashboard() {
       {/* Background decorative elements */}
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
-      
       <div className="relative z-10 px-4 py-10">
         <div className="max-w-6xl mx-auto space-y-8">
           <header className="text-center">
-             <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
-             <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
+            <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
+            <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
           </header>
-
           {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}
-
           {/* --- CONTROLS SECTION --- */}
           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="area-select" className="block text-lg font-semibold mb-2">Select a Parking Area</label>
                 <select id="area-select" value={selectedAreaId || ''} onChange={(e) => setSelectedAreaId(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
-                    <option value="" disabled>Choose an area...</option>
-                    {areas.map((area) => ( <option key={area._id} value={area._id}> {area.name} </option> ))}
+                  <option value="" disabled>Choose an area...</option>
+                  {areas.map((area) => (<option key={area._id} value={area._id}>{area.name}</option>))}
                 </select>
               </div>
               <div>
@@ -338,27 +360,26 @@ export default function ParkingDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
-                    <label htmlFor="start-date" className="block text-sm font-medium mb-2">Start Date</label>
-                    <Input type="date" id="start-date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                  <label htmlFor="start-date" className="block text-sm font-medium mb-2">Start Date</label>
+                  <Input type="date" id="start-date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="flex-1">
-                    <label htmlFor="end-date" className="block text-sm font-medium mb-2">End Date</label>
-                    <Input type="date" id="end-date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                  <label htmlFor="end-date" className="block text-sm font-medium mb-2">End Date</label>
+                  <Input type="date" id="end-date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div className="flex flex-col space-y-2">
                 <label className="block text-sm font-medium mb-2">Quick Filters</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 gap-2">
-                    <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')}>Today</Button>
-                    <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')}>Week</Button>
-                    <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')}>Month</Button>
-                    <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')}>All</Button>
+                  <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')}>Today</Button>
+                  <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')}>Week</Button>
+                  <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')}>Month</Button>
+                  <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')}>All</Button>
                 </div>
               </div>
             </div>
             <div><Button variant="ghost" onClick={handleClearFilters} className="text-sm text-gray-400 hover:text-white">Clear All Filters</Button></div>
           </section>
-
           {/* --- MAIN DASHBOARD CONTENT --- */}
           {selectedAreaId && (
             dashboardLoading ? (
@@ -375,68 +396,82 @@ export default function ParkingDashboard() {
                     <CardHeader><CardTitle className="text-green-400">Total Entries (Filtered)</CardTitle></CardHeader>
                     <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'ENTRY').length}</CardContent>
                   </Card>
-                   <Card className="bg-neutral-800 border-neutral-700">
+                  <Card className="bg-neutral-800 border-neutral-700">
                     <CardHeader><CardTitle className="text-yellow-400">Total Exits (Filtered)</CardTitle></CardHeader>
                     <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'EXIT').length}</CardContent>
                   </Card>
                 </section>
-                
                 {/* --- MODIFIED CHART LAYOUT --- */}
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Chart 1 & 2 will remain side-by-side on large screens */}
-                    
-                    {/* Chart 1: Hourly Activity */}
-                    <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
-                        <h3 className="text-lg font-semibold mb-4">Hourly Entry/Exit Activity</h3>
-                        <ResponsiveContainer width="100%" height={300}><BarChart data={hourlyChartData}><XAxis dataKey="hour" stroke="#888888" fontSize={12} /><YAxis stroke="#888888" fontSize={12} /><Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" /><Legend /><Bar dataKey="Entries" fill="#3b82f6" radius={[4, 4, 0, 0]} /><Bar dataKey="Exits" fill="#f59e0b" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
+                  {/* Chart 1: Hourly Activity with Prediction */}
+                  <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md lg:col-span-2">
+                    <h3 className="text-lg font-semibold mb-4">Hourly Activity (Historical & Predicted)</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={combinedHourlyData}>
+                        <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
+                        <YAxis stroke="#888888" fontSize={12} />
+                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <Legend />
+                        <Bar dataKey="Entries" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Exits" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                         <Line type="monotone" dataKey="Predictor" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Chart 2: Historical Vehicle Entries */}
+                  <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Historical Vehicle Entries</h3>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant={entriesPeriod === 'daily' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('daily')}>Daily</Button>
+                        <Button size="sm" variant={entriesPeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('weekly')}>Weekly</Button>
+                        <Button size="sm" variant={entriesPeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('monthly')}>Monthly</Button>
+                      </div>
                     </div>
-
-                    {/* Chart 2: Activity Trend */}
-                    <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
-                        <h3 className="text-lg font-semibold mb-4">Activity Trend</h3>
-                        <ResponsiveContainer width="100%" height={300}><LineChart data={hourlyChartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#444" /><Line type="monotone" dataKey="Entries" stroke="#3b82f6" /><Line type="monotone" dataKey="Exits" stroke="#f59e0b" /><XAxis dataKey="hour" stroke="#888888" fontSize={12}/><YAxis stroke="#888888" fontSize={12}/><Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" /><Legend /></LineChart></ResponsiveContainer>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={entriesChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                        <XAxis dataKey="period" stroke="#888888" fontSize={12} />
+                        <YAxis stroke="#888888" fontSize={12} />
+                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <Legend />
+                        <Line type="monotone" dataKey="Entries" stroke="#22c55e" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Chart 3: Vehicles Overstay Analysis */}
+                  <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                      <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="overstay-limit" className="text-sm">Time Limit (mins):</label>
+                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-neutral-700 border-neutral-600 w-24" />
+                      </div>
                     </div>
-
-                    {/* MODIFIED: Added lg:col-span-2 to make this chart take a full row */}
-                    <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md lg:col-span-2">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-semibold">Vehicle Entries</h3>
-                            <div className="flex items-center gap-2">
-                            <Button size="sm" variant={entriesPeriod === 'daily' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('daily')}>Daily</Button>
-                            <Button size="sm" variant={entriesPeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('weekly')}>Weekly</Button>
-                            <Button size="sm" variant={entriesPeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('monthly')}>Monthly</Button>
-                            </div>
-                        </div>
-                        <ResponsiveContainer width="100%" height={300}><LineChart data={entriesChartData}><CartesianGrid strokeDasharray="3 3" stroke="#444" /><XAxis dataKey="period" stroke="#888888" fontSize={12} /><YAxis stroke="#888888" fontSize={12} /><Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" /><Legend /><Line type="monotone" dataKey="Entries" stroke="#22c55e" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer>
-                    </div>
-                    
-                    {/* MODIFIED: Added lg:col-span-2 to make this chart take a full row */}
-                    <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md lg:col-span-2">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                            <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="overstay-limit" className="text-sm">Time Limit (mins):</label>
-                                <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-neutral-700 border-neutral-600 w-24"/>
-                            </div>
-                        </div>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={overstayChartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                                <XAxis dataKey="date" stroke="#888888" fontSize={12} />
-                                <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
-                                <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
-                                <Legend />
-                                <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={overstayChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                        <XAxis dataKey="date" stroke="#888888" fontSize={12} />
+                        <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
+                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <Legend />
+                        <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </section>
-                
                 {/* Records Table */}
                 <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
                   <h3 className="text-lg font-semibold mb-4">Filtered Records ({filteredRecords.length} found)</h3>
                   <Table>
-                    <TableHeader><TableRow><TableHead>License Plate</TableHead><TableHead>Action</TableHead><TableHead>Date & Time</TableHead><TableHead>Duration (mins)</TableHead></TableRow></TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>License Plate</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Duration (mins)</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {filteredRecords.length > 0 ? (
                         filteredRecords.slice(0, 10).map((record) => (
@@ -448,7 +483,9 @@ export default function ParkingDashboard() {
                           </TableRow>
                         ))
                       ) : (
-                        <TableRow><TableCell colSpan={4} className="text-center">No records found matching your filters.</TableCell></TableRow>
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center">No records found matching your filters.</TableCell>
+                        </TableRow>
                       )}
                     </TableBody>
                   </Table>

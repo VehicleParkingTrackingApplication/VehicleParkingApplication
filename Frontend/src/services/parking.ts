@@ -66,3 +66,13 @@ export const getAllRecords = async (areaId: string, page: number = 1, limit: num
   if (!res.ok) throw new Error('Failed to fetch records');
   return res.json();
 };
+
+export const getVehicleEntryPredictions = async (timestamps: string[]) => {
+  const res = await fetch('http://localhost:5001/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ timestamps }),
+  });
+  if (!res.ok) throw new Error('Failed to fetch vehicle entry predictions');
+  return res.json();
+};
