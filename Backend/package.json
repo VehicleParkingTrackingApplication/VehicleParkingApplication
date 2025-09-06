@@ -57,7 +57,7 @@
     "jest": "^30.0.3",
     "lint-staged": "^15.5.1",
     "morgan": "^1.10.0",
-    "nodemon": "^3.1.9",
+    "nodemon": "^3.1.10",
     "prettier": "^3.5.3",
     "supertest": "^7.1.1"
   }
