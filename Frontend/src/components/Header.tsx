@@ -86,7 +86,7 @@ export const Header: React.FC = () => {
                   <>
                     <Link to="/area-management" className="text-gray-300 hover:text-white transition-colors">Area Management</Link>
                     <Link to="/staff-management" className="text-gray-300 hover:text-white transition-colors">Staff Management</Link>
-                    <Link to="/analytics" className="text-gray-300 hover:text-white transition-colors">Visualization Dashboard</Link>
+                    <Link to="/parking-dashboard" className="text-gray-300 hover:text-white transition-colors">Visualization Dashboard</Link>
                   </>
                 ) : (
                   <>
