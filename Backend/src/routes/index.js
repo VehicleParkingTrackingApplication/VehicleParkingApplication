@@ -5,6 +5,7 @@ import userRouter from './user.js';
 import authRouter from './auth.js';
 import staffRouter from './staff.js';
 import recordsRouter from './records.js'; // <-- 1. IMPORT your new route
+import reportsRouter from './reports.js';
 
 function route(app) {
     // API routes
@@ -26,6 +27,8 @@ function route(app) {
     app.use('/api/home', homeRouter);
     
     app.use('/api/records', recordsRouter); 
+
+    app.use('/api/reports', reportsRouter);
 }
 
 // module.exports = route;

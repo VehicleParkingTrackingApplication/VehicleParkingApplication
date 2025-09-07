@@ -11,6 +11,7 @@ import AreaManagement from './components/AreaManagement';
 import Analytics from './components/ParkingDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import StaffManagement from './components/StaffManagement';
+import ExistingReportsPage from './components/ExistingReport';
 
 import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
 import ViewAllRecords from './components/ViewAllRecords';
@@ -65,6 +66,12 @@ export default function App() {
                 <div>
                     <Header/>
                     <Analytics />
+                </div>
+            } />
+             <Route path="/reports" element={
+                <div>
+                    <Header/>
+                    <ExistingReportsPage />
                 </div>
             } />
             <Route path="/area/:areaId/vehicles" element={

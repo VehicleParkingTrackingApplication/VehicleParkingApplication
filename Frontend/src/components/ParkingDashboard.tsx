@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react'; // Add useRef
+import domtoimage from 'dom-to-image-more';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,8 @@ import {
 } from '@/components/ui/card';
 import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parking';
+import { saveReport } from '@/services/reports';
+import { Save } from 'lucide-react';
 
 // --- INTERFACES ---
 interface VehicleRecord {
@@ -43,6 +46,7 @@ interface Area {
   name: string;
   capacity: number;
 }
+
 
 // --- HELPER FUNCTIONS ---
 const processHourlyChartData = (records: ProcessedRecord[]) => {
@@ -86,6 +90,34 @@ const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'w
   }));
 };
 
+const processPredictionsByPeriod = (
+  predictions: { [key: string]: number },
+  period: 'daily' | 'weekly' | 'monthly'
+) => {
+  const aggregation: { [key: string]: number } = {};
+  Object.keys(predictions).forEach(timestamp => {
+    const date = new Date(timestamp);
+    let key = '';
+    if (period === 'daily') {
+      key = date.toLocaleDateString('en-CA');
+    } else if (period === 'weekly') {
+      const dayOfWeek = date.getDay();
+      const firstDay = new Date(new Date(date).setDate(date.getDate() - dayOfWeek));
+      key = `Week of ${firstDay.toLocaleDateString('en-CA')}`;
+    } else if (period === 'monthly') {
+      key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    }
+    if (key) {
+      aggregation[key] = (aggregation[key] || 0) + predictions[timestamp];
+    }
+  });
+  return Object.keys(aggregation).sort().map(key => ({
+    period: key,
+    Predictor: Math.round(aggregation[key])
+  }));
+};
+
+
 const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: number) => {
   const overstays = records.filter(r => r.durationMinutes && r.durationMinutes > timeLimitMinutes);
   const aggregation: { [key: string]: number } = {};
@@ -103,6 +135,9 @@ const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: numbe
 // --- MAIN DASHBOARD COMPONENT ---
 export default function ParkingDashboard() {
   // --- STATE MANAGEMENT ---
+  const hourlyChartRef = useRef(null);
+  const entriesChartRef = useRef(null);
+  const overstayChartRef = useRef(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
@@ -121,8 +156,13 @@ export default function ParkingDashboard() {
   const [overstayLimit, setOverstayLimit] = useState(60);
 
   // --- ML Predictor State ---
-  const [predictedEntries, setPredictedEntries] = useState<{ period: string, Predictor: number }[]>([]);
   const [predictLoading, setPredictLoading] = useState(false);
+  const [rawHourlyPredictions, setRawHourlyPredictions] = useState<{ [key: string]: number }>({});
+
+  // --- State for handling save report feedback ---
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+
 
   // --- DATA FETCHING AND PROCESSING ---
   useEffect(() => {
@@ -221,51 +261,45 @@ export default function ParkingDashboard() {
     setFilteredRecords(records);
   }, [startDate, endDate, searchTerm, allRecords]);
 
-  // --- ML Predictor Effect (MODIFIED) ---
   useEffect(() => {
     if (filteredRecords.length === 0) {
-      setPredictedEntries([]);
+      setRawHourlyPredictions({});
       return;
     }
 
-    setPredictLoading(true);
+    const fetchPredictions = async () => {
+      setPredictLoading(true);
+      const lastRecordDate = new Date(Math.max(
+          Date.now(),
+          ...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)
+      ));
+      const timestamps: string[] = [];
+      const startDate = new Date(lastRecordDate);
+      startDate.setDate(startDate.getDate() + 1);
+      startDate.setHours(0, 0, 0, 0);
 
-    // --- NEW LOGIC: Generate hourly timestamps for the next day ---
-    const lastRecordDate = new Date(Math.max(...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)));
-    const nextDay = new Date(lastRecordDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-    nextDay.setHours(0, 0, 0, 0); // Start from midnight
+      for (let day = 0; day < 30; day++) {
+        for (let hour = 0; hour < 24; hour++) {
+          const timestampDate = new Date(startDate);
+          timestampDate.setDate(startDate.getDate() + day);
+          timestampDate.setHours(hour);
+          timestamps.push(timestampDate.toISOString().slice(0, 19));
+        }
+      }
 
-    const timestamps: string[] = [];
-    for (let i = 0; i < 24; i++) {
-        const nextHour = new Date(nextDay);
-        nextHour.setHours(i);
-        // Format to YYYY-MM-DDTHH:mm:ss as expected by backend
-        timestamps.push(nextHour.toISOString().slice(0, 19).replace('T', 'T'));
-    }
+      try {
+        const res = await getVehicleEntryPredictions(timestamps);
+        setRawHourlyPredictions(res.predictions || {});
+      } catch (err) {
+        console.error("Prediction API call failed:", err);
+        setRawHourlyPredictions({});
+      } finally {
+        setPredictLoading(false);
+      }
+    };
+    fetchPredictions();
+  }, [filteredRecords]);
 
-    getVehicleEntryPredictions(timestamps)
-      .then(res => {
-        console.log('✅ Raw API Response:', res); // Keep for debugging
-        
-        const preds = timestamps.map(ts => {
-          const date = new Date(ts);
-          return {
-            period: `${date.getHours()}:00 (${date.toLocaleDateString('en-CA')})`, // e.g., "9:00 (2025-09-07)"
-            Predictor: Math.round(res.predictions[ts] ?? 0) // Round the prediction for cleaner display
-          };
-        });
-
-        console.log('📊 Data being set for the chart:', preds); // Keep for debugging
-        setPredictedEntries(preds);
-      })
-      .catch((err) => {
-        console.error("API call failed:", err);
-        setPredictedEntries([]);
-      })
-      .finally(() => setPredictLoading(false));
-
-  }, [filteredRecords]); // Dependency changed, entriesPeriod no longer needed for prediction
 
   // --- EVENT HANDLERS ---
   const handlePresetFilterClick = (period: string) => {
@@ -295,20 +329,84 @@ export default function ParkingDashboard() {
     setSearchTerm('');
     setActiveFilter('all');
   };
+// Located inside the ParkingDashboard component
+
+// ParkingDashboard.tsx
+// ParkingDashboard.tsx
+
+const handleSaveReport = async (chartType: string, chartData: any[], description: string) => {
+    const reportName = prompt('Please enter a name for this report:');
+    if (!reportName || !selectedAreaId) {
+        alert('Report name and a selected area are required.');
+        return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage('');
+
+    try {
+        let chartElement = null;
+        if (chartType === 'hourly-activity') chartElement = hourlyChartRef.current;
+        if (chartType === 'entries-over-time') chartElement = entriesChartRef.current;
+        if (chartType === 'overstay-analysis') chartElement = overstayChartRef.current;
+
+        if (!chartElement) {
+            throw new Error("Chart element could not be found in the DOM.");
+        }
+
+        // --- NEW: Add a small delay to ensure the chart is fully rendered ---
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+
+        const chartImage = await domtoimage.toPng(chartElement, {
+            bgcolor: '#18181b'
+        });
+        
+        // --- NEW: Explicitly check if the image capture was successful ---
+        if (!chartImage || chartImage.length < 100) { // Check if the result is valid
+             throw new Error("Image capture failed, the resulting data is empty.");
+        }
+
+        const payload = {
+            name: reportName,
+            areaId: selectedAreaId,
+            type: chartType,
+            chartData: chartData,
+            chartImage: chartImage,
+            filters: { startDate, endDate, searchTerm, overstayLimit, entriesPeriod },
+            description
+        };
+
+        await saveReport(payload);
+        setSaveMessage(`Report "${reportName}" saved successfully!`);
+
+    } catch (error) {
+        // This will now catch the specific error if image capture fails
+        console.error('Failed to save report', error);
+        setSaveMessage('Error: Could not save the report. Check console for details.');
+    } finally {
+        setIsSaving(false);
+        setTimeout(() => setSaveMessage(''), 4000);
+    }
+};
 
   // --- MEMOIZED CHART DATA ---
-  const hourlyChartData = useMemo(() => processHourlyChartData(filteredRecords), [filteredRecords]);
-  const entriesChartData = useMemo(() => processEntriesByPeriod(filteredRecords, entriesPeriod), [filteredRecords, entriesPeriod]);
   const overstayChartData = useMemo(() => processOverstayData(filteredRecords, overstayLimit), [filteredRecords, overstayLimit]);
   
-  // Combine historical and predicted data for the hourly chart
   const combinedHourlyData = useMemo(() => {
     const historical = processHourlyChartData(filteredRecords);
-    const predicted = predictedEntries.map(p => {
-        const hourMatch = p.period.match(/^(\d+):00/);
-        const hourKey = hourMatch ? `${parseInt(hourMatch[1])}:00` : '';
-        return { hour: hourKey, Predictor: p.Predictor };
-    });
+    const lastRecordDate = new Date(Math.max(
+        Date.now(),
+        ...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)
+    ));
+    const nextDayStr = new Date(lastRecordDate.setDate(lastRecordDate.getDate() + 1)).toISOString().split('T')[0];
+
+    const predicted = Object.keys(rawHourlyPredictions)
+      .filter(ts => ts.startsWith(nextDayStr))
+      .map(ts => {
+          const date = new Date(ts);
+          const hourKey = `${date.getHours()}:00`;
+          return { hour: hourKey, Predictor: Math.round(rawHourlyPredictions[ts]) };
+      });
 
     const combined = historical.map(h => {
         const matchingPred = predicted.find(p => p.hour === h.hour);
@@ -318,7 +416,26 @@ export default function ParkingDashboard() {
         };
     });
     return combined;
-  }, [filteredRecords, predictedEntries]);
+  }, [filteredRecords, rawHourlyPredictions]);
+
+  const combinedEntriesData = useMemo(() => {
+    const historical = processEntriesByPeriod(filteredRecords, entriesPeriod);
+    const predicted = processPredictionsByPeriod(rawHourlyPredictions, entriesPeriod);
+    const combinedMap = new Map<string, { period: string; Entries?: number | null; Predictor?: number | null }>();
+
+    historical.forEach(item => {
+      combinedMap.set(item.period, { ...item, Predictor: null });
+    });
+    predicted.forEach(item => {
+      if (combinedMap.has(item.period)) {
+        const existing = combinedMap.get(item.period)!;
+        existing.Predictor = item.Predictor;
+      } else {
+        combinedMap.set(item.period, { period: item.period, Entries: null, Predictor: item.Predictor });
+      }
+    });
+    return Array.from(combinedMap.values()).sort((a, b) => new Date(a.period.replace('Week of ', '')).getTime() - new Date(b.period.replace('Week of ', '')).getTime());
+  }, [filteredRecords, entriesPeriod, rawHourlyPredictions]);
 
 
   // --- RENDER LOGIC ---
@@ -342,7 +459,13 @@ export default function ParkingDashboard() {
             <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
           </header>
           {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}
-          {/* --- CONTROLS SECTION --- */}
+          
+          {saveMessage && (
+            <div className={`p-4 rounded-md text-center ${saveMessage.includes('Error') ? 'bg-red-800' : 'bg-green-800'}`}>
+                {saveMessage}
+            </div>
+          )}
+          
           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -380,13 +503,12 @@ export default function ParkingDashboard() {
             </div>
             <div><Button variant="ghost" onClick={handleClearFilters} className="text-sm text-gray-400 hover:text-white">Clear All Filters</Button></div>
           </section>
-          {/* --- MAIN DASHBOARD CONTENT --- */}
+          
           {selectedAreaId && (
             dashboardLoading ? (
               <div className="text-center py-10">Loading area data...</div>
             ) : (
               <div className="space-y-8">
-                {/* Summary Cards */}
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <Card className="bg-neutral-800 border-neutral-700">
                     <CardHeader><CardTitle className="text-blue-400">Current Occupancy</CardTitle></CardHeader>
@@ -401,13 +523,18 @@ export default function ParkingDashboard() {
                     <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'EXIT').length}</CardContent>
                   </Card>
                 </section>
-                {/* --- MODIFIED CHART LAYOUT --- */}
+                
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Chart 1: Hourly Activity with Prediction */}
-                  <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md lg:col-span-2">
-                    <h3 className="text-lg font-semibold mb-4">Hourly Activity (Historical & Predicted)</h3>
+                  <div ref={hourlyChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md lg:col-span-2">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Hourly Activity (Historical & Predicted)</h3>
+                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('hourly-activity', combinedHourlyData, 'Hourly entries, exits, and next-day predictions.')}>
+                           <Save className="mr-2 h-4 w-4" /> Save Report
+                        </Button>
+                    </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={combinedHourlyData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
                         <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
                         <YAxis stroke="#888888" fontSize={12} />
                         <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
@@ -418,10 +545,16 @@ export default function ParkingDashboard() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  {/* Chart 2: Historical Vehicle Entries */}
-                  <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                  
+                  <div ref={entriesChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Historical Vehicle Entries</h3>
+                      <h3 className="text-lg font-semibold">Vehicle Entries</h3>
+                       <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)}>
+                           <Save className="mr-2 h-4 w-4" /> Save Report
+                        </Button>
+                    </div>
+                     <div className="flex justify-between items-center mb-4">
+                      <p className="text-sm text-muted-foreground">Historical & Predicted</p>
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant={entriesPeriod === 'daily' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('daily')}>Daily</Button>
                         <Button size="sm" variant={entriesPeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('weekly')}>Weekly</Button>
@@ -429,20 +562,26 @@ export default function ParkingDashboard() {
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={entriesChartData}>
+                      <LineChart data={combinedEntriesData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="period" stroke="#888888" fontSize={12} />
-                        <YAxis stroke="#888888" fontSize={12} />
+                        <XAxis dataKey="period" stroke="#888888" fontSize={12} tick={{ angle: -20, textAnchor: 'end' }} height={60} />
+                        <YAxis stroke="#888888" fontSize={12} allowDecimals={false}/>
                         <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                         <Legend />
-                        <Line type="monotone" dataKey="Entries" stroke="#22c55e" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="Entries" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="Predictor" stroke="#a78bfa" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  {/* Chart 3: Vehicles Overstay Analysis */}
-                  <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                  
+                  <div ref={overstayChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                     <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
+                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, `Vehicles staying longer than ${overstayLimit} minutes.`)}>
+                           <Save className="mr-2 h-4 w-4" /> Save Report
+                        </Button>
+                    </div>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                      <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
                       <div className="flex items-center gap-2">
                         <label htmlFor="overstay-limit" className="text-sm">Time Limit (mins):</label>
                         <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-neutral-700 border-neutral-600 w-24" />
@@ -460,7 +599,7 @@ export default function ParkingDashboard() {
                     </ResponsiveContainer>
                   </div>
                 </section>
-                {/* Records Table */}
+                
                 <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
                   <h3 className="text-lg font-semibold mb-4">Filtered Records ({filteredRecords.length} found)</h3>
                   <Table>
