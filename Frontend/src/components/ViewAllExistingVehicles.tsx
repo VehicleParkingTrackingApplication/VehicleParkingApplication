@@ -109,14 +109,22 @@ export default function ViewAllVehicles() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white px-6 py-10">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden px-6 py-10">
+      <div 
+        className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+        style={{ transform: 'translate(50%, -50%)' }}
+      ></div>
+      <div 
+        className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
+        style={{ transform: 'translate(-50%, 50%)' }}
+      ></div>
+      <div className="max-w-6xl mx-auto space-y-6 relative z-10">
         <h1 className="text-3xl font-bold text-center mb-6">
           Currently Parked Vehicles - {areaName}
         </h1>
 
-        <div className="bg-neutral-800 rounded-lg p-4">
-          <p className="text-sm text-gray-400 mb-4">
+        <div className="backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl p-4">
+          <p className="text-sm text-white/70 mb-4">
             Showing {vehicles.length} vehicles (Page {page} of {totalPages})
           </p>
 
@@ -135,16 +143,16 @@ export default function ViewAllVehicles() {
                 vehicles.map((vehicle, index) => {
                   const entryDateTime = formatDateTime(vehicle.entryTime);
                   return (
-                    <TableRow key={vehicle._id || index}>
-                      <TableCell className="font-medium">{vehicle.plateNumber}</TableCell>
-                      <TableCell>{vehicle.country}</TableCell>
+                    <TableRow key={vehicle._id || index} className="hover:bg-white/5">
+                      <TableCell className="font-medium text-white">{vehicle.plateNumber}</TableCell>
+                      <TableCell className="text-white">{vehicle.country}</TableCell>
                       <TableCell>
                         <div>
-                          <div>{entryDateTime.date}</div>
-                          <div className="text-sm text-gray-400">{entryDateTime.time}</div>
+                          <div className="text-white">{entryDateTime.date}</div>
+                          <div className="text-sm text-white/70">{entryDateTime.time}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{formatDuration(vehicle.currentDuration)}</TableCell>
+                      <TableCell className="text-white">{formatDuration(vehicle.currentDuration)}</TableCell>
                       <TableCell>
                         {vehicle.image && vehicle.image !== 'image.jpg' ? (
                           <img 
@@ -161,7 +169,7 @@ export default function ViewAllVehicles() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                  <TableCell colSpan={5} className="text-center py-8 text-white/70">
                     No vehicles currently parked in this area
                   </TableCell>
                 </TableRow>

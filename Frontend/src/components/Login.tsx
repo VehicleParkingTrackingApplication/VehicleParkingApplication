@@ -43,8 +43,16 @@ export default function LoginPage() {
 
     return (
         <>
-            <div className="flex flex-col md:flex-row min-h-screen bg-black text-white">
-                <div className="flex-1 bg-gray-800 flex items-center justify-center p-8">
+            <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden">
+                <div 
+                    className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+                    style={{ transform: 'translate(50%, -50%)' }}
+                ></div>
+                <div 
+                    className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
+                    style={{ transform: 'translate(-50%, 50%)' }}
+                ></div>
+                <div className="flex-1 flex items-center justify-center p-8 relative z-10">
                     <Card className="w-full max-w-md bg-gray-700 border-gray-600">
                     <CardContent className="space-y-6 pt-6">
                         <h3 className="text-2xl font-semibold text-center text-white">Sign in</h3>
