@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
-import { authInterceptor } from '../services/authInterceptor';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import { authInterceptor } from '../../services/authInterceptor';
 
 interface AccountPopupProps {
   onClose: () => void;

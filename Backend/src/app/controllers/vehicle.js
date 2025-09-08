@@ -83,7 +83,7 @@ class parkingVehicleController {
         }
     }
     
-    async getExistingParkingVehicleByParkingArea(req, res) {
+    async getExistingVehicleByAreaId(req, res) {
         try {
             const { areaId } = req.params;
             if (!areaId) {
@@ -140,7 +140,7 @@ class parkingVehicleController {
             
             return res.status(200).json({
                 success: true,
-                vehicles: vehiclesWithDuration,
+                data: vehiclesWithDuration,
                 pagination: {
                     total,
                     page: page + 1,
@@ -209,7 +209,7 @@ class parkingVehicleController {
     }
 
     // get all records for a parking area with pagination
-    async getAllRecordsByArea(req, res) {
+    async getAllRecordsByAreaId(req, res) {
         try {
             const { areaId } = req.params;
             
@@ -303,8 +303,8 @@ class parkingVehicleController {
             // Format the response to match the frontend expectations
             const formattedRecords = records.map(record => ({
                 _id: record._id,
-                plate: record.plateNumber,
-                action: record.status === 'APPROACHING' ? 'ENTRY' : 'EXIT',
+                plateNumber: record.plateNumber,
+                status: record.status === 'APPROACHING' ? 'ENTRY' : 'EXIT',
                 time: record.datetime.toLocaleTimeString('en-US', { 
                     hour12: false,
                     hour: '2-digit',
@@ -317,14 +317,13 @@ class parkingVehicleController {
                     day: '2-digit'
                 }),
                 image: record.image,
+                duration: record.duration || 0,
                 country: record.country,
-                angle: record.angle,
-                confidence: record.confidence
             }));
             
             return res.status(200).json({
                 success: true,
-                records: formattedRecords,
+                data: formattedRecords,
                 pagination: {
                     total,
                     page: page + 1,
@@ -701,49 +700,6 @@ class parkingVehicleController {
                 message: 'Error processing vehicle data',
                 error: error.message
             });
-        }
-    }
-
-    // input by params for vehicle (legacy method - kept for backward compatibility)
-    async inputVehicleForm(req, res) {
-        try {
-            const {
-                areaId, 
-                date,
-                time,
-                plateNumber,
-                country,
-                image,
-                status
-            } = req.body;
-            
-            // return the missing value for server, can use to analysis the accuracy of camera
-            if ( !areaId || !date || !time || !plateNumber || !status ) {
-                return res.status(500).json({
-                    success: false,
-                    message: "Missing required fields"
-                });
-            }
-            
-            const vehicleData = {
-                areaId, 
-                date,
-                time,
-                plateNumber,
-                country,
-                image,
-                status
-            };
-            
-            // Use the helper method to process the input
-            return await this.processVehicleInput(req, res, vehicleData);
-            
-        } catch (error) {
-            return res.status(500).json({
-                success: false,
-                message: 'Error API processing vehicle data',
-                error: error.message
-            })
         }
     }
 

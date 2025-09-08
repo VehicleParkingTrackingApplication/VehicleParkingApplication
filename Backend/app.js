@@ -39,8 +39,8 @@ webSocketService.initialize(server);
 // scheduledSimulationService.startScheduledProcessing();
 
 // Init schedulers services for data FTP
-const scheduledFtpService = new ScheduledFtpService();
-scheduledFtpService.startScheduledProcessing();
+// const scheduledFtpService = new ScheduledFtpService();
+// scheduledFtpService.startScheduledProcessing();
 
 // CORS configuration for development
 // app.use(cors());

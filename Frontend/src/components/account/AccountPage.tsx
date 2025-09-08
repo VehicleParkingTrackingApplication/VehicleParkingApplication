@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { fetchAuthApi, putAuthApi } from '../services/api';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { fetchAuthApi, putAuthApi } from '../../services/api';
 
 export default function AccountPage() {
     const [user, setUser] = useState({

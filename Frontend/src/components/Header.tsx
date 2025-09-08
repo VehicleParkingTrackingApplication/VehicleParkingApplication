@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { Button } from './ui/button';
-import { AccountPopup } from './AccountPopup';
+import { AccountPopup } from './account/AccountPopup';
 import { NotificationPopup } from './NotificationPopup';
 import { authInterceptor } from '../services/authInterceptor';
 import { getCurrentUser } from '../services/backend';

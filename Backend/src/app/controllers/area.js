@@ -3,6 +3,7 @@ import FtpServer from '../models/FtpServer.js';
 import Notification from '../models/Notification.js';
 import { FtpService } from '../services/ftpService.js';
 import { webSocketService } from '../services/webSocketService.js';
+import { Client } from 'basic-ftp';
 
 class parkingAreaController {
     // not use this function
@@ -12,7 +13,7 @@ class parkingAreaController {
     }
 
     // get all parking areas of a business
-    async getAreaByBusiness(req, res) {
+    async getAllAreasByBusiness(req, res) {
         try {
             const businessId = req.user.businessId;
             if (!businessId) {
@@ -77,6 +78,31 @@ class parkingAreaController {
             return res.status(500).json({
                 success: false,
                 message: 'Error fetching parking areas',
+                error: error.message
+            });
+        }
+    }
+
+    // get area information detail by areaId 
+    async getAreaDetails(req, res) {
+        try {
+            const { areaId } = req.params;
+            const area = await Area.findById(areaId);
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Area not found"
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                message: "Area details fetched successfully",
+                data: area
+            });
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error",
                 error: error.message
             });
         }
@@ -261,19 +287,10 @@ class parkingAreaController {
     async triggerFtpServer(req, res) {
         try {
             const { areaId } = req.params;
-            const businessId = req.user.businessId;
-
             if (!areaId) {
                 return res.status(400).json({
                     success: false,
                     message: "Area ID is required"
-                });
-            }
-
-            if (!businessId) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Business ID is required"
                 });
             }
 
@@ -286,13 +303,6 @@ class parkingAreaController {
                 });
             }
 
-            // Verify the area belongs to the current user's business
-            if (area.businessId.toString() !== businessId.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Access denied. You can only trigger FTP servers for areas in your business"
-                });
-            }
 
             // Check if the area has an FTP server configured
             if (!area.ftpServer) {
@@ -378,6 +388,76 @@ class parkingAreaController {
             return res.status(500).json({
                 success: false,
                 message: "Internal server error",
+                error: error.message
+            });
+        }
+    }
+
+    // Test FTP server connectivity before saving
+    async testFtpServerConnection(req, res) {
+        try {
+            const { host, port, user, password, secure, secureOptions } = req.body;
+            
+            // Validate required fields
+            if (!host || !port || !user || !password) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Missing required FTP server fields: host, port, user, password"
+                });
+            }
+            
+            const client = new Client();
+
+            let connectionSuccessful = false;
+            let errorMessage = '';
+
+            try {
+                // Set timeout for connection test (10 seconds)
+                client.ftp.timeout = 10000;
+
+                // Attempt to connect to FTP server
+                await client.access({
+                    host: host,
+                    port: parseInt(port),
+                    user: user,
+                    password: password,
+                    secure: secure,
+                    secureOptions: secureOptions
+                });
+
+                // Test if we can list directory (basic connectivity test)
+                // await client.list();
+
+                connectionSuccessful = true;
+                
+            } catch (error) {
+                connectionSuccessful = false;
+                errorMessage = error.message;
+            } finally {
+                // Always close the connection
+                try {
+                    client.close();
+                } catch (closeError) {
+                    // Ignore close errors
+                }
+            }
+
+            // Return the result
+            return res.status(200).json({
+                success: true,
+                data: {
+                    canConnect: connectionSuccessful,
+                    message: connectionSuccessful 
+                        ? 'FTP server connection successful' 
+                        : `FTP server connection failed: ${errorMessage}`,
+                    error: connectionSuccessful ? null : errorMessage
+                }
+            });
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error during FTP connection test",
                 error: error.message
             });
         }

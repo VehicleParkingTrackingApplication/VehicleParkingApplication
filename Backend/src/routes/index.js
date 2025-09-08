@@ -7,6 +7,7 @@ import staffRouter from './staff.js';
 import recordsRouter from './records.js';
 import notificationRouter from './notification.js';
 import schedulerRouter from './scheduler.js';
+import blacklistRouter from './blacklist.js';
 
 function route(app) {
     // API routes
@@ -30,6 +31,9 @@ function route(app) {
     // Records routes
     app.use('/api/records', recordsRouter);
     
+    // Blacklist routes
+    app.use('/api/blacklist', blacklistRouter);
+
     // Scheduler routes
     app.use('/api/scheduler', schedulerRouter);
     

@@ -11,9 +11,9 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import AreaCreatePopup from '@/components/AreaCreatePopup';
-import { authInterceptor } from '../services/authInterceptor';
-import { fetchAuthApi } from '../services/api';
+import AreaCreatePopup from '@/components/areaManagement/AreaCreatePopup';
+import { authInterceptor } from '../../services/authInterceptor';
+import { fetchAuthApi } from '../../services/api';
 import { getExistingVehicles } from '@/services/parking';
 
 interface Area {
@@ -548,22 +548,12 @@ export default function AreaManagement() {
                          <Button 
                            size="sm" 
                            variant="outline" 
-                           className="flex-1 text-xs"
-                           onClick={() => navigate(`/area/${area._id}/records`, { 
+                           className="w-full text-xs"
+                           onClick={() => navigate(`/area/${area._id}/details`, { 
                              state: { areaName: area.name } 
                            })}
                          >
-                           All Records
-                         </Button>
-                         <Button 
-                           size="sm" 
-                           variant="outline" 
-                           className="flex-1 text-xs"
-                           onClick={() => navigate(`/area/${area._id}/vehicles`, { 
-                             state: { areaName: area.name } 
-                           })}
-                         >
-                           Existing Vehicles
+                           View Details
                          </Button>
                        </div>
                      </div>
@@ -601,31 +591,6 @@ export default function AreaManagement() {
               </TableBody>
             </Table>
           </section>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <Button 
-              className="w-full md:w-auto" 
-              onClick={() => console.log('Export areas data')}
-              variant="outline"
-            >
-              Export Areas Data
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full md:w-auto" 
-              onClick={() => console.log('View area analytics')}
-            >
-              View Analytics
-            </Button>
-            <Button 
-              className="w-full md:w-auto" 
-              onClick={() => console.log('Manage FTP servers')}
-              variant="outline"
-            >
-              Manage FTP Servers
-            </Button>
-          </div>
         </div>
       </div>
       <AreaCreatePopup
