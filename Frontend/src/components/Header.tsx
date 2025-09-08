@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { Button } from './ui/button';
-import { AccountPopup } from './AccountPopup';
+import { AccountPopup } from './account/AccountPopup';
 import { NotificationPopup } from './NotificationPopup';
 import { authInterceptor } from '../services/authInterceptor';
 import { getCurrentUser } from '../services/backend';
@@ -96,14 +96,14 @@ export const Header: React.FC = () => {
                     <Link to="/analytics" className="text-gray-300 hover:text-white transition-colors">Visualization Dashboard</Link>
                     {/* --- NEW LINK ADDED --- */}
                     <Link to="/reports" className="text-gray-300 hover:text-white transition-colors">Existing Reports</Link>
-<!--                     <Link to="/area-management" className="text-white hover:text-blue-300 transition-colors">Area Management</Link>
+{/* <!--                     <Link to="/area-management" className="text-white hover:text-blue-300 transition-colors">Area Management</Link>
                     <Link to="/staff-management" className="text-white hover:text-blue-300 transition-colors">Staff Management</Link>
                     <Link to="/parking-dashboard" className="text-white hover:text-blue-300 transition-colors">Visualization Dashboard</Link>
                   </>
                 ) : (
                   <>
                     <Link to="/area-management" className="text-white hover:text-blue-300 transition-colors">Area Management</Link>
-                    <Link to="/analytics" className="text-white hover:text-blue-300 transition-colors">Visualization Dashboard</Link> -->
+                    <Link to="/analytics" className="text-white hover:text-blue-300 transition-colors">Visualization Dashboard</Link> --> */}
                   </>
                 )}
               </nav>

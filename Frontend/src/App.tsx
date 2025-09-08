@@ -6,8 +6,8 @@ import LoginPage from './components/Login';
 import HomePage from './components/HomePage';
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
-import AccountPage from './components/AccountPage';
-import AreaManagement from './components/AreaManagement';
+import AccountPage from './components/account/AccountPage';
+import AreaManagement from './components/areaManagement/AreaManagement';
 import ParkingDashboard from './components/ParkingDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import StaffManagement from './components/StaffManagement';
@@ -15,6 +15,7 @@ import ExistingReportsPage from './components/ExistingReport';
 
 import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
 import ViewAllRecords from './components/ViewAllRecords';
+import AreaDetail from './components/areaManagement/AreaDetail';
 
 export default function App() {
   return (
@@ -74,6 +75,12 @@ export default function App() {
                     <Header/>
                     <ExistingReportsPage />
                 </div>
+            } />
+            <Route path="/area/:areaId/details" element={
+                <ProtectedRoute>
+                    <Header/>
+                    <AreaDetail />
+                </ProtectedRoute>
             } />
             <Route path="/area/:areaId/vehicles" element={
                 <div>

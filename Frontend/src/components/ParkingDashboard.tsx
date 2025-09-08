@@ -55,6 +55,7 @@ interface ProcessedRecord {
   entryDate: Date | null;
   exitDate: Date | null;
   durationMinutes: number | null;
+  angle: number;
 }
 
 interface Area {
@@ -150,6 +151,15 @@ const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: numbe
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function ParkingDashboard() {
+  // Custom rotated tick for XAxis labels
+  const AngleTick = (props: any) => {
+    const { x, y, payload } = props;
+    return (
+      <text x={x} y={y} dy={16} textAnchor="end" transform={`rotate(-20, ${x}, ${y})`} fill="#888888" fontSize={12}>
+        {payload?.value}
+      </text>
+    );
+  };
   // --- URL PARAMETER MANAGEMENT ---
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -187,19 +197,19 @@ export default function ParkingDashboard() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   // --- URL PARAMETER FUNCTIONS ---
-<!--   const updateURLParams = (updates: Record<string, string | null>) => {
-    const newSearchParams = new URLSearchParams(searchParams);
+// <!--   const updateURLParams = (updates: Record<string, string | null>) => {
+//     const newSearchParams = new URLSearchParams(searchParams);
     
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === '') {
-        newSearchParams.delete(key);
-      } else {
-        newSearchParams.set(key, value);
-      }
-    });
+//     Object.entries(updates).forEach(([key, value]) => {
+//       if (value === null || value === '') {
+//         newSearchParams.delete(key);
+//       } else {
+//         newSearchParams.set(key, value);
+//       }
+//     });
     
-    setSearchParams(newSearchParams, { replace: true });
-  }; -->
+//     setSearchParams(newSearchParams, { replace: true });
+//   }; -->
 
 
   // --- DATA FETCHING AND PROCESSING ---
@@ -360,7 +370,8 @@ export default function ParkingDashboard() {
                           ...rec,
                           entryDate: entryDateObj,
                           exitDate: dateObj,
-                          durationMinutes: Math.floor(durationMs / 60000)
+                          durationMinutes: Math.floor(durationMs / 60000),
+                          angle: rec.angle
                       });
                       // Once matched, remove the entry to handle re-entries correctly
                       entryMap.delete(rec.plate);
@@ -370,7 +381,8 @@ export default function ParkingDashboard() {
                       ...rec,
                       entryDate: dateObj,
                       exitDate: null,
-                      durationMinutes: null
+                      durationMinutes: null,
+                      angle: rec.angle
                   });
               }
           });
@@ -696,7 +708,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
           )}
         
           {/* --- CONTROLS SECTION --- */}
-<!--           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6"> -->
+{/* <!--           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6"> --> */}
           <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -778,7 +790,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                         </Button>
                     </div>
                   {/* Chart 1: Hourly Activity with Prediction */}
-<!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl lg:col-span-2"> -->
+{/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl lg:col-span-2"> --> */}
                     <h3 className="text-lg font-semibold mb-4">Hourly Activity (Historical & Predicted)</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={combinedHourlyData}>
@@ -796,7 +808,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                   
                   <div ref={entriesChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
                   {/* Chart 2: Historical Vehicle Entries */}
-<!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> -->
+{/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Vehicle Entries</h3>
                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)}>
@@ -814,7 +826,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={combinedEntriesData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="period" stroke="#888888" fontSize={12} tick={{ angle: -20, textAnchor: 'end' }} height={60} />
+                        <XAxis dataKey="period" stroke="#888888" fontSize={12} tick={<AngleTick />} height={60} />
                         <YAxis stroke="#888888" fontSize={12} allowDecimals={false}/>
                         <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                         <Legend />
@@ -832,7 +844,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                         </Button>
                     </div>
                   {/* Chart 3: Vehicles Overstay Analysis */}
-<!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> -->
+{/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <div className="flex items-center gap-2">
                         <label htmlFor="overstay-limit" className="text-sm">Time Limit (mins):</label>
@@ -854,7 +866,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                 
                 <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
                 {/* Records Table */}
-<!--                 <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> -->
+{/* <!--                 <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                   <h3 className="text-lg font-semibold mb-4">Filtered Records ({filteredRecords.length} found)</h3>
                   <Table>
                     <TableHeader>
@@ -863,6 +875,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                         <TableHead>Action</TableHead>
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Duration (mins)</TableHead>
+                        <TableHead>Angle (°)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -873,6 +886,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                             <TableCell>{record.action}</TableCell>
                             <TableCell>{record.date} {record.time}</TableCell>
                             <TableCell>{record.durationMinutes !== null ? record.durationMinutes : 'N/A'}</TableCell>
+                            <TableCell>{typeof record.angle === 'number' ? record.angle.toFixed(1) : 'N/A'}</TableCell>
                           </TableRow>
                         ))
                       ) : (

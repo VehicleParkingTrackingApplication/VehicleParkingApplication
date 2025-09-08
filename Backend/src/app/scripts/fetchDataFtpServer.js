@@ -77,7 +77,7 @@ async function updateAreaCapacity(areaId, isEntering) {
     }
 }
 
-export async function fetchDataFtpServer(areaId) {
+export async function fetchDataFtpServer(areaId, options = {}) {
     if (mongoose.connection.readyState === 0) {
         await mongoose.connect(MONGO_URI);
     }
@@ -109,7 +109,7 @@ export async function fetchDataFtpServer(areaId) {
             secure: ftpInfo.secure,
             secureOptions: ftpInfo.secureOptions
         });
-        const targetFolder = "CF02200-200034BE004";
+        const targetFolder = options.folder || "CF02200-200034BE004";
         await client.cd(targetFolder);
         const contents = await client.list();
         const csvFiles = contents
@@ -158,7 +158,22 @@ export async function fetchDataFtpServer(areaId) {
                                     console.error('Failed to import record: plateNumber is missing.', row);
                                     return;
                                 }
-                                try {
+                                let duration = 0;
+                                if (row.status === 'LEAVING') {
+                                    try {
+                                        const existingVehicle = await Vehicle.findOne({
+                                            areaId,
+                                            plateNumber: row.plateNumber
+                                        })
+                                        if (existingVehicle && existingVehicle.datetime) {
+                                            // Calculate duration in milliseconds, then convert to minutes
+                                            duration = Math.round((rowDateTime - existingVehicle.datetime) / (1000 * 60));
+                                        }
+                                    } catch (err) {
+                                        console.error('Error calculating duration:', err.message);
+                                    }
+                                }
+                                try {    
                                     await Record.create({
                                         areaId,
                                         datetime: rowDateTime,
@@ -167,7 +182,8 @@ export async function fetchDataFtpServer(areaId) {
                                         confidence: Number(row.confidence) || 85,
                                         angle: Number(row.angle) || 0,
                                         image: row.image,
-                                        status: row.status
+                                        status: row.status,
+                                        duration: duration
                                     });
                                     console.log('Success: Imported record for plateNumber', row.plateNumber);
                                 } catch (err) {

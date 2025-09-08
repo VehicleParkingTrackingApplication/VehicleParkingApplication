@@ -55,13 +55,13 @@ export const getRecentRecords = async (areaId: string) => {
   return res.json();
 };
 
-export const getExistingVehicles = async (areaId: string, page: number = 1, limit: number = 20) => {
+export const getExistingVehicles = async (areaId: string, page: number = 1, limit: number = 10) => {
   const res = await fetchAuthApi(`parking/vehicle/${areaId}/existing-vehicles`, { page: page.toString(), limit: limit.toString() });
   if (!res.ok) throw new Error('Failed to fetch vehicles');
   return res.json();
 };
 
-export const getAllRecords = async (areaId: string, page: number = 1, limit: number = 20) => {
+export const getAllRecords = async (areaId: string, page: number = 1, limit: number = 10) => {
   const res = await fetchAuthApi(`parking/vehicle/${areaId}/all-records`, { page: page.toString(), limit: limit.toString() });
   if (!res.ok) throw new Error('Failed to fetch records');
   return res.json();

@@ -11,9 +11,9 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import AreaCreatePopup from '@/components/AreaCreatePopup';
-import { authInterceptor } from '../services/authInterceptor';
-import { fetchAuthApi } from '../services/api';
+import AreaCreatePopup from '@/components/areaManagement/AreaCreatePopup';
+import { authInterceptor } from '../../services/authInterceptor';
+import { fetchAuthApi } from '../../services/api';
 import { getExistingVehicles } from '@/services/parking';
 
 interface Area {

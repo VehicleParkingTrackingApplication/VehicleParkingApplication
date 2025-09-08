@@ -2,7 +2,7 @@
 import Blacklist from '../models/Blacklist.js';
 
 class BlacklistController {
-    async create(req, res) {
+    async createBlacklist(req, res) {
         try {
             const { businessId, plateNumber, reason } = req.body;
             if (!businessId || !plateNumber || !reason) {
@@ -43,7 +43,7 @@ class BlacklistController {
         }
     }
 
-    async getAllBlacklist(req, res) {
+    async getAllBlacklistByBusinessId(req, res) {
         try {
             const { businessId, page = 1, limit = 10 } = req.query;
             if (!businessId) {
@@ -80,4 +80,125 @@ class BlacklistController {
             });
         }
     }
+
+    // Search blacklist entries by plate number
+    async searchBlacklistByPlateNumber(req, res) {
+        try {
+            const { plateNumber, businessId, page = 1, limit = 10 } = req.query;
+            
+            if (!plateNumber) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Plate number is required'
+                });
+            }
+
+            const normalizedPlateNumber = plateNumber.trim().toUpperCase();
+            const pageNum = parseInt(page);
+            const limitNum = parseInt(limit);
+            const skip = (pageNum - 1) * limitNum;
+
+            // Build query
+            const query = { plateNumber: normalizedPlateNumber };
+            
+            // If businessId is provided, search only within that business
+            if (businessId) {
+                query.businessId = businessId;
+            }
+
+            // Get total count for pagination
+            const total = await Blacklist.countDocuments(query);
+
+            // Get blacklist entries with business information
+            const blacklistEntries = await Blacklist.find(query)
+                .populate('businessId', 'businessName location email phoneNumber')
+                .skip(skip)
+                .limit(limitNum)
+                .sort({ createdAt: -1 });
+
+            // Check if plate number is blacklisted anywhere
+            const isBlacklisted = blacklistEntries.length > 0;
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    plateNumber: normalizedPlateNumber,
+                    isBlacklisted: isBlacklisted,
+                    entries: blacklistEntries,
+                    totalFound: total
+                },
+                pagination: {
+                    currentPage: pageNum,
+                    totalPages: Math.ceil(total / limitNum),
+                    totalEntries: total,
+                    hasNextPage: pageNum * limitNum < total,
+                    hasPrevPage: pageNum > 1
+                }
+            });
+
+        } catch (error) {
+            console.error('Error searching blacklist by plate number:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error for searching blacklist',
+                error: error.message
+            });
+        }
+    }
+
+    // Check if a plate number is blacklisted (quick check without pagination)
+    async checkBlacklistStatus(req, res) {
+        try {
+            const { plateNumber, businessId } = req.query;
+            
+            if (!plateNumber) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Plate number is required'
+                });
+            }
+
+            const normalizedPlateNumber = plateNumber.trim().toUpperCase();
+
+            // Build query
+            const query = { plateNumber: normalizedPlateNumber };
+            
+            // If businessId is provided, check only within that business
+            if (businessId) {
+                query.businessId = businessId;
+            }
+
+            // Find blacklist entries
+            const blacklistEntries = await Blacklist.find(query)
+                .populate('businessId', 'businessName location')
+                .sort({ createdAt: -1 });
+
+            const isBlacklisted = blacklistEntries.length > 0;
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    plateNumber: normalizedPlateNumber,
+                    isBlacklisted: isBlacklisted,
+                    blacklistCount: blacklistEntries.length,
+                    entries: blacklistEntries.map(entry => ({
+                        businessName: entry.businessId.businessName,
+                        businessLocation: entry.businessId.location,
+                        reason: entry.reason,
+                        blacklistedAt: entry.createdAt
+                    }))
+                }
+            });
+
+        } catch (error) {
+            console.error('Error checking blacklist status:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error for checking blacklist status',
+                error: error.message
+            });
+        }
+    }
 }
+
+export default new BlacklistController();
