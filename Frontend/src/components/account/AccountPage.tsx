@@ -195,7 +195,7 @@ export default function AccountPage() {
     }
 
     return (
-        <div className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden flex items-center justify-center">
             <div 
                 className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
                 style={{ transform: 'translate(50%, -50%)' }}
@@ -206,7 +206,7 @@ export default function AccountPage() {
             ></div>
 
             <main className="relative z-10 px-4 py-8 sm:px-6 lg:px-8 w-full max-w-4xl">
-                <Card className="bg-gray-900/50 border-gray-700">
+                <Card className="backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
                     <CardHeader>
                         <CardTitle className="text-2xl font-bold">My Details</CardTitle>
                     </CardHeader>

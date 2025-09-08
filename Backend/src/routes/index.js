@@ -4,7 +4,8 @@ import parkingRouter from './parking.js';
 import userRouter from './user.js';
 import authRouter from './auth.js';
 import staffRouter from './staff.js';
-import recordsRouter from './records.js';
+import recordsRouter from './records.js'; // <-- 1. IMPORT your new route
+import reportsRouter from './reports.js';
 import notificationRouter from './notification.js';
 import schedulerRouter from './scheduler.js';
 import blacklistRouter from './blacklist.js';
@@ -39,6 +40,10 @@ function route(app) {
     
     // Home routes (should be last)
     app.use('/api/home', homeRouter);
+    
+    app.use('/api/records', recordsRouter); 
+
+    app.use('/api/reports', reportsRouter);
 }
 
 export default route;
