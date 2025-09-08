@@ -7,16 +7,82 @@ class parkingVehicleController {
     async updateAreaCapacity(areaId, increment = true) {
         try {
             const updateOperation = increment ? 1 : -1;
+             // Get the current area data before updating
+            const area = await Area.findById(areaId);
+            if (!area) {
+                console.error(`Area not found: ${areaId}`);
+                return;
+            }
+            
+            const oldCapacity = area.currentCapacity;
+            const newCapacity = oldCapacity + updateOperation;
+            
+            // Update the area capacity
             await Area.findByIdAndUpdate(
                 areaId,
                 { $inc: { currentCapacity: updateOperation } },
                 { new: true }
             );
+            
+            // Check if we need to create a notification (only when capacity increases)
+            if (increment) {
+                await this.checkAndCreateCapacityNotification(areaId, newCapacity, area.capacity);
+            }
         } catch (error) {
             console.error(`Error updating area capacity for ${areaId}:`, error);
+            return;
         }
     }
 
+    async checkAndCreateCapacityNotification(areaId, currentCapacity, totalCapacity) {
+        try {
+            const threshold = 80; // 80% threshold
+            const currentPercentage = Math.round((currentCapacity / totalCapacity) * 100);
+            
+            // Check if current capacity reaches or exceeds 80%
+            if (currentPercentage >= threshold) {
+                // Check if we already have a recent notification for this threshold
+                const existingNotification = await Notification.findOne({
+                    areaId,
+                    type: 'capacity_warning',
+                    threshold: threshold,
+                    status: 'unread'
+                }).sort({ createdAt: -1 });
+                
+                // Only create notification if:
+                // 1. No existing unread notification for this threshold, OR
+                // 2. The last notification was for a lower capacity (meaning we went below 80% and came back up)
+                let shouldCreateNotification = true;
+                
+                if (existingNotification) {
+                    const lastNotificationPercentage = Math.round((existingNotification.currentCapacity / existingNotification.totalCapacity) * 100);
+                    
+                    // If the last notification was for the same or higher percentage, don't create a new one
+                    if (lastNotificationPercentage >= currentPercentage) {
+                        shouldCreateNotification = false;
+                    }
+                }
+                
+                if (shouldCreateNotification) {
+                    const message = `Parking area has reached ${currentPercentage}% capacity (${currentCapacity}/${totalCapacity} vehicles).`;
+                    
+                    await Notification.create({
+                        areaId,
+                        status: 'unread',
+                        message,
+                        type: 'capacity_warning',
+                        threshold,
+                        currentCapacity,
+                        totalCapacity
+                    });
+                    
+                }
+            }
+        } catch (error) {
+            console.error(`Error checking capacity notification for area ${areaId}:`, error);
+        }
+    }
+    
     async getExistingParkingVehicleByParkingArea(req, res) {
         try {
             const { areaId } = req.params;
@@ -230,9 +296,10 @@ class parkingVehicleController {
                 .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
                 .skip(page * limit)
                 .limit(limit)
-                .select('plateNumber status datetime image country') // Select needed fields
+                .select('plateNumber status datetime image country angle confidence') // Include angle and confidence
                 .lean(); // Convert to plain JavaScript objects for better performance
-
+                
+            
             // Format the response to match the frontend expectations
             const formattedRecords = records.map(record => ({
                 _id: record._id,
@@ -250,9 +317,11 @@ class parkingVehicleController {
                     day: '2-digit'
                 }),
                 image: record.image,
-                country: record.country
+                country: record.country,
+                angle: record.angle,
+                confidence: record.confidence
             }));
-
+            
             return res.status(200).json({
                 success: true,
                 records: formattedRecords,
@@ -272,7 +341,6 @@ class parkingVehicleController {
             });
 
         } catch (error) {
-            console.error('Error fetching all records:', error);
             return res.status(500).json({
                 success: false,
                 message: 'Error fetching all records',
@@ -281,8 +349,249 @@ class parkingVehicleController {
         }
     }
 
-    // input by params for vehicle
-    async inputVehicleForm(req, res) {
+    // Get areas by business ID for dropdown selection
+    async getAreasByBusiness(req, res) {
+        try {
+            const { businessId } = req.params;
+            
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
+                });
+            }
+
+            const areas = await Area.find({ businessId })
+                .select('_id name location capacity currentCapacity')
+                .lean();
+
+            return res.status(200).json({
+                success: true,
+                areas: areas
+            });
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error fetching areas by business',
+                error: error.message
+            });
+        }
+    }
+
+    // Get existing vehicles for removal dropdown (for specific area)
+    async getVehiclesForRemoval(req, res) {
+        try {
+            const { areaId } = req.params;
+            
+            if (!areaId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Area ID is required'
+                });
+            }
+
+            // Verify area exists
+            const area = await Area.findById(areaId);
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Area not found'
+                });
+            }
+            
+            // Get all vehicles in this specific area
+            const vehicles = await Vehicle.find({ areaId })
+                .sort({ datetime: -1 })
+                .lean();
+
+            // Calculate current duration for each vehicle
+            const vehiclesWithDuration = vehicles.map(vehicle => {
+                const currentTime = new Date();
+                const entryTime = vehicle.datetime;
+                const durationMs = currentTime.getTime() - entryTime.getTime();
+                const durationMinutes = Math.floor(durationMs / (1000 * 60));
+                const durationHours = Math.floor(durationMinutes / 60);
+                const remainingMinutes = durationMinutes % 60;
+
+                return {
+                    _id: vehicle._id,
+                    plateNumber: vehicle.plateNumber,
+                    country: vehicle.country,
+                    areaName: area.name,
+                    areaId: vehicle.areaId,
+                    entryTime: entryTime,
+                    currentDuration: {
+                        totalMinutes: durationMinutes,
+                        hours: durationHours,
+                        minutes: remainingMinutes,
+                        milliseconds: durationMs / 1000
+                    }
+                };
+            });
+
+            return res.status(200).json({
+                success: true,
+                vehicles: vehiclesWithDuration
+            });
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error fetching vehicles for removal',
+                error: error.message
+            });
+        }
+    }
+
+    // Manual input vehicle form with Add/Remove actions
+    async manualInputVehicle(req, res) {
+        try {
+            const { areaId } = req.params;
+            const { action, vehicleData } = req.body;
+            
+            if (!areaId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Area ID is required'
+                });
+            }
+
+            if (!action || !['ADD', 'REMOVE'].includes(action)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Action must be either "ADD" or "REMOVE"'
+                });
+            }
+
+            // Verify area exists
+            const area = await Area.findById(areaId);
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Area not found'
+                });
+            }
+
+            if (action === 'ADD') {
+                // Handle ADD action
+                const {
+                    date,
+                    time,
+                    plateNumber,
+                    country,
+                    image,
+                    status
+                } = vehicleData;
+                
+                // Validate required fields for ADD
+                if (!date || !time || !plateNumber || !status) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Missing required fields for ADD action"
+                    });
+                }
+
+                // Create vehicle data with the areaId from URL
+                const fullVehicleData = {
+                    areaId,
+                    date,
+                    time,
+                    plateNumber,
+                    country,
+                    image,
+                    status
+                };
+                
+                // Process the ADD action using existing logic
+                return await this.processVehicleInput(req, res, fullVehicleData);
+
+            } else if (action === 'REMOVE') {
+                // Handle REMOVE action
+                const { vehicleId } = vehicleData;
+                
+                if (!vehicleId) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Vehicle ID is required for REMOVE action"
+                    });
+                }
+
+                // Find the vehicle to remove
+                const vehicle = await Vehicle.findById(vehicleId);
+                if (!vehicle) {
+                    return res.status(404).json({
+                        success: false,
+                        message: "Vehicle not found"
+                    });
+                }
+
+                // Verify the vehicle belongs to the specified area
+                if (vehicle.areaId.toString() !== areaId) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Vehicle doesn't belong to the specified area"
+                    });
+                }
+
+                // Create a LEAVING record
+                const currentTime = new Date();
+                const recordData = {
+                    areaId: vehicle.areaId,
+                    datetime: currentTime,
+                    plateNumber: vehicle.plateNumber,
+                    country: vehicle.country,
+                    angle: 0,
+                    confidence: 0,
+                    image: vehicle.image || '',
+                    status: 'LEAVING'
+                };
+
+                // Calculate duration
+                const durationMs = currentTime.getTime() - vehicle.datetime.getTime();
+                const durationMinutes = Math.floor(durationMs / (1000 * 60));
+                const durationHours = Math.floor(durationMinutes / 60);
+                const remainingMinutes = durationMinutes % 60;
+
+                recordData.duration = {
+                    hours: durationHours,
+                    minutes: remainingMinutes,
+                    milliseconds: durationMs / 1000
+                };
+                recordData.entryTime = vehicle.datetime;
+
+                // Create the leaving record
+                await Record.create(recordData);
+
+                // Remove vehicle from Vehicle collection
+                await Vehicle.deleteOne({ _id: vehicleId });
+                
+                // Decrement area capacity
+                await this.updateAreaCapacity(vehicle.areaId, false);
+
+                return res.status(200).json({
+                    success: true,
+                    message: `Vehicle ${vehicle.plateNumber} removed successfully`,
+                    removedVehicle: {
+                        plateNumber: vehicle.plateNumber,
+                        duration: recordData.duration,
+                        entryTime: vehicle.datetime,
+                        exitTime: currentTime
+                    }
+                });
+            }
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error processing manual vehicle input',
+                error: error.message
+            });
+        }
+    }
+
+    // Helper method to process vehicle input (extracted from original inputVehicleForm)
+    async processVehicleInput(req, res, vehicleData) {
         try {
             const {
                 areaId, 
@@ -292,15 +601,7 @@ class parkingVehicleController {
                 country,
                 image,
                 status
-            } = req.body;
-            
-            // return the missing value for server, can use to analysis the accuracy of camera
-            if ( !areaId || !date || !time || !plateNumber || !status ) {
-                return res.status(500).json({
-                    success: false,
-                    message: "Missing required fields"
-                });
-            }
+            } = vehicleData;
             
             // convert date and time into datetime variable
             let datetime;
@@ -336,8 +637,6 @@ class parkingVehicleController {
                     // Vehicle already exists - camera missed the previous LEAVING event
                     // Delete the old record first
                     await Vehicle.deleteOne({ areaId, plateNumber });
-                    console.log(`Removed existing vehicle for plateNumber ${plateNumber} (camera missed previous LEAVING event)`);
-                    // Don't update capacity since we're replacing, not adding
                 } else {
                     // New vehicle entering - increment capacity
                     await this.updateAreaCapacity(areaId, true);
@@ -352,7 +651,6 @@ class parkingVehicleController {
                     datetime
                 };
                 await Vehicle.create(vehicleData);
-                console.log(`Added vehicle for plateNumber ${plateNumber}`);
             } else if (status === "LEAVING") {
                 // For leaving vehicles, we need to calculate duration
                 
@@ -384,10 +682,6 @@ class parkingVehicleController {
 
                     // Update the leaving record with duration information
                     await Record.create(recordData);
-
-                    console.log(`Vehicle ${plateNumber} parked for ${durationHours}h ${remainingMinutes}m`);
-                } else {
-                    console.warn(`No approaching record found for vehicle ${plateNumber} - cannot calculate duration`);
                 }
 
                 // Remove the vehicle from Vehicle collection (it's no longer in the parking area)
@@ -401,6 +695,49 @@ class parkingVehicleController {
                 success: true,
                 message: 'Vehicle data processed successfully'
             });
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error processing vehicle data',
+                error: error.message
+            });
+        }
+    }
+
+    // input by params for vehicle (legacy method - kept for backward compatibility)
+    async inputVehicleForm(req, res) {
+        try {
+            const {
+                areaId, 
+                date,
+                time,
+                plateNumber,
+                country,
+                image,
+                status
+            } = req.body;
+            
+            // return the missing value for server, can use to analysis the accuracy of camera
+            if ( !areaId || !date || !time || !plateNumber || !status ) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Missing required fields"
+                });
+            }
+            
+            const vehicleData = {
+                areaId, 
+                date,
+                time,
+                plateNumber,
+                country,
+                image,
+                status
+            };
+            
+            // Use the helper method to process the input
+            return await this.processVehicleInput(req, res, vehicleData);
+            
         } catch (error) {
             return res.status(500).json({
                 success: false,

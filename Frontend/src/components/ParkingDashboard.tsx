@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'; // Add useRef
 import domtoimage from 'dom-to-image-more';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parking';
 import { saveReport } from '@/services/reports';
 import { Save } from 'lucide-react';
+import { webSocketService } from '@/services/websocket';
 
 // --- INTERFACES ---
 interface VehicleRecord {
@@ -30,6 +32,20 @@ interface VehicleRecord {
   areaId: string;
 }
 
+// Represents the raw record data from the backend API
+interface RawRecord {
+  _id: string;
+  plate: string;
+  action: 'ENTRY' | 'EXIT';
+  time: string;
+  date: string;
+  image: string;
+  country: string;
+  angle: number;
+  confidence: number;
+}
+
+// Represents the enriched record object after client-side processing
 interface ProcessedRecord {
   _id: string;
   plate: string;
@@ -134,6 +150,9 @@ const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: numbe
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function ParkingDashboard() {
+  // --- URL PARAMETER MANAGEMENT ---
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // --- STATE MANAGEMENT ---
   const hourlyChartRef = useRef(null);
   const entriesChartRef = useRef(null);
@@ -152,9 +171,14 @@ export default function ParkingDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
+  const [wsConnected, setWsConnected] = useState(false);
+  const [lastDataUpdate, setLastDataUpdate] = useState<string | null>(null);
+  const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
+
+  // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [overstayLimit, setOverstayLimit] = useState(60);
-
+    
   // --- ML Predictor State ---
   const [predictLoading, setPredictLoading] = useState(false);
   const [rawHourlyPredictions, setRawHourlyPredictions] = useState<{ [key: string]: number }>({});
@@ -162,6 +186,20 @@ export default function ParkingDashboard() {
   // --- State for handling save report feedback ---
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  // --- URL PARAMETER FUNCTIONS ---
+<!--   const updateURLParams = (updates: Record<string, string | null>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '') {
+        newSearchParams.delete(key);
+      } else {
+        newSearchParams.set(key, value);
+      }
+    });
+    
+    setSearchParams(newSearchParams, { replace: true });
+  }; -->
 
 
   // --- DATA FETCHING AND PROCESSING ---
@@ -175,6 +213,97 @@ export default function ParkingDashboard() {
     verifyAuth();
   }, []);
 
+  // Effect to read URL parameters on component mount
+  useEffect(() => {
+    const areaId = searchParams.get('area');
+    const search = searchParams.get('search');
+    const start = searchParams.get('startDate');
+    const end = searchParams.get('endDate');
+    const filter = searchParams.get('filter');
+
+    if (areaId) setSelectedAreaId(areaId);
+    if (search) setSearchTerm(search);
+    if (start) setStartDate(start);
+    if (end) setEndDate(end);
+    if (filter) setActiveFilter(filter);
+  }, [searchParams]);
+
+  // Effect to manage WebSocket connection and events
+  useEffect(() => {
+    // Check WebSocket connection status
+    const checkConnection = () => {
+      const status = webSocketService.getConnectionStatus();
+      setWsConnected(status.isConnected);
+      setLiveUpdatesEnabled(status.liveUpdatesEnabled);
+    };
+
+    // Initial connection check
+    checkConnection();
+
+    // Set up WebSocket event listeners
+    const cleanupDataUpdated = webSocketService.addEventListener('websocket-data-updated', (data) => {
+      console.log('📊 Received data update notification:', data);
+      setLastDataUpdate(data.timestamp);
+      
+      // If the update is for the currently selected area, refresh the data
+      if (selectedAreaId && data.areaId === selectedAreaId) {
+        console.log('🔄 Refreshing data for current area due to WebSocket update');
+        // Trigger a data refresh by re-running the fetch effect
+        setDashboardLoading(true);
+        // The effect will automatically re-run when selectedAreaId changes
+        // We'll add a small delay to ensure the backend has processed the data
+        setTimeout(() => {
+          setDashboardLoading(false);
+        }, 1000);
+      }
+    });
+
+    const cleanupDataError = webSocketService.addEventListener('websocket-data-error', (data) => {
+      console.error('❌ WebSocket data error:', data);
+      if (selectedAreaId && data.areaId === selectedAreaId) {
+        setError(`Data update failed: ${data.error}`);
+      }
+    });
+
+    const cleanupRefreshComplete = webSocketService.addEventListener('websocket-refresh-complete', (data) => {
+      console.log('🔄 Refresh complete:', data);
+      if (selectedAreaId && data.areaId === selectedAreaId) {
+        if (data.success) {
+          setError(''); // Clear any previous errors
+        } else {
+          setError(`Manual refresh failed: ${data.error}`);
+        }
+      }
+    });
+
+    const cleanupLiveUpdatesToggled = webSocketService.addEventListener('websocket-live-updates-toggled', (data) => {
+      console.log('📊 Live updates toggled:', data.enabled);
+      setLiveUpdatesEnabled(data.enabled);
+    });
+
+    // Check connection status periodically
+    const connectionInterval = setInterval(checkConnection, 5000);
+
+    // Cleanup function
+    return () => {
+      cleanupDataUpdated();
+      cleanupDataError();
+      cleanupRefreshComplete();
+      cleanupLiveUpdatesToggled();
+      clearInterval(connectionInterval);
+    };
+  }, [selectedAreaId]);
+
+  // Effect to clean up WebSocket room when component unmounts
+  useEffect(() => {
+    return () => {
+      if (selectedAreaId) {
+        webSocketService.leaveArea(selectedAreaId);
+      }
+    };
+  }, [selectedAreaId]);
+
+  // Effect to fetch list of parking areas
   useEffect(() => {
     if (isAuthenticated) {
       const fetchAreas = async () => {
@@ -190,6 +319,9 @@ export default function ParkingDashboard() {
 
   useEffect(() => {
     if (selectedAreaId) {
+      // Join WebSocket room for this area
+      webSocketService.joinArea(selectedAreaId);
+      
       const fetchDashboardData = async () => {
         setDashboardLoading(true);
         setError('');
@@ -200,37 +332,47 @@ export default function ParkingDashboard() {
             getAllRecords(selectedAreaId, 1, 2000),
             getExistingVehicles(selectedAreaId, 1, 1000)
           ]);
-          const rawRecords = recordsResponse.records || [];
-          const entryMap = new Map<string, any>();
+          
+          const rawRecords: RawRecord[] = recordsResponse.records || [];
+          
+          // Process raw records into a more useful format with Date objects and duration
+          const entryMap = new Map<string, RawRecord>();
           const processedRecords: ProcessedRecord[] = [];
-          rawRecords.filter(r => r.action === 'ENTRY').forEach(rec => {
-            entryMap.set(rec.plate, rec);
+
+          // First pass: create a map of the most recent entry for each license plate
+          rawRecords.filter((r: RawRecord) => r.action === 'ENTRY').forEach((rec: RawRecord) => {
+              entryMap.set(rec.plate, rec);
           });
-          rawRecords.forEach(rec => {
-            const [month, day, year] = rec.date.split('/');
-            const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
-            if (rec.action === 'EXIT') {
-              const matchingEntry = entryMap.get(rec.plate);
-              if (matchingEntry) {
-                const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
-                const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
-                const durationMs = dateObj.getTime() - entryDateObj.getTime();
-                processedRecords.push({
-                  ...rec,
-                  entryDate: entryDateObj,
-                  exitDate: dateObj,
-                  durationMinutes: Math.floor(durationMs / 60000)
-                });
-                entryMap.delete(rec.plate);
+
+          // Second pass: process all records, calculating duration for exits
+          rawRecords.forEach((rec: RawRecord) => {
+              const [month, day, year] = rec.date.split('/');
+              const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
+              
+              if (rec.action === 'EXIT') {
+                  const matchingEntry = entryMap.get(rec.plate);
+                  if (matchingEntry) {
+                      const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
+                      const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
+                      const durationMs = dateObj.getTime() - entryDateObj.getTime();
+                      
+                      processedRecords.push({
+                          ...rec,
+                          entryDate: entryDateObj,
+                          exitDate: dateObj,
+                          durationMinutes: Math.floor(durationMs / 60000)
+                      });
+                      // Once matched, remove the entry to handle re-entries correctly
+                      entryMap.delete(rec.plate);
+                  }
+              } else { // Entry record
+                  processedRecords.push({
+                      ...rec,
+                      entryDate: dateObj,
+                      exitDate: null,
+                      durationMinutes: null
+                  });
               }
-            } else {
-              processedRecords.push({
-                ...rec,
-                entryDate: dateObj,
-                exitDate: null,
-                durationMinutes: null
-              });
-            }
           });
           setAllRecords(processedRecords);
           setExistingVehicles(vehiclesResponse.vehicles || []);
@@ -309,18 +451,31 @@ export default function ParkingDashboard() {
     if (period === 'all') {
       setStartDate('');
       setEndDate('');
+      updateURLParams({ filter: 'all', startDate: null, endDate: null });
       return;
     }
+    
     setEndDate(toYYYYMMDD(today));
+    let startDateValue = '';
+    
     if (period === 'today') {
-      setStartDate(toYYYYMMDD(today));
+      startDateValue = toYYYYMMDD(today);
+      setStartDate(startDateValue);
     } else if (period === 'week') {
       const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-      setStartDate(toYYYYMMDD(firstDayOfWeek));
+      startDateValue = toYYYYMMDD(firstDayOfWeek);
+      setStartDate(startDateValue);
     } else if (period === 'month') {
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      setStartDate(toYYYYMMDD(firstDayOfMonth));
+      startDateValue = toYYYYMMDD(firstDayOfMonth);
+      setStartDate(startDateValue);
     }
+    
+    updateURLParams({ 
+      filter: period, 
+      startDate: startDateValue, 
+      endDate: toYYYYMMDD(today) 
+    });
   };
 
   const handleClearFilters = () => {
@@ -328,6 +483,12 @@ export default function ParkingDashboard() {
     setEndDate('');
     setSearchTerm('');
     setActiveFilter('all');
+    updateURLParams({ 
+      startDate: null, 
+      endDate: null, 
+      search: null, 
+      filter: 'all' 
+    });
   };
 // Located inside the ParkingDashboard component
 
@@ -441,54 +602,138 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
   // --- RENDER LOGIC ---
   if (loading || isAuthenticated === null) {
     return (
-      <div className="relative min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="z-10">Loading Dashboard...</div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden flex items-center justify-center">
+        <div 
+          className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+          style={{ transform: 'translate(50%, -50%)' }}
+        ></div>
+        <div 
+          className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
+          style={{ transform: 'translate(-50%, 50%)' }}
+        ></div>
+        <div className="backdrop-blur-md bg-white/5 rounded-2xl px-6 py-3 border border-white/10 shadow-2xl text-center relative z-10">
+          Loading Dashboard...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
       <div className="relative z-10 px-4 py-10">
         <div className="max-w-6xl mx-auto space-y-8">
           <header className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
-            <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
+             <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
+             <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
+             
+             {/* WebSocket Connection Status */}
+             <div className="flex items-center justify-center gap-4 mt-4">
+               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+                 wsConnected 
+                   ? (liveUpdatesEnabled 
+                       ? 'bg-green-900/30 text-green-400 border border-green-700' 
+                       : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700')
+                   : 'bg-red-900/30 text-red-400 border border-red-700'
+               }`}>
+                 <div className={`w-2 h-2 rounded-full ${
+                   wsConnected 
+                     ? (liveUpdatesEnabled ? 'bg-green-400' : 'bg-yellow-400')
+                     : 'bg-red-400'
+                 }`}></div>
+                 {wsConnected 
+                   ? (liveUpdatesEnabled ? 'Live Updates Connected' : 'Live Updates Paused')
+                   : 'Live Updates Disconnected'
+                 }
+               </div>
+               
+               {selectedAreaId && (
+                 <>
+                   <Button 
+                     variant="outline" 
+                     size="sm"
+                     onClick={() => {
+                       webSocketService.refreshAreaData(selectedAreaId);
+                       setDashboardLoading(true);
+                       setTimeout(() => setDashboardLoading(false), 2000);
+                     }}
+                     disabled={!wsConnected || dashboardLoading}
+                     className="text-xs"
+                   >
+                     {dashboardLoading ? 'Refreshing...' : 'Manual Refresh'}
+                   </Button>
+                   
+                   <Button 
+                     variant="outline" 
+                     size="sm"
+                     onClick={() => webSocketService.toggleLiveUpdates()}
+                     disabled={!wsConnected}
+                     className={`text-xs ${
+                       liveUpdatesEnabled 
+                         ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
+                         : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
+                     }`}
+                   >
+                     {liveUpdatesEnabled ? 'Live Updates: ON' : 'Live Updates: OFF'}
+                   </Button>
+                 </>
+               )}
+               
+               {lastDataUpdate && (
+                 <div className="text-xs text-gray-400">
+                   Last update: {new Date(lastDataUpdate).toLocaleTimeString()}
+                 </div>
+               )}
+             </div>
           </header>
-          {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}
-          
+          {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}  
           {saveMessage && (
             <div className={`p-4 rounded-md text-center ${saveMessage.includes('Error') ? 'bg-red-800' : 'bg-green-800'}`}>
                 {saveMessage}
             </div>
           )}
-          
-          <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6">
+        
+          {/* --- CONTROLS SECTION --- */}
+<!--           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6"> -->
+          <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="area-select" className="block text-lg font-semibold mb-2">Select a Parking Area</label>
-                <select id="area-select" value={selectedAreaId || ''} onChange={(e) => setSelectedAreaId(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
-                  <option value="" disabled>Choose an area...</option>
-                  {areas.map((area) => (<option key={area._id} value={area._id}>{area.name}</option>))}
+                <select id="area-select" value={selectedAreaId || ''} onChange={(e) => {
+                  setSelectedAreaId(e.target.value);
+                  updateURLParams({ area: e.target.value || null });
+                }} className="w-full backdrop-blur-md bg-white/20 border-white/30 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
+                    <option value="" disabled>Choose an area...</option>
+                    {areas.map((area) => ( <option key={area._id} value={area._id}> {area.name} </option> ))}
                 </select>
               </div>
               <div>
                 <label htmlFor="search-bar" className="block text-lg font-semibold mb-2">Search by License Plate</label>
-                <Input id="search-bar" type="text" placeholder="e.g., ABC-123" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-neutral-700 border-neutral-600 text-white" />
+                <Input id="search-bar" type="text" placeholder="e.g., ABC-123" value={searchTerm} onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  updateURLParams({ search: e.target.value || null });
+                }} className="backdrop-blur-md bg-white/20 border-white/30 text-white" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
-                  <label htmlFor="start-date" className="block text-sm font-medium mb-2">Start Date</label>
-                  <Input type="date" id="start-date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    <label htmlFor="start-date" className="block text-sm font-medium mb-2">Start Date</label>
+                    <Input type="date" id="start-date" value={startDate} onChange={(e) => { 
+                      setStartDate(e.target.value); 
+                      setActiveFilter('custom');
+                      updateURLParams({ startDate: e.target.value || null, filter: 'custom' });
+                    }} className="w-full backdrop-blur-md bg-white/20 border-white/30 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="flex-1">
-                  <label htmlFor="end-date" className="block text-sm font-medium mb-2">End Date</label>
-                  <Input type="date" id="end-date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    <label htmlFor="end-date" className="block text-sm font-medium mb-2">End Date</label>
+                    <Input type="date" id="end-date" value={endDate} onChange={(e) => { 
+                      setEndDate(e.target.value); 
+                      setActiveFilter('custom');
+                      updateURLParams({ endDate: e.target.value || null, filter: 'custom' });
+                    }} className="w-full backdrop-blur-md bg-white/20 border-white/30 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div className="flex flex-col space-y-2">
@@ -510,15 +755,15 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
             ) : (
               <div className="space-y-8">
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="bg-neutral-800 border-neutral-700">
+                  <Card className="backdrop-blur-md bg-white/20 border-white/30">
                     <CardHeader><CardTitle className="text-blue-400">Current Occupancy</CardTitle></CardHeader>
                     <CardContent className="text-3xl font-bold">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
                   </Card>
-                  <Card className="bg-neutral-800 border-neutral-700">
+                  <Card className="backdrop-blur-md bg-white/20 border-white/30">
                     <CardHeader><CardTitle className="text-green-400">Total Entries (Filtered)</CardTitle></CardHeader>
                     <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'ENTRY').length}</CardContent>
                   </Card>
-                  <Card className="bg-neutral-800 border-neutral-700">
+                  <Card className="backdrop-blur-md bg-white/20 border-white/30">
                     <CardHeader><CardTitle className="text-yellow-400">Total Exits (Filtered)</CardTitle></CardHeader>
                     <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'EXIT').length}</CardContent>
                   </Card>
@@ -532,6 +777,9 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
+                  {/* Chart 1: Hourly Activity with Prediction */}
+<!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl lg:col-span-2"> -->
+                    <h3 className="text-lg font-semibold mb-4">Hourly Activity (Historical & Predicted)</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={combinedHourlyData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#444" />
@@ -547,6 +795,8 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                   </div>
                   
                   <div ref={entriesChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                  {/* Chart 2: Historical Vehicle Entries */}
+<!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> -->
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Vehicle Entries</h3>
                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)}>
@@ -573,7 +823,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  
+                 
                   <div ref={overstayChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
                      <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
@@ -581,10 +831,12 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
+                  {/* Chart 3: Vehicles Overstay Analysis */}
+<!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> -->
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <div className="flex items-center gap-2">
                         <label htmlFor="overstay-limit" className="text-sm">Time Limit (mins):</label>
-                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-neutral-700 border-neutral-600 w-24" />
+                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="backdrop-blur-md bg-white/20 border-white/30 w-24" />
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
@@ -601,6 +853,8 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                 </section>
                 
                 <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                {/* Records Table */}
+<!--                 <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> -->
                   <h3 className="text-lg font-semibold mb-4">Filtered Records ({filteredRecords.length} found)</h3>
                   <Table>
                     <TableHeader>

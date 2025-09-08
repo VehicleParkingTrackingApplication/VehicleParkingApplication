@@ -165,9 +165,17 @@ export default function StaffManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 md:p-8">
-      <div className="mx-auto w-full max-w-6xl">
-        <Card className="w-full bg-gray-700 border-gray-600">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden p-6 md:p-8">
+      <div 
+        className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+        style={{ transform: 'translate(50%, -50%)' }}
+      ></div>
+      <div 
+        className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
+        style={{ transform: 'translate(-50%, 50%)' }}
+      ></div>
+      <div className="mx-auto w-full max-w-6xl relative z-10">
+        <Card className="w-full backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
           <CardContent className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2">
               <div>
@@ -180,7 +188,7 @@ export default function StaffManagement() {
                     Create Staff Account
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-gray-900/95 text-white border-gray-700">
+                <DialogContent className="backdrop-blur-md bg-white/20 text-white border-white/30">
                   <StaffAccountPopUp 
                     onSuccess={handleSuccess}
                     onError={handleError}
@@ -199,7 +207,7 @@ export default function StaffManagement() {
               </div>
             )}
 
-            <section className="bg-gray-800 rounded-lg border border-gray-600 p-4 md:p-6 shadow-md">
+            <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-4 md:p-6 shadow-2xl">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <form onSubmit={handleSearch} className="flex gap-2 w-full">
                   <Input
@@ -207,9 +215,9 @@ export default function StaffManagement() {
                     placeholder="Search staff by username, name, email, or role..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white flex-1"
+                    className="backdrop-blur-md bg-white/20 border-white/30 text-white flex-1"
                   />
-                  <Button type="submit" variant="outline" className="border-gray-500 text-gray-200 hover:bg-gray-900">
+                  <Button type="submit" variant="outline" className="border-white/30 text-white hover:bg-white/20">
                     Search
                   </Button>
                   {search && (
@@ -217,7 +225,7 @@ export default function StaffManagement() {
                       type="button" 
                       variant="outline" 
                       onClick={handleClearSearch}
-                      className="border-gray-500 text-gray-200 hover:bg-gray-900"
+                      className="border-white/30 text-white hover:bg-white/20"
                     >
                       Clear
                     </Button>
@@ -229,7 +237,7 @@ export default function StaffManagement() {
               </div>
             </section>
 
-            <div className="bg-gray-800 rounded-lg border border-gray-600 overflow-hidden">
+            <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 overflow-hidden">
               {loading ? (
                 <div className="p-8 text-center">
                   <div className="text-gray-400">Loading staff list...</div>
@@ -255,7 +263,7 @@ export default function StaffManagement() {
                       </TableRow>
                     ) : (
                       staffList.map((staff, index) => (
-                        <TableRow key={staff._id} className="border-gray-700 hover:bg-gray-900/40">
+                        <TableRow key={staff._id} className="border-white/20 hover:bg-white/10">
                           <TableCell className="text-white">{index + 1}</TableCell>
                           <TableCell className="text-white">{staff.username}</TableCell>
                           <TableCell className="text-white">{`${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A'}</TableCell>
@@ -321,7 +329,7 @@ export default function StaffManagement() {
       </div>
 
       <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
-        <DialogContent className="bg-gray-900/95 text-white border-gray-700 max-w-md">
+        <DialogContent className="backdrop-blur-md bg-white/20 text-white border-white/30 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">Update Staff Member</DialogTitle>
           </DialogHeader>
@@ -332,7 +340,7 @@ export default function StaffManagement() {
                 id="update-username"
                 value={updateForm.username}
                 onChange={(e) => handleUpdateFormChange('username', e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="backdrop-blur-md bg-white/20 border-white/30 text-white"
               />
             </div>
             <div className="space-y-2">
@@ -341,7 +349,7 @@ export default function StaffManagement() {
                 id="update-firstName"
                 value={updateForm.firstName}
                 onChange={(e) => handleUpdateFormChange('firstName', e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="backdrop-blur-md bg-white/20 border-white/30 text-white"
               />
             </div>
             <div className="space-y-2">
@@ -350,7 +358,7 @@ export default function StaffManagement() {
                 id="update-lastName"
                 value={updateForm.lastName}
                 onChange={(e) => handleUpdateFormChange('lastName', e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="backdrop-blur-md bg-white/20 border-white/30 text-white"
               />
             </div>
             <div className="space-y-2">
@@ -360,7 +368,7 @@ export default function StaffManagement() {
                 type="email"
                 value={updateForm.email}
                 onChange={(e) => handleUpdateFormChange('email', e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="backdrop-blur-md bg-white/20 border-white/30 text-white"
               />
             </div>
             <div className="space-y-2">
@@ -369,7 +377,7 @@ export default function StaffManagement() {
                 id="update-businessId"
                 value={updateForm.businessId}
                 onChange={(e) => handleUpdateFormChange('businessId', e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="backdrop-blur-md bg-white/20 border-white/30 text-white"
               />
             </div>
             <div className="space-y-2">
@@ -379,7 +387,7 @@ export default function StaffManagement() {
                 type="password"
                 value={updateForm.password}
                 onChange={(e) => handleUpdateFormChange('password', e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="backdrop-blur-md bg-white/20 border-white/30 text-white"
               />
             </div>
           </div>
@@ -387,7 +395,7 @@ export default function StaffManagement() {
             <Button
               variant="outline"
               onClick={handleCloseUpdate}
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              className="border-white/30 text-white hover:bg-white/20"
             >
               Cancel
             </Button>

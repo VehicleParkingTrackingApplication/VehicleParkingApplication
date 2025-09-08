@@ -1,5 +1,5 @@
-import moongoose from 'mongoose';
-const Schema = moongoose.Schema;
+import mongoose from 'mongoose';
+const Schema = mongoose.Schema;
 
 const Area = new Schema(
   {
@@ -20,4 +20,4 @@ const Area = new Schema(
   { timestamps: true },
 );
 
-export default moongoose.model('areas', Area);
+export default mongoose.model('areas', Area);

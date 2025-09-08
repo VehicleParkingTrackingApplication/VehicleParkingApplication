@@ -18,6 +18,9 @@ router.post('/area/input-ftpserver', requireAuth, area.inputFtpServer);
 // PUT /api/parking/area/update-ftpserver
 router.put('/area/update-ftpserver', requireAuth, area.updateFtpServer);
 
+// POST /api/parking/area/:areaId/trigger-ftp
+router.post('/area/:areaId/trigger-ftp', requireAuth, area.triggerFtpServer);
+
 // POST /api/parking/area/input-vehicle
 router.post('/area/input-vehicle', requireAuth, vehicle.inputVehicleForm);
 
@@ -30,13 +33,24 @@ router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentReco
 // GET /api/parking/vehicle/:areaId/all-records
 router.get('/vehicle/:areaId/all-records', requireAuth, vehicle.getAllRecordsByArea);
 
+// POST /api/parking/vehicle/manually-input
+router.post('/vehicle/manually-input', requireAuth, vehicle.inputVehicleForm);
+
+// New routes for manual input workflow with areaId
+// GET /api/parking/area/:areaId/details
+// router.get('/area/:areaId/details', requireAuth, vehicle.getAreaDetails);
+
+// GET /api/parking/area/:areaId/vehicles-for-removal
+router.get('/vehicle/:areaId/vehicles-for-removal', requireAuth, vehicle.getVehiclesForRemoval);
+
+// POST /api/parking/area/:areaId/manual-input
+router.post('/vehicle/:areaId/manual-input', requireAuth, vehicle.manualInputVehicle);
 
 // POST /api/parking/simulate
 router.post('/simulate', vehicle.handleSimulation);
 
-
 // API for data analysis without authentication
 // create new function controller to fetch the API
 router.get('/analysis/area', area.getAreaByBusiness);
-
+// router.get('/')
 export default router;

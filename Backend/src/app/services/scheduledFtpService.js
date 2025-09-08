@@ -25,7 +25,7 @@ class ScheduledFtpService {
     // Start the scheduled FTP processing
     startScheduledProcessing() {
         const enableScheduling = process.env.ENABLE_SCHEDULED_FTP === 'true';
-        const intervalMinutes = parseInt(process.env.FTP_SCHEDULE_INTERVAL) || 60; // default 1 hour
+        const intervalMinutes = parseInt(process.env.FTP_SCHEDULE_INTERVAL) || 5; // default 1 hour
         
         if (!enableScheduling) {
             console.log('Scheduled FTP processing is disabled');

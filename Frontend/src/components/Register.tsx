@@ -44,8 +44,16 @@ export default function RegisterPage() {
 
     return (
         <>
-            <div className="flex flex-col md:flex-row min-h-screen bg-black text-white">
-                <div className="flex-1 bg-gradient-to-b from-blue-900 via-black to-yellow-900 flex items-center justify-center p-8">
+            <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden">
+                <div 
+                    className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+                    style={{ transform: 'translate(50%, -50%)' }}
+                ></div>
+                <div 
+                    className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
+                    style={{ transform: 'translate(-50%, 50%)' }}
+                ></div>
+                <div className="flex-1 flex items-center justify-center p-8 relative z-10">
                     <div className="text-white text-center">
                         <h2 className="text-3xl font-bold mb-2">MoniPark</h2>
                         <p className="opacity-80">"From Parked Cars to Smart Starts"</p>
