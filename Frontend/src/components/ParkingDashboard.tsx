@@ -1,5 +1,5 @@
 import domtoimage from 'dom-to-image-more';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
@@ -171,7 +171,6 @@ export default function ParkingDashboard() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [allRecords, setAllRecords] = useState<ProcessedRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<ProcessedRecord[]>([]);
   const [existingVehicles, setExistingVehicles] = useState<VehicleRecord[]>([]);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [startDate, setStartDate] = useState('');
@@ -197,19 +196,19 @@ export default function ParkingDashboard() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   // --- URL PARAMETER FUNCTIONS ---
-// <!--   const updateURLParams = (updates: Record<string, string | null>) => {
-//     const newSearchParams = new URLSearchParams(searchParams);
+  const updateURLParams = (updates: Record<string, string | null>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
     
-//     Object.entries(updates).forEach(([key, value]) => {
-//       if (value === null || value === '') {
-//         newSearchParams.delete(key);
-//       } else {
-//         newSearchParams.set(key, value);
-//       }
-//     });
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '') {
+        newSearchParams.delete(key);
+      } else {
+        newSearchParams.set(key, value);
+      }
+    });
     
-//     setSearchParams(newSearchParams, { replace: true });
-//   }; -->
+    setSearchParams(newSearchParams, { replace: true });
+  };
 
 
   // --- DATA FETCHING AND PROCESSING ---
@@ -238,6 +237,45 @@ export default function ParkingDashboard() {
     if (filter) setActiveFilter(filter);
   }, [searchParams]);
 
+  // Memoized WebSocket event handlers
+  const handleDataUpdated = useCallback((data: any) => {
+    console.log('📊 Received data update notification:', data);
+    setLastDataUpdate(data.timestamp);
+    
+    // If the update is for the currently selected area, refresh the data
+    if (selectedAreaId && data.areaId === selectedAreaId) {
+      console.log('🔄 Refreshing data for current area due to WebSocket update');
+      setDashboardLoading(true);
+      // Trigger data refresh
+      setTimeout(() => {
+        fetchDashboardData(selectedAreaId);
+      }, 1000);
+    }
+  }, [selectedAreaId]);
+
+  const handleDataError = useCallback((data: any) => {
+    console.error('❌ WebSocket data error:', data);
+    if (selectedAreaId && data.areaId === selectedAreaId) {
+      setError(`Data update failed: ${data.error}`);
+    }
+  }, [selectedAreaId]);
+
+  const handleRefreshComplete = useCallback((data: any) => {
+    console.log('🔄 Refresh complete:', data);
+    if (selectedAreaId && data.areaId === selectedAreaId) {
+      if (data.success) {
+        setError(''); // Clear any previous errors
+      } else {
+        setError(`Manual refresh failed: ${data.error}`);
+      }
+    }
+  }, [selectedAreaId]);
+
+  const handleLiveUpdatesToggled = useCallback((data: any) => {
+    console.log('📊 Live updates toggled:', data.enabled);
+    setLiveUpdatesEnabled(data.enabled);
+  }, []);
+
   // Effect to manage WebSocket connection and events
   useEffect(() => {
     // Check WebSocket connection status
@@ -251,45 +289,10 @@ export default function ParkingDashboard() {
     checkConnection();
 
     // Set up WebSocket event listeners
-    const cleanupDataUpdated = webSocketService.addEventListener('websocket-data-updated', (data) => {
-      console.log('📊 Received data update notification:', data);
-      setLastDataUpdate(data.timestamp);
-      
-      // If the update is for the currently selected area, refresh the data
-      if (selectedAreaId && data.areaId === selectedAreaId) {
-        console.log('🔄 Refreshing data for current area due to WebSocket update');
-        // Trigger a data refresh by re-running the fetch effect
-        setDashboardLoading(true);
-        // The effect will automatically re-run when selectedAreaId changes
-        // We'll add a small delay to ensure the backend has processed the data
-        setTimeout(() => {
-          setDashboardLoading(false);
-        }, 1000);
-      }
-    });
-
-    const cleanupDataError = webSocketService.addEventListener('websocket-data-error', (data) => {
-      console.error('❌ WebSocket data error:', data);
-      if (selectedAreaId && data.areaId === selectedAreaId) {
-        setError(`Data update failed: ${data.error}`);
-      }
-    });
-
-    const cleanupRefreshComplete = webSocketService.addEventListener('websocket-refresh-complete', (data) => {
-      console.log('🔄 Refresh complete:', data);
-      if (selectedAreaId && data.areaId === selectedAreaId) {
-        if (data.success) {
-          setError(''); // Clear any previous errors
-        } else {
-          setError(`Manual refresh failed: ${data.error}`);
-        }
-      }
-    });
-
-    const cleanupLiveUpdatesToggled = webSocketService.addEventListener('websocket-live-updates-toggled', (data) => {
-      console.log('📊 Live updates toggled:', data.enabled);
-      setLiveUpdatesEnabled(data.enabled);
-    });
+    const cleanupDataUpdated = webSocketService.addEventListener('websocket-data-updated', handleDataUpdated);
+    const cleanupDataError = webSocketService.addEventListener('websocket-data-error', handleDataError);
+    const cleanupRefreshComplete = webSocketService.addEventListener('websocket-refresh-complete', handleRefreshComplete);
+    const cleanupLiveUpdatesToggled = webSocketService.addEventListener('websocket-live-updates-toggled', handleLiveUpdatesToggled);
 
     // Check connection status periodically
     const connectionInterval = setInterval(checkConnection, 5000);
@@ -302,7 +305,7 @@ export default function ParkingDashboard() {
       cleanupLiveUpdatesToggled();
       clearInterval(connectionInterval);
     };
-  }, [selectedAreaId]);
+  }, [selectedAreaId, handleDataUpdated, handleDataError, handleRefreshComplete, handleLiveUpdatesToggled]);
 
   // Effect to clean up WebSocket room when component unmounts
   useEffect(() => {
@@ -313,89 +316,99 @@ export default function ParkingDashboard() {
     };
   }, [selectedAreaId]);
 
+  // Memoized function to fetch areas
+  const fetchAreas = useCallback(async () => {
+    try {
+      const response = await getAllParkingAreas();
+      if (response.success) setAreas(response.data || []);
+    } catch (err) { 
+      setError(err instanceof Error ? err.message : 'An unknown error occurred.'); 
+    } finally { 
+      setLoading(false); 
+    }
+  }, []);
+
   // Effect to fetch list of parking areas
   useEffect(() => {
     if (isAuthenticated) {
-      const fetchAreas = async () => {
-        try {
-          const response = await getAllParkingAreas();
-          if (response.success) setAreas(response.data || []);
-        } catch (err) { setError(err instanceof Error ? err.message : 'An unknown error occurred.'); }
-        finally { setLoading(false); }
-      };
       fetchAreas();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchAreas]);
+
+  // Memoized function to fetch dashboard data
+  const fetchDashboardData = useCallback(async (areaId: string) => {
+    setDashboardLoading(true);
+    setError('');
+    try {
+      const areaDetails = areas.find(a => a._id === areaId);
+      setSelectedArea(areaDetails || null);
+      const [recordsResponse, vehiclesResponse] = await Promise.all([
+        getAllRecords(areaId, 1, 2000),
+        getExistingVehicles(areaId, 1, 1000)
+      ]);
+      
+      const rawRecords: RawRecord[] = recordsResponse.records || [];
+      
+      // Process raw records into a more useful format with Date objects and duration
+      const entryMap = new Map<string, RawRecord>();
+      const processedRecords: ProcessedRecord[] = [];
+
+      // First pass: create a map of the most recent entry for each license plate
+      rawRecords.filter((r: RawRecord) => r.action === 'ENTRY').forEach((rec: RawRecord) => {
+          entryMap.set(rec.plate, rec);
+      });
+
+      // Second pass: process all records, calculating duration for exits
+      rawRecords.forEach((rec: RawRecord) => {
+          const [month, day, year] = rec.date.split('/');
+          const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
+          
+          if (rec.action === 'EXIT') {
+              const matchingEntry = entryMap.get(rec.plate);
+              if (matchingEntry) {
+                  const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
+                  const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
+                  const durationMs = dateObj.getTime() - entryDateObj.getTime();
+                  
+                  processedRecords.push({
+                      ...rec,
+                      entryDate: entryDateObj,
+                      exitDate: dateObj,
+                      durationMinutes: Math.floor(durationMs / 60000),
+                      angle: rec.angle
+                  });
+                  // Once matched, remove the entry to handle re-entries correctly
+                  entryMap.delete(rec.plate);
+              }
+          } else { // Entry record
+              processedRecords.push({
+                  ...rec,
+                  entryDate: dateObj,
+                  exitDate: null,
+                  durationMinutes: null,
+                  angle: rec.angle
+              });
+          }
+      });
+      setAllRecords(processedRecords);
+      setExistingVehicles(vehiclesResponse.vehicles || []);
+    } catch (err) { 
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); 
+    } finally { 
+      setDashboardLoading(false); 
+    }
+  }, [areas]);
 
   useEffect(() => {
     if (selectedAreaId) {
       // Join WebSocket room for this area
       webSocketService.joinArea(selectedAreaId);
-      
-      const fetchDashboardData = async () => {
-        setDashboardLoading(true);
-        setError('');
-        try {
-          const areaDetails = areas.find(a => a._id === selectedAreaId);
-          setSelectedArea(areaDetails || null);
-          const [recordsResponse, vehiclesResponse] = await Promise.all([
-            getAllRecords(selectedAreaId, 1, 2000),
-            getExistingVehicles(selectedAreaId, 1, 1000)
-          ]);
-          
-          const rawRecords: RawRecord[] = recordsResponse.records || [];
-          
-          // Process raw records into a more useful format with Date objects and duration
-          const entryMap = new Map<string, RawRecord>();
-          const processedRecords: ProcessedRecord[] = [];
-
-          // First pass: create a map of the most recent entry for each license plate
-          rawRecords.filter((r: RawRecord) => r.action === 'ENTRY').forEach((rec: RawRecord) => {
-              entryMap.set(rec.plate, rec);
-          });
-
-          // Second pass: process all records, calculating duration for exits
-          rawRecords.forEach((rec: RawRecord) => {
-              const [month, day, year] = rec.date.split('/');
-              const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
-              
-              if (rec.action === 'EXIT') {
-                  const matchingEntry = entryMap.get(rec.plate);
-                  if (matchingEntry) {
-                      const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
-                      const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
-                      const durationMs = dateObj.getTime() - entryDateObj.getTime();
-                      
-                      processedRecords.push({
-                          ...rec,
-                          entryDate: entryDateObj,
-                          exitDate: dateObj,
-                          durationMinutes: Math.floor(durationMs / 60000),
-                          angle: rec.angle
-                      });
-                      // Once matched, remove the entry to handle re-entries correctly
-                      entryMap.delete(rec.plate);
-                  }
-              } else { // Entry record
-                  processedRecords.push({
-                      ...rec,
-                      entryDate: dateObj,
-                      exitDate: null,
-                      durationMinutes: null,
-                      angle: rec.angle
-                  });
-              }
-          });
-          setAllRecords(processedRecords);
-          setExistingVehicles(vehiclesResponse.vehicles || []);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); }
-        finally { setDashboardLoading(false); }
-      };
-      fetchDashboardData();
+      fetchDashboardData(selectedAreaId);
     }
-  }, [selectedAreaId, areas]);
+  }, [selectedAreaId, fetchDashboardData]);
 
-  useEffect(() => {
+  // Memoized filtered records to prevent unnecessary re-renders
+  const filteredRecords = useMemo(() => {
     let records = allRecords;
     if (startDate) {
       const start = new Date(startDate);
@@ -412,7 +425,7 @@ export default function ParkingDashboard() {
         record.plate?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    setFilteredRecords(records);
+    return records;
   }, [startDate, endDate, searchTerm, allRecords]);
 
   useEffect(() => {
