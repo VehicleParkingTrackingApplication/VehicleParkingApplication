@@ -12,11 +12,11 @@ router.get('/area', requireAuth, area.getAllAreasByBusiness);
 // POST /api/parking/area/input-area
 router.post('/area/input-area', requireAuth, area.inputParkingArea);
 
-// POST /api/parking/area/input-ftpserver
-router.post('/area/:areaId/input-ftpserver', requireAuth, area.inputFtpServer);
+// GET /api/parking/area/:areaId/ftpserver
+// router.get('/area/:areaId/input-ftpserver', requireAuth, area.getFtpServerByAreaId);
 
-// PUT /api/parking/area/update-ftpserver
-router.put('/area/:areaId/update-ftpserver', requireAuth, area.updateFtpServer);
+// POST /api/parking/area/input-ftpserver
+router.post('/area/:areaId/input-ftpserver', requireAuth, area.saveFtpServer);
 
 // POST /api/parking/area/:areaId/trigger-ftp
 router.post('/area/:areaId/trigger-ftp', requireAuth, area.triggerFtpServer);
@@ -25,7 +25,7 @@ router.post('/area/:areaId/trigger-ftp', requireAuth, area.triggerFtpServer);
  * Test FTP Server connection
  * GET /api/parking/area/status-ftpserver
  */
-router.get('/area/status-ftpserver', requireAuth, area.testFtpServerConnection);
+router.post('/area/:areaId/status-ftpserver', requireAuth, area.testFtpServerConnection);
 
 
 /**

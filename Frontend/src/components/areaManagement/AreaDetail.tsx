@@ -96,16 +96,14 @@ export default function AreaDetail() {
       setLoading(true);
       setError('');
 
-      console.log('=== Starting fetchAreaDetails ===');
-      console.log('Area ID:', areaId);
+      // console.log('=== Starting fetchAreaDetails ===');
+      // console.log('Area ID:', areaId);
 
       // Fetch area details
       const areaResponse = await fetchAuthApi(`parking/area/${areaId!}/details`);
-      
       if (areaResponse.ok) {
-        const areaData: Area = await areaResponse.json();
-        console.log('Area data received:', areaData);
-        setArea(areaData);
+        const areaData: { data: Area } = await areaResponse.json();
+        setArea(areaData.data);
 
         // Fetch current vehicles count
         try {

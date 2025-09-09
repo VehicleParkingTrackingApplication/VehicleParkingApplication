@@ -11,7 +11,8 @@ export interface WebSocketEvents {
 
 class WebSocketService {
     private socket: Socket | null = null;
-    private isConnected = false;
+    // private isConnected = false;
+    private isConnected = true;
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
     private reconnectDelay = 1000; // Start with 1 second
@@ -41,7 +42,7 @@ class WebSocketService {
             console.log('🔌 WebSocket connected');
             this.isConnected = true;
             this.reconnectAttempts = 0;
-            this.reconnectDelay = 1000;
+            this.reconnectDelay = 1000000;
             
             // Rejoin current area if we were in one
             if (this.currentAreaId) {

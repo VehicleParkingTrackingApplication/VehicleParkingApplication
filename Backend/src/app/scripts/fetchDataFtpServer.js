@@ -77,6 +77,7 @@ async function updateAreaCapacity(areaId, isEntering) {
     }
 }
 
+// input areaId and options to access that ftp server to fetch data
 export async function fetchDataFtpServer(areaId, options = {}) {
     if (mongoose.connection.readyState === 0) {
         await mongoose.connect(MONGO_URI);
@@ -107,9 +108,10 @@ export async function fetchDataFtpServer(areaId, options = {}) {
             user: ftpInfo.user,
             password: ftpInfo.password,
             secure: ftpInfo.secure,
-            secureOptions: ftpInfo.secureOptions
+            secureOptions: ftpInfo.secureOptions,
+            folder: ftpInfo.folder || "CF02200-200034BE004"
         });
-        const targetFolder = options.folder || "CF02200-200034BE004";
+        const targetFolder = ftpInfo.folder || "CF02200-200034BE004";
         await client.cd(targetFolder);
         const contents = await client.list();
         const csvFiles = contents
