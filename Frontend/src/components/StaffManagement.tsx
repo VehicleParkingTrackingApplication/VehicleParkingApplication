@@ -165,7 +165,7 @@ export default function StaffManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden p-6 md:p-8">
+    <div className="min-h-screen text-white relative overflow-hidden p-6 md:p-8"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}

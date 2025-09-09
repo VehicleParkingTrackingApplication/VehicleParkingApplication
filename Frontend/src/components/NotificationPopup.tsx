@@ -53,7 +53,6 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
       setIsLoading(true);
       setError('');
       
-      // Try to fetch notifications from backend
       const response = await fetchAuthApi('notifications');
       if (response.ok) {
         const data: NotificationResponse = await response.json();
@@ -65,9 +64,8 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Failed to load notifications');
-      // Set mock data for demonstration
       setNotifications(getMockNotifications());
-      setUnreadCount(3);
+      setUnreadCount(getMockNotifications().filter(n => !n.isRead).length);
     } finally {
       setIsLoading(false);
     }
@@ -78,11 +76,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
       const response = await putAuthApi(`notifications/${notificationId}/read`);
       if (response.ok) {
         setNotifications(prev => 
-          prev.map(notification => 
-            notification._id === notificationId 
-              ? { ...notification, isRead: true }
-              : notification
-          )
+          prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n)
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
@@ -95,9 +89,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
     try {
       const response = await putAuthApi('notifications/read-all');
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notification => ({ ...notification, isRead: true }))
-        );
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         setUnreadCount(0);
       }
     } catch (err) {
@@ -147,13 +139,13 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
   return (
     <div 
       ref={popupRef}
-      className="absolute right-0 top-full mt-2 w-96 bg-gray-900/95 border border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-hidden backdrop-blur-sm"
+      className="absolute right-0 top-full mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-90 overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800/50">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-gray-300" />
-          <h3 className="font-semibold text-white">Notifications</h3>
+          <Bell className="h-5 w-5 text-black" />
+          <h3 className="font-semibold text-black">Notifications</h3>
           {unreadCount > 0 && (
             <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
               {unreadCount}
@@ -166,7 +158,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
               variant="ghost"
               size="sm"
               onClick={handleMarkAllAsRead}
-              className="text-xs text-blue-400 hover:text-blue-300 hover:bg-gray-700"
+              className="text-xs text-blue-500 hover:text-blue-600 hover:bg-gray-100"
             >
               Mark all read
             </Button>
@@ -175,7 +167,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+            className="text-gray-500 hover:text-gray-800 hover:bg-gray-100"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -185,24 +177,24 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
       {/* Content */}
       <div className="max-h-80 overflow-y-auto">
         {isLoading ? (
-          <div className="p-4 text-center text-gray-400">
+          <div className="p-4 text-center text-gray-500">
             Loading notifications...
           </div>
         ) : error ? (
-          <div className="p-4 text-center text-red-400">
+          <div className="p-4 text-center text-red-500">
             {error}
           </div>
         ) : notifications.length === 0 ? (
-          <div className="p-4 text-center text-gray-400">
+          <div className="p-4 text-center text-gray-500">
             No notifications yet
           </div>
         ) : (
-          <div className="divide-y divide-gray-700">
+          <div className="divide-y divide-gray-200">
             {notifications.map((notification) => (
               <div
                 key={notification._id}
-                className={`p-4 hover:bg-gray-800/50 transition-colors ${
-                  !notification.isRead ? 'bg-blue-900/30 border-l-4 border-l-blue-500' : ''
+                className={`p-4 hover:bg-gray-50 transition-colors ${
+                  !notification.isRead ? 'bg-blue-500/10 border-l-4 border-l-blue-500' : ''
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -213,14 +205,14 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h4 className={`text-sm font-medium ${
-                          !notification.isRead ? 'text-white' : 'text-gray-300'
+                          !notification.isRead ? 'text-black' : 'text-gray-800'
                         }`}>
                           {notification.title}
                         </h4>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-gray-600 mt-1">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-gray-400 mt-2">
                           {formatTimeAgo(notification.createdAt)}
                         </p>
                       </div>
@@ -230,7 +222,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
                             variant="ghost"
                             size="sm"
                             onClick={() => handleMarkAsRead(notification._id)}
-                            className="text-gray-500 hover:text-gray-300 hover:bg-gray-700 p-1"
+                            className="text-gray-400 hover:text-blue-500 hover:bg-gray-100 p-1"
                             title="Mark as read"
                           >
                             <Check className="h-3 w-3" />
@@ -240,7 +232,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteNotification(notification._id)}
-                          className="text-gray-500 hover:text-red-400 hover:bg-gray-700 p-1"
+                          className="text-gray-400 hover:text-red-500 hover:bg-gray-100 p-1"
                           title="Delete"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -257,11 +249,11 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="p-3 border-t border-gray-700 bg-gray-800/50">
+        <div className="p-3 border-t border-gray-200">
           <Button
             variant="ghost"
             size="sm"
-            className="w-full text-blue-400 hover:text-blue-300 hover:bg-gray-700"
+            className="w-full text-blue-500 hover:text-blue-600 hover:bg-gray-100"
             onClick={() => {
               // Navigate to full notifications page
               console.log('Navigate to notifications page');
@@ -323,3 +315,4 @@ const getMockNotifications = (): Notification[] => [
     updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
   },
 ];
+
