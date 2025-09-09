@@ -15,7 +15,7 @@ import { createServer } from 'http';
 // Import scheduler services
 import { ScheduledFtpService } from './src/app/services/scheduledFtpService.js';
 import { ScheduledSimulationService } from './src/app/services/scheduledSimulationService.js';
-import { WebSocketService } from './src/app/services/webSocketService.js';
+import { WebSocketService } from './src/app/services/webSocketServiceSimulation.js';
 
 dotenv.config();
 

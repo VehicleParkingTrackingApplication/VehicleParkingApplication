@@ -2,7 +2,7 @@ import Area from '../models/Area.js';
 import FtpServer from '../models/FtpServer.js';
 import Notification from '../models/Notification.js';
 import { FtpService } from '../services/ftpService.js';
-import { webSocketService } from '../services/webSocketService.js';
+import { webSocketService } from '../services/webSocketServiceSimulation.js';
 import { Client } from 'basic-ftp';
 
 class parkingAreaController {

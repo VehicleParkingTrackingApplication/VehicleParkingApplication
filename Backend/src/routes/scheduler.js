@@ -1,7 +1,7 @@
 import express from 'express';
 import { ScheduledFtpService } from '../app/services/scheduledFtpService.js';
 import { ScheduledSimulationService } from '../app/services/scheduledSimulationService.js';
-import { WebSocketService } from '../app/services/webSocketService.js';
+import { WebSocketService } from '../app/services/webSocketServiceSimulation.js';
 
 const router = express.Router();
 
