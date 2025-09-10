@@ -14,6 +14,7 @@ import ExistingReportsPage from './components/ExistingReport';
 import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
 import ViewAllRecords from './components/ViewAllRecords';
 import AreaDetail from './components/areaManagement/AreaDetail';
+import CompleteProfile from './components/CompleteProfile';
 
 // The Layout Component
 const MainLayout = () => {
@@ -37,6 +38,14 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/signin" element={<LoginPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/complete-profile"
+          element={
+            <ProtectedRoute>
+              <CompleteProfile />
+            </ProtectedRoute>
+          }
+        />
 
         {/* --- Routes WITH the sidebar --- */}
         <Route element={<MainLayout />}>

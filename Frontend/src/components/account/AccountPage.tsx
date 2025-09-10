@@ -10,7 +10,9 @@ export default function AccountPage() {
         firstName: '',
         lastName: '',
         email: '',
-        username: ''
+        username: '',
+        phoneNumber: '',
+        address: ''
     });
     const [passwords, setPasswords] = useState({
         oldPassword: '',
@@ -78,13 +80,17 @@ export default function AccountPage() {
                         firstName: userData.firstName || '',
                         lastName: userData.lastName || '',
                         email: userData.email || '',
-                        username: userData.username || ''
+                        username: userData.username || '',
+                        phoneNumber: userData.phoneNumber || '',
+                        address: userData.address || ''
                     });
                     console.log('User state updated:', {
                         firstName: userData.firstName || '',
                         lastName: userData.lastName || '',
                         email: userData.email || '',
-                        username: userData.username || ''
+                        username: userData.username || '',
+                        phoneNumber: userData.phoneNumber || '',
+                        address: userData.address || ''
                     });
                     setError(''); // Clear any previous errors
                 } else {
@@ -162,7 +168,9 @@ export default function AccountPage() {
             // Update user name using the proper endpoint
             const nameResponse = await putAuthApi('account/update-name', {}, JSON.stringify({
                 firstName: user.firstName,
-                lastName: user.lastName
+                lastName: user.lastName,
+                phoneNumber: user.phoneNumber,
+                address: user.address
             }));
             
             if (!nameResponse.ok) {
@@ -195,9 +203,9 @@ export default function AccountPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden flex items-center justify-center">
+        <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{ background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)' }}>
             <div 
-                className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+                className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#677ae5] rounded-full filter blur-3xl opacity-20"
                 style={{ transform: 'translate(50%, -50%)' }}
             ></div>
             <div 
@@ -256,6 +264,14 @@ export default function AccountPage() {
                                     <Label htmlFor="lastName" className="sm:text-right">Last name:</Label>
                                     <Input id="lastName" value={user.lastName} onChange={handleUserChange} className="sm:col-span-2 bg-gray-700 border-gray-600" />
                                 </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="phoneNumber" className="sm:text-right">Phone number:</Label>
+                                    <Input id="phoneNumber" value={user.phoneNumber} onChange={handleUserChange} className="sm:col-span-2 bg-gray-700 border-gray-600" />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="address" className="sm:text-right">Address:</Label>
+                                    <Input id="address" value={user.address} onChange={handleUserChange} className="sm:col-span-2 bg-gray-700 border-gray-600" />
+                                </div>
                             </div>
 
                             <hr className="my-8 border-gray-700" />
@@ -288,9 +304,53 @@ export default function AccountPage() {
                                 </Button>
                             </div>
                         </form>
+                        <hr className="my-8 border-gray-700" />
+                        <MyReportsSection />
                     </CardContent>
                 </Card>
             </main>
+        </div>
+    );
+}
+
+function MyReportsSection() {
+    const [reports, setReports] = useState<Array<{ _id: string; name: string }>>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await fetchAuthApi('reports');
+                if (!res.ok) throw new Error('Failed to load reports');
+                const data = await res.json();
+                const items = Array.isArray(data?.data) ? data.data : [];
+                setReports(items.map((r: any) => ({ _id: r._id, name: r.name })));
+            } catch (e: any) {
+                setError(e?.message || 'Failed to load reports');
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, []);
+
+    return (
+        <div>
+            <h3 className="text-xl font-semibold mb-4">My Reports</h3>
+            {loading && <div className="text-gray-300">Loading...</div>}
+            {error && <div className="text-red-400">{error}</div>}
+            {!loading && !error && (
+                <ul className="list-disc pl-6 space-y-1">
+                    {reports.length === 0 ? (
+                        <li className="text-gray-300">No reports yet.</li>
+                    ) : (
+                        reports.map(r => (
+                            <li key={r._id}>{r.name}</li>
+                        ))
+                    )}
+                </ul>
+            )}
         </div>
     );
 }

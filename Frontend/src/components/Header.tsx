@@ -9,7 +9,7 @@ import { getCurrentUser } from '../services/backend';
 export const Header: React.FC = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(authInterceptor.isAuthenticated());
-  const [userRole, setUserRole] = useState<string>('Admin');
+  const [userRole, setUserRole] = useState<string>('User');
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
 
@@ -20,14 +20,19 @@ export const Header: React.FC = () => {
       if (authenticated) {
         try {
           const user = await getCurrentUser();
-          setUserRole(user?.role?.charAt(0).toUpperCase() + user.role.slice(1) || 'Admin');
+          if (user?.role) {
+            setUserRole(user.role.charAt(0).toUpperCase() + user.role.slice(1));
+          } else {
+            setUserRole('User');
+          }
           setUnreadCount(3);
         } catch (error) {
           console.error('Failed to fetch user role:', error);
-          setUserRole('Admin');
+          setUserRole('User');
         }
       } else {
         setUnreadCount(0);
+        setUserRole('User');
       }
     };
     window.addEventListener('authChange', handleAuthChange);
@@ -78,7 +83,7 @@ export const Header: React.FC = () => {
                   <Link to="/staff-management" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
                     <Users className="mr-3 h-5 w-5" /> Staff Management
                   </Link>
-                  <Link to="/staff-management" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/account" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
                     <User className="mr-3 h-5 w-5" /> My Details
                   </Link>
                   <Link to="/staff-management" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
@@ -86,7 +91,28 @@ export const Header: React.FC = () => {
                   </Link>
                 </>
               ) : (
-                <></> // Omitting other role for brevity
+                <>
+                  <Link to="/dashboard" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <LayoutDashboard className="mr-3 h-5 w-5" /> Dashboard
+                  </Link>
+                  <Link to="/parking-dashboard" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <BarChart2 className="mr-3 h-5 w-5" /> Statistic
+                  </Link>
+                  <Link to="/reports" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <FileText className="mr-3 h-5 w-5" /> ReportAI
+                  </Link>
+                  <Link to="/parking-dashboard" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <Car className="mr-3 h-5 w-5" /> Vehicle
+                  </Link>
+                  {/* Hidden for non-admin: Connection (area-management) */}
+                  {/* Hidden for non-admin: Staff Management */}
+                  <Link to="/account" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <User className="mr-3 h-5 w-5" /> My Details
+                  </Link>
+                  <Link to="/staff-management" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <Settings className="mr-3 h-5 w-5" /> Setting
+                  </Link>
+                </>
               )}
             </nav>
           )}

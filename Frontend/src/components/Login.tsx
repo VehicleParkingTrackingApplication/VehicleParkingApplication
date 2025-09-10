@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/input';
-import { login } from '../services/backend';
+import { login, getCurrentUser } from '../services/backend';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, LogIn } from 'lucide-react';
@@ -26,7 +26,16 @@ export default function LoginPage() {
       if (result && result.accessToken) {
         localStorage.setItem('token', result.accessToken);
         window.dispatchEvent(new CustomEvent('authChange'));
-        nav('/dashboard');
+        try {
+          const me = await getCurrentUser();
+          if (me && (me as any).profileCompleted === false) {
+            nav('/complete-profile');
+          } else {
+            nav('/dashboard');
+          }
+        } catch {
+          nav('/dashboard');
+        }
       } else {
         setError(result?.message || 'Invalid username or password');
       }
