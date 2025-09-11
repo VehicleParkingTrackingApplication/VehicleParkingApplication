@@ -13,7 +13,7 @@ class parkingAreaController {
     }
 
     // get all parking areas of a business
-    async getAllAreasByBusiness(req, res) {
+    async getAllAreasByBusinessId(req, res) {
         try {
             const businessId = req.user.businessId;
             if (!businessId) {

@@ -8,7 +8,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { getExistingVehicles } from '@/services/parking';
+import { getExistingVehicles } from '@/services/parkingApi';
 import { useState, useEffect } from 'react';
 
 interface VehicleRecord {

@@ -15,6 +15,7 @@ import { createServer } from 'http';
 // Import scheduler services
 import { ScheduledFtpService } from './src/app/services/scheduledFtpService.js';
 import { ScheduledSimulationService } from './src/app/services/scheduledSimulationService.js';
+import { ScheduledMonitoringService } from './src/app/services/scheduledMonitoringService.js';
 import { WebSocketService } from './src/app/services/webSocketServiceSimulation.js';
 
 dotenv.config();
@@ -30,8 +31,8 @@ const PORT = process.env.PORT || 1313;
 dbConnect();
 
 // Init web socket service
-const webSocketService = new WebSocketService();
-webSocketService.initialize(server);
+// const webSocketService = new WebSocketService();
+// webSocketService.initialize(server);
 
 
 // Init schedulers services for data simulation processing
@@ -41,6 +42,14 @@ webSocketService.initialize(server);
 // Init schedulers services for data FTP
 // const scheduledFtpService = new ScheduledFtpService();
 // scheduledFtpService.startScheduledProcessing();
+
+// Init scheduled monitoring service for long-parked vehicles
+const scheduledMonitoringService = new ScheduledMonitoringService();
+scheduledMonitoringService.startScheduledMonitoring();
+
+// Add this to your app.js right after starting the monitoring service
+// console.log('�� Testing monitoring service...');
+// scheduledMonitoringService.triggerManualCheck(); // This will run immediately
 
 // CORS configuration for development
 // app.use(cors());

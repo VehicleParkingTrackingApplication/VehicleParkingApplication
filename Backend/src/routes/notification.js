@@ -16,7 +16,15 @@ const router = express.Router();
  * @query {number} [limit=10] - Number of notifications per page
  * @returns {object} - Object containing notifications array and pagination info
  */
-router.get('/business/:businessId/notifications', requireAuth, notification.getNotificationsByBusiness);
+router.get('/getAllNotifications', requireAuth, notification.getNotificationsByBusinessId);
+
+
+/**
+ * @access Private
+ * @returns {object} - Object containing notifications array and pagination info
+ */
+router.get('/getRecentNotifications', requireAuth, notification.getRecentNotifications);
+
 
 /**
  * @route PUT /api/notification/:notificationId/read

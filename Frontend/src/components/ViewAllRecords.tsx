@@ -9,7 +9,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { getAllRecords } from '@/services/parking';
+import { getAllRecords } from '@/services/parkingApi';
 
 interface ParkingRecord {
   _id: string;

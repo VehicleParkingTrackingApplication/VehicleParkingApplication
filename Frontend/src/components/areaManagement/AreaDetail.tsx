@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { authInterceptor } from '../../services/authInterceptor';
 import { fetchAuthApi } from '../../services/api';
-import { getExistingVehicles, getAllRecords } from '@/services/parking';
+import { getExistingVehicles, getAllRecords } from '@/services/parkingApi';
 import { FtpServerEditPopup } from './FtpServerEditPopup';
 
 interface Area {

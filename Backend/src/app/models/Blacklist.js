@@ -5,6 +5,10 @@ const Blacklist = new Schema({
         type: Schema.Types.ObjectId, 
         ref: 'businesses', 
         required: true },    
+    areaId: {
+        type: Schema.Types.ObjectId,
+        ref: 'areas'
+    },
     plateNumber: { 
         type: String, 
         required: true, 

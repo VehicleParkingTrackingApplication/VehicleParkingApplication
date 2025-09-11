@@ -19,8 +19,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { authInterceptor } from '../services/authInterceptor';
-import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parking';
-import { saveReport } from '@/services/reports';
+import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parkingApi';
+import { saveReport } from '@/services/reportsApi';
 import { Save } from 'lucide-react';
 import { webSocketService } from '@/services/websocket';
 

@@ -14,7 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import AreaCreatePopup from '@/components/areaManagement/AreaCreatePopup';
 import { authInterceptor } from '../../services/authInterceptor';
 import { fetchAuthApi } from '../../services/api';
-import { getExistingVehicles } from '@/services/parking';
+import { getExistingVehicles } from '@/services/parkingApi';
 
 interface Area {
   _id: string;

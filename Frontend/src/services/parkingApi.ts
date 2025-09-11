@@ -1,7 +1,6 @@
 import { 
   fetchAuthApi, 
-  postAuthApi, 
-  putAuthApi 
+  postAuthApi
 } from '@/services/api';
 
 

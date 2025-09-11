@@ -21,7 +21,7 @@ const Notification = new Schema(
     },
     type: {
       type: String,
-      enum: ['capacity_warning', 'capacity_critical', 'system'],
+      enum: ['capacity_warning', 'capacity_critical', 'long_parking', 'system'],
       default: 'capacity_warning',
     },
     threshold: {

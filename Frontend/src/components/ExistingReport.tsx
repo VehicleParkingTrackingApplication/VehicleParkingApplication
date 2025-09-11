@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Trash2 } from 'lucide-react';
 // 1. Import the queryReportAI function
-import { getAllReports, getReportById, deleteReport, queryReportAI } from '../services/reports'; 
+import { getAllReports, getReportById, deleteReport, queryReportAI } from '../services/reportsApi'; 
 
 const ClientOnlyReportChart = lazy(() => import('./ClientReportChart'));
 

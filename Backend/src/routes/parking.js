@@ -7,7 +7,7 @@ const router = express.Router();
 
 
 // GET /api/parking/area
-router.get('/area', requireAuth, area.getAllAreasByBusiness);
+router.get('/area', requireAuth, area.getAllAreasByBusinessId);
 
 // POST /api/parking/area/input-area
 router.post('/area/input-area', requireAuth, area.inputParkingArea);
@@ -41,10 +41,10 @@ router.get('/area/:areaId/details', requireAuth, area.getAreaDetails);
 router.post('/vehicle/:areaId/manual-input', requireAuth, vehicle.manualInputVehicle);
 
 // GET /api/parking/vehicle/:areaId/existing-vehicles
-router.get('/vehicle/:areaId/existing-vehicles', requireAuth, vehicle.getExistingVehicleByAreaId);
+router.get('/vehicle/:areaId/existing-vehicles', requireAuth, vehicle.getParkingVehicleByAreaId);
 
 // GET /api/vehicle/:areaId/recent-records
-router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentRecords);
+router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentRecordsByAreaId);
 
 // GET /api/parking/vehicle/:areaId/all-records
 router.get('/vehicle/:areaId/all-records', requireAuth, vehicle.getAllRecordsByAreaId);

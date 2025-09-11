@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { checkFtpServerStatus, saveFtpServer } from '../../services/parking';
+import { checkFtpServerStatus, saveFtpServer } from '../../services/parkingApi';
 
 interface FtpServerConfig {
   host: string;
