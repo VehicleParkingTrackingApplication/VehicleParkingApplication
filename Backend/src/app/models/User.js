@@ -1,51 +1,66 @@
-import moongoose from 'mongoose';
-const Schema = moongoose.Schema;
+import mongoose from 'mongoose';
+const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
-    username: { 
-        type: String, 
-        maxLength: 255 
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        maxLength: 255
     },
-    password: { 
-        type: String, 
-        maxLength: 255 
+    password: {
+        type: String,
+        required: true,
+        maxLength: 255
     },
     businessId: {
         type: Schema.Types.ObjectId,
         ref: 'businesses',
-        required: true,
-        default: '683d4188a0c9a9af6e5d547c'
+        required: true
     },
     role: {
-        type: String, 
+        type: String,
         required: true,
-        enum: ['admin', 'staff', 'customer']
+        enum: ['admin', 'user'],
+        default: 'user' 
     },
-    firstName: { 
-        type: String, 
-        maxLength: 255 
-    },
-    lastName: { 
-        type: String, 
-        maxLength: 255 
-    },
-    email: { 
-        type: String, 
-        trim: true,
+    firstName: {
+        type: String,
         maxLength: 255
     },
-    createAt: { 
-        type: Date, 
-        default: Date.now 
+    lastName: {
+        type: String,
+        maxLength: 255
     },
-    updateAt: { 
-        type: Date, 
-        default: Date.now 
+    phoneNumber: {
+        type: String,
+        trim: true,
+        maxLength: 50
+    },
+    address: {
+        type: String,
+        trim: true,
+        maxLength: 1024
+    },
+    email: {
+        type: String,
+        trim: true,
+        unique: true,
+        lowercase: true,
+        required: true, // Making email required for registration.
+        maxLength: 255
     },
     loggedSessions: {
         type: [String],
         default: []
+    },
+    profileCompleted: {
+        type: Boolean,
+        default: false
     }
+}, {
+    timestamps: true
 });
 
-export default moongoose.model('users', userSchema);
+export default mongoose.model('users', userSchema);

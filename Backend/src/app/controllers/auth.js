@@ -95,10 +95,13 @@ class authController {
                 email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
+                phoneNumber: user.phoneNumber,
+                address: user.address,
                 role: user.role,
                 businessId: user.businessId,
                 createAt: user.createAt,
-                updateAt: user.updateAt
+                updateAt: user.updateAt,
+                profileCompleted: user.profileCompleted
             });
 
         } catch (err) {

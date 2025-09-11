@@ -6,19 +6,22 @@ import { Input } from './ui/input';
 import { register } from '../services/backend';
 import { motion } from 'framer-motion';
 import { ArrowLeft, UserPlus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 export default function RegisterPage() {
     const nav = useNavigate();
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [businessId, setBusinessId] = useState('');
+    const [role, setRole] = useState('user');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleRegister = async (e) => {
         e.preventDefault();
         
-        if (!username || !email || !password) {
+        if (!username || !email || !password || !businessId) {
           setError('Please fill in all fields');
           return;
         }
@@ -27,12 +30,13 @@ export default function RegisterPage() {
         setError('');
     
         try {
-          const result = await register(username, email, password);
+          const result = await register(username, email, password, businessId, role);
           
           if (result && result.accessToken) {
             localStorage.setItem('token', result.accessToken);
             window.dispatchEvent(new CustomEvent('authChange'));
-            nav('/dashboard');
+            // After registration, prompt to complete profile on first login
+            nav('/complete-profile');
           } else {
             setError(result?.message || 'Registration failed. Please try again.');
           }
@@ -121,6 +125,23 @@ export default function RegisterPage() {
                       onChange={(e) => setPassword(e.target.value)} 
                       className="bg-black/20 border-white/20 text-white placeholder-gray-400 focus:ring-yellow-400 focus:border-yellow-400"
                     />
+                    <Input 
+                      placeholder="Business ID" 
+                      value={businessId} 
+                      onChange={(e) => setBusinessId(e.target.value)} 
+                      className="bg-black/20 border-white/20 text-white placeholder-gray-400 focus:ring-yellow-400 focus:border-yellow-400"
+                    />
+                    <div className="space-y-1">
+                      <Select value={role} onValueChange={setRole}>
+                        <SelectTrigger className="w-full bg-black/20 border-white/20 text-white">
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-black/40 border-white/20 text-white">
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Button 
                       size="lg" 
                       type="submit"
