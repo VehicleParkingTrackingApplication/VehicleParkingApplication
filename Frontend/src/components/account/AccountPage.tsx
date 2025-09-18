@@ -17,10 +17,7 @@ export default function AccountPage() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [userPassword, setUserPassword] = useState('••••••••••');
-
+  
     useEffect(() => {
         const fetchUserData = async () => {
             try {
@@ -115,9 +112,13 @@ export default function AccountPage() {
 
         fetchUserData();
     }, []);
-
-
-
+    const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value } = e.target;
+        setUser(prevUser => ({
+            ...prevUser,
+            [id]: value
+        }));
+    };
     const handleUpdate = async () => {
         setIsLoading(true);
         setError('');
@@ -192,93 +193,24 @@ export default function AccountPage() {
                 className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
                 style={{ transform: 'translate(-50%, 50%)' }}
             ></div>
-            
-            <div className="relative z-10 max-w-6xl mx-auto px-6 py-8">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-8">
-                    <div>
-                        <h1 className="text-4xl font-bold text-white mb-2">My Details</h1>
-                        <p className="text-gray-400 text-lg">Manage your profile information and account settings</p>
-                    </div>
-                    {!isEditing ? (
-                        <Button 
-                            onClick={() => setIsEditing(true)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2"
-                        >
-                            <Edit size={16} />
-                            Edit Profile
-                        </Button>
-                    ) : (
-                        <div className="flex gap-4">
-                            <Button 
-                                onClick={() => setIsEditing(false)}
-                                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg flex items-center gap-2"
-                            >
-                                <X size={16} />
-                                Cancel
-                            </Button>
-                            <Button 
-                                onClick={handleUpdate}
-                                disabled={isLoading}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2"
-                            >
-                                <Save size={16} />
-                                {isLoading ? 'Saving...' : 'Save'}
-                            </Button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Main Profile Card */}
-                <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
-                    <CardContent className="p-8">
-                        {/* Top Section - User Info */}
-                        <div className="flex items-center gap-6 mb-8">
-                            {/* Avatar */}
-                            <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                                {getInitials()}
-                            </div>
-                            
-                            {/* User Details */}
-                            <div>
-                                <h2 className="text-2xl font-bold text-white mb-2">
-                                    {user.firstName} {user.lastName}
-                                </h2>
-                                <p className="text-white text-lg mb-1">{user.role}</p>
-                                <p className="text-white">{user.company}</p>
-                            </div>
-                        </div>
-
-                        {/* Bottom Section - Information Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Left Column */}
-                            <div className="space-y-6">
-                                {/* Full Name */}
-                                <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <User size={20} className="text-white" />
-                                        <Label className="text-white text-sm font-medium">Full Name</Label>
-                                    </div>
-                                    {isEditing ? (
-                                        <div className="flex gap-2">
-                                            <Input 
-                                                value={user.firstName} 
-                                                onChange={(e) => setUser({...user, firstName: e.target.value})}
-                                                className="bg-black/20 border-white/20 text-white"
-                                                placeholder="First Name"
-                                            />
-                                            <Input 
-                                                value={user.lastName} 
-                                                onChange={(e) => setUser({...user, lastName: e.target.value})}
-                                                className="bg-black/20 border-white/20 text-white"
-                                                placeholder="Last Name"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="bg-black/20 border-white/20 px-4 py-3 rounded-lg text-white">
-                                            {user.firstName} {user.lastName}
-                                        </div>
-                                    )}
+            <main className="relative z-10 px-4 py-8 sm:px-6 lg:px-8 w-full max-w-4xl">
+                <Card className="backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
+                    <CardHeader>
+                        <CardTitle className="text-2xl font-bold">My Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-8">
+                        {error && <p className="text-red-500">{error}</p>}
+                        
+                        
+                        <form onSubmit={handleUpdate}>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="firstName" className="sm:text-right">First name:</Label>
+                                    <Input id="firstName" value={user.firstName} onChange={handleUserChange} className="sm:col-span-2 bg-gray-700 border-gray-600" />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
+                                    <Label htmlFor="lastName" className="sm:text-right">Last name:</Label>
+                                    <Input id="lastName" value={user.lastName} onChange={handleUserChange} className="sm:col-span-2 bg-gray-700 border-gray-600" />
                                 </div>
 
                                 {/* Email Address */}

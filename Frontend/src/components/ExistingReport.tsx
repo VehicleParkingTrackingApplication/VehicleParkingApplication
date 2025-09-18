@@ -282,7 +282,7 @@ export default function ExistingReportsPage() {
                 <CardContent className="p-6 grid grid-cols-1 lg:grid-cols-5 gap-8">
                   <div className="lg:col-span-3 flex flex-col h-[452px]">
                     <h3 className="text-xl font-medium text-white mb-3 flex items-center"><BarChart2 className="mr-2 h-5 w-5 text-blue-300"/> Data Visualization</h3>
-                    <div className="flex-grow bg-black/30 rounded-xl p-4 border border-white/10 shadow-inner">
+                    <div className="flex-grow backdrop-blur-md bg-white/20 rounded-xl p-4 border border-white/30 shadow-2xl">
                       <Suspense fallback={<div className="flex items-center justify-center h-full text-white/70">Loading Chart...</div>}>
                         <ClientOnlyReportChart report={currentReport} />
                       </Suspense>

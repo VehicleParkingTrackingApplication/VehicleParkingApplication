@@ -509,11 +509,18 @@ export async function login(username: string, password: string): Promise<{ messa
 export async function register(username: string, email: string, password: string, businessId: string, role?: 'user'|'admin'): Promise<{ message: string; accessToken: string } | null> {
   const payload: Record<string, any> = { username, email, password, businessId };
   if (role) payload.role = role;
-  const response = await postApi("auth/register", {}, JSON.stringify(payload));
-  if (!response.ok) {
-    return null;
+  
+  try {
+    const response = await postApi("auth/register", {}, JSON.stringify(payload));
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Registration failed' }));
+      throw new Error(errorData.message || `HTTP ${response.status}: Registration failed`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Registration error:', error);
+    throw error;
   }
-  return await response.json();
 }
 
 /**
