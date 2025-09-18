@@ -20,7 +20,6 @@ export default function AccountPage() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isTestingConnection, setIsTestingConnection] = useState(false);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -115,33 +114,6 @@ export default function AccountPage() {
         fetchUserData();
     }, []);
 
-    const testConnection = async () => {
-        setIsTestingConnection(true);
-        try {
-            const response = await fetch('http://localhost:1313/api/auth/me', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include'
-            });
-            
-            console.log('Test connection response:', response.status, response.statusText);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Test connection data:', data);
-                alert('Connection successful! Check console for details.');
-            } else {
-                alert(`Connection failed: ${response.status} ${response.statusText}`);
-            }
-        } catch (err) {
-            console.error('Test connection error:', err);
-            alert('Connection test failed. Check console for details.');
-        } finally {
-            setIsTestingConnection(false);
-        }
-    };
 
     const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
@@ -221,38 +193,6 @@ export default function AccountPage() {
                     <CardContent className="space-y-8">
                         {error && <p className="text-red-500">{error}</p>}
                         
-                        {/* Debug section */}
-                        <div className="flex gap-4 mb-4">
-                            <Button 
-                                type="button" 
-                                onClick={testConnection}
-                                disabled={isTestingConnection}
-                                className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                            >
-                                {isTestingConnection ? 'Testing...' : 'Test Connection'}
-                            </Button>
-                            <Button 
-                                type="button" 
-                                onClick={() => {
-                                    console.log('Current token:', localStorage.getItem('token'));
-                                    console.log('Current user state:', user);
-                                }}
-                                className="bg-gray-600 hover:bg-gray-700 text-white"
-                            >
-                                Debug Info
-                            </Button>
-                        </div>
-                        
-                        {/* Backend Status Info */}
-                        <div className="bg-blue-900/50 border border-blue-700 rounded-lg p-4 mb-4">
-                            <h4 className="text-blue-300 font-semibold mb-2">Backend Connection Status</h4>
-                            <p className="text-blue-200 text-sm">
-                                The backend server is running on port 1313, but it needs environment variables to be configured.
-                            </p>
-                            <p className="text-blue-200 text-sm mt-2">
-                                <strong>Required:</strong> Create a .env file in the Backend folder with ACCESS_TOKEN_SECRET and other variables.
-                            </p>
-                        </div>
                         
                         <form onSubmit={handleUpdate}>
                             <div className="space-y-4">

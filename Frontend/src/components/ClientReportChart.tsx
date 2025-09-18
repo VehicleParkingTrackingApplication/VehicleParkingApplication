@@ -33,37 +33,37 @@ const ClientReportChart = ({ report }: { report: ReportDetail }) => {
           case 'hourly-activity':
             return (
               <ComposedChart data={report.chartData}> 
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
-                <YAxis stroke="#888888" fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
+                <XAxis dataKey="hour" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
+                <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
                 <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                 <Legend />
-                <Bar dataKey="Entries" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Exits" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                <Line type="monotone" dataKey="Predictor" stroke="#22c55e" />
+                <Bar dataKey="Entries" fill="rgba(255, 255, 255, 0.7)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Exits" fill="rgba(255, 255, 255, 0.5)" radius={[4, 4, 0, 0]} />
+                <Line type="monotone" dataKey="Predictor" stroke="rgba(255, 255, 255, 0.8)" />
               </ComposedChart>
             );
           case 'entries-over-time':
             return (
               <LineChart data={report.chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis dataKey="period" stroke="#888888" fontSize={12} tick={{ angle: -20, textAnchor: 'end' }} height={60} />
-                <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
+                <XAxis dataKey="period" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} tick={{ angle: -20, textAnchor: 'end' }} height={60} />
+                <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} allowDecimals={false} />
                 <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                 <Legend />
-                <Line type="monotone" dataKey="Entries" stroke="#22c55e" dot={false} connectNulls />
-                <Line type="monotone" dataKey="Predictor" stroke="#a78bfa" strokeDasharray="5 5" dot={false} connectNulls />
+                <Line type="monotone" dataKey="Entries" stroke="rgba(255, 255, 255, 0.8)" dot={false} connectNulls />
+                <Line type="monotone" dataKey="Predictor" stroke="rgba(255, 255, 255, 0.6)" strokeDasharray="5 5" dot={false} connectNulls />
               </LineChart>
             );
           case 'overstay-analysis':
             return (
               <BarChart data={report.chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis dataKey="date" stroke="#888888" fontSize={12} />
-                <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
+                <XAxis dataKey="date" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
+                <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} allowDecimals={false} />
                 <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                 <Legend />
-                <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Overstaying Vehicles" fill="rgba(255, 255, 255, 0.7)" radius={[4, 4, 0, 0]} />
               </BarChart>
             );
           default:
