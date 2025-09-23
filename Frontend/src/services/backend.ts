@@ -1,6 +1,7 @@
 // @ts-check
 
 import { fetchAuthApi, postAuthApi, putAuthApi, deleteAuthApi } from "./api";
+import { postApi } from "./api";
 
 // Type definitions for your application
 export interface User {
@@ -491,7 +492,8 @@ export async function refreshToken(): Promise<{ message: string; accessToken: st
  * @returns {Promise<{ message: string; accessToken: string } | null>}
  */
 export async function login(username: string, password: string): Promise<{ message: string; accessToken: string } | null> {
-  const response = await postAuthApi("auth/login", {}, JSON.stringify({ username, password }));
+  const response = await postApi("auth/login", {}, JSON.stringify({ username, password }));
+  console.log("response :", response)
   if (!response.ok) {
     return null;
   }
