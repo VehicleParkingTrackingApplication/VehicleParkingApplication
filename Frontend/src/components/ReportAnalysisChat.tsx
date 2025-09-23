@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { analyzeReport } from '../services/reports'; // Corrected import path
+import { analyzeReport } from '../services/reportsApi'; // Corrected import path
 import { Send } from 'lucide-react';
 
 // Defines the structure for a single chat message

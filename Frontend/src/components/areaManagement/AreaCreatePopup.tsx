@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { inputParkingArea, type CreateAreaPayload } from '@/services/parking';
+import { inputParkingArea, type CreateAreaPayload } from '@/services/parkingApi';
 
 interface AreaCreatePopupProps {
   open: boolean;

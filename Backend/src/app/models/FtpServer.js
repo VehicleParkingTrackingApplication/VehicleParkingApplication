@@ -9,7 +9,8 @@ const FtpServerSchema = new Schema({
     secure: { type: Boolean, default: true},
     secureOptions: {
         rejectUnauthorized: { type: Boolean, default: false }
-    }
+    },
+    folder: { type: String, default: '' },
 });
 
 export default mongoose.model('ftpservers', FtpServerSchema);

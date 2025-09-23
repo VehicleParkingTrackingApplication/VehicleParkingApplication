@@ -10,8 +10,10 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+
 import { Send, Trash2, BarChart2 } from 'lucide-react';
-import { getAllReports, getReportById, deleteReport, queryReportAI } from '../services/reports';
+// import { getAllReports, getReportById, deleteReport, queryReportAI } from '../services/reports';
+import { getAllReports, getReportById, deleteReport, queryReportAI } from '../services/reportsApi'; 
 
 const ClientOnlyReportChart = lazy(() => import('./ClientReportChart'));
 
@@ -55,7 +57,7 @@ export default function ExistingReportsPage() {
     return (...args: any[]) => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        func.apply(this, args);
+        func(...args);
       }, delay);
     };
   };
@@ -93,18 +95,18 @@ export default function ExistingReportsPage() {
 
   const handleDotClick = (index: number) => {
     const container = scrollContainerRef.current;
-    const childElement = container?.children[index] as HTMLElement;
-    if (childElement) {
-      const containerWidth = container.offsetWidth;
-      const childWidth = childElement.offsetWidth;
-      // Calculate the scroll position to center the child element
-      const scrollLeft = childElement.offsetLeft - (containerWidth / 2) + (childWidth / 2);
+    if (!container) return;
+    const childElement = container.children[index] as HTMLElement | undefined;
+    if (!childElement) return;
+    const containerWidth = container.offsetWidth;
+    const childWidth = childElement.offsetWidth;
+    // Calculate the scroll position to center the child element
+    const scrollLeft = childElement.offsetLeft - (containerWidth / 2) + (childWidth / 2);
 
-      container.scrollTo({
-        left: scrollLeft,
-        behavior: 'smooth'
-      });
-    }
+    container.scrollTo({
+      left: scrollLeft,
+      behavior: 'smooth'
+    });
   };
 
 

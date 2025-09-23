@@ -1,5 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 
+// Prevent multiple connections during HMR/module re-evaluations
+let wsInitialized = false;
+
 export interface WebSocketEvents {
   'data-updated': (data: { areaId: string; timestamp: string; message: string }) => void;
   'data-update-error': (data: { areaId: string; timestamp: string; error: string }) => void;
@@ -19,6 +22,10 @@ class WebSocketService {
     private liveUpdatesEnabled = true; // Default to enabled
 
     constructor() {
+        if (wsInitialized) {
+            return;
+        }
+        wsInitialized = true;
         this.connect();
     }
 
@@ -206,3 +213,13 @@ export const webSocketService = new WebSocketService();
 
 // Export the class for testing purposes
 export { WebSocketService };
+
+// HMR cleanup: ensure socket disconnects on module dispose to avoid leaks and dup connections
+if (import.meta && (import.meta as any).hot) {
+    (import.meta as any).hot.dispose(() => {
+        try {
+            webSocketService.disconnect();
+        } catch {}
+        wsInitialized = false;
+    });
+}

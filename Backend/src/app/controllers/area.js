@@ -2,7 +2,7 @@ import Area from '../models/Area.js';
 import FtpServer from '../models/FtpServer.js';
 import Notification from '../models/Notification.js';
 import { FtpService } from '../services/ftpService.js';
-import { webSocketService } from '../services/webSocketService.js';
+import { webSocketService } from '../services/webSocketServiceSimulation.js';
 import { Client } from 'basic-ftp';
 
 class parkingAreaController {
@@ -13,7 +13,7 @@ class parkingAreaController {
     }
 
     // get all parking areas of a business
-    async getAllAreasByBusiness(req, res) {
+    async getAllAreasByBusinessId(req, res) {
         try {
             const businessId = req.user.businessId;
             if (!businessId) {
@@ -154,127 +154,100 @@ class parkingAreaController {
     }
 
     // input the info of ftp server for a specific area
-    async inputFtpServer(req,res) {
+    async saveFtpServer(req, res) {
         try {
-            const {areaId, host, port, user, password, secure, secureOptions } = req.body;
-            if ( !areaId || !host || !port || !user || !password || !secure || !secureOptions ) {
+            const { areaId } = req.params;
+            const { host, port, user, password, secure, secureOptions, selectedFolder } = req.body;
+            
+            if (!areaId || !host || !port || !user || !password || !selectedFolder) {
                 return res.status(400).json({
                     success: false,
-                    message: "Missing ftp-server required fields."
-                });
-            }
-            const newFtpServer = new FtpServer({
-                host: host,
-                port: port, 
-                user: user,
-                password: password, 
-                secure: secure,
-                secureOptions: secureOptions
-            });
-
-            const savedFtpServer = await newFtpServer.save();
-            // update area with new ftp server;
-            const updatedArea = await Area.findByIdAndUpdate(
-                areaId,
-                { ftpServer: savedFtpServer._id },
-                { new: true }
-            )
-            
-            if (!updatedArea) {
-                return res.status(404).json({
-                    sucess: false,
-                    message: "Area not found"
+                    message: "Missing required fields: areaId, host, port, user, password, folder"
                 });
             }
 
-            return res.status(201).json({
-                success: true,
-                message: "Ftp server saved successfully and area updated with new ftp server",
-                ftpServer: savedFtpServer
-            })
-        } catch (error) {
-            return res.status(500).json({
-                success: false,
-                message: "Internal server error",
-                error: error.message
-            });
-        }
-    }
-
-    // update the info of ftp server for a specific area
-    async updateFtpServer(req, res) {
-        try {
-            const { areaId, host, port, user, password, secure, secureOptions } = req.body;
-            
-            if (!areaId) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Area ID is required"
-                });
-            }
-
-            // Check if the area exists and belongs to the current user's business
+            // First, check if the area exists
             const area = await Area.findById(areaId);
             if (!area) {
                 return res.status(404).json({
                     success: false,
                     message: "Area not found"
-                });
+                }); 
             }
 
-            // Verify the area belongs to the current user's business
-            if (area.businessId.toString() !== req.user.businessId.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Access denied. You can only update FTP servers for areas in your business"
+            let ftpServer;
+            let isNewFtpServer = false;
+
+            // Check if area already has an FTP server
+            if (area.ftpServer) {
+                // Update existing FTP server
+                console.log(`Updating existing FTP server for area: ${areaId}`);
+                
+                ftpServer = await FtpServer.findByIdAndUpdate(
+                    area.ftpServer,
+                    {
+                        host: host,
+                        port: parseInt(port),
+                        user: user,
+                        password: password,
+                        secure: secure === 'true' || secure === true,
+                        secureOptions: secureOptions || { rejectUnauthorized: false },
+                        folder: selectedFolder
+                    },
+                    { new: true, runValidators: true }
+                );
+
+                if (!ftpServer) {
+                    return res.status(404).json({
+                        success: false,
+                        message: "FTP server not found for this area"
+                    });
+                }
+
+                console.log(`✅ Updated existing FTP server: ${ftpServer._id}`);
+            } else {
+                // Create new FTP server
+                console.log(`Creating new FTP server for area: ${areaId}`);
+                
+                ftpServer = new FtpServer({
+                    host: host,
+                    port: parseInt(port),
+                    user: user,
+                    password: password,
+                    secure: secure === 'true' || secure === true,
+                    secureOptions: secureOptions || { rejectUnauthorized: false },
+                    folder: selectedFolder
                 });
-            }
 
-            // Check if the area has an existing FTP server
-            if (!area.ftpServer) {
-                return res.status(400).json({
-                    success: false,
-                    message: "No FTP server configured for this area. Use input-ftpserver endpoint instead."
-                });
-            }
+                ftpServer = await ftpServer.save();
+                isNewFtpServer = true;
 
-            // Update the existing FTP server
-            const updateData = {};
-            if (host !== undefined) updateData.host = host;
-            if (port !== undefined) updateData.port = port;
-            if (user !== undefined) updateData.user = user;
-            if (password !== undefined) updateData.password = password;
-            if (secure !== undefined) updateData.secure = secure;
-            if (secureOptions !== undefined) updateData.secureOptions = secureOptions;
+                // Update area with new FTP server reference
+                await Area.findByIdAndUpdate(
+                    areaId,
+                    { ftpServer: ftpServer._id },
+                    { new: true }
+                );
 
-            // Check if at least one field is provided for update
-            if (Object.keys(updateData).length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: "At least one field must be provided for update"
-                });
-            }
-
-            const updatedFtpServer = await FtpServer.findByIdAndUpdate(
-                area.ftpServer,
-                updateData,
-                { new: true, runValidators: true }
-            );
-
-            if (!updatedFtpServer) {
-                return res.status(404).json({
-                    success: false,
-                    message: "FTP server not found"
-                });
+                console.log(`✅ Created new FTP server: ${ftpServer._id} and linked to area: ${areaId}`);
             }
 
             return res.status(200).json({
                 success: true,
-                message: "FTP server updated successfully",
-                ftpServer: updatedFtpServer
+                message: "FTP server saved successfully",
+                ftpServer: {
+                    _id: ftpServer._id,
+                    host: ftpServer.host,
+                    port: ftpServer.port,
+                    user: ftpServer.user,
+                    secure: ftpServer.secure,
+                    secureOptions: ftpServer.secureOptions,
+                    folder: ftpServer.folder
+                }
             });
 
         } catch (error) {
+            console.error('Error in inputFtpServer:', error);
             return res.status(500).json({
                 success: false,
                 message: "Internal server error",
@@ -396,6 +369,13 @@ class parkingAreaController {
     // Test FTP server connectivity before saving
     async testFtpServerConnection(req, res) {
         try {
+            const { areaId } = req.params;
+            if (!areaId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Area ID is required"
+                });
+            }
             const { host, port, user, password, secure, secureOptions } = req.body;
             
             // Validate required fields
@@ -407,9 +387,9 @@ class parkingAreaController {
             }
             
             const client = new Client();
-
             let connectionSuccessful = false;
             let errorMessage = '';
+            let availableFolders = [];
 
             try {
                 // Set timeout for connection test (10 seconds)
@@ -421,12 +401,23 @@ class parkingAreaController {
                     port: parseInt(port),
                     user: user,
                     password: password,
-                    secure: secure,
-                    secureOptions: secureOptions
+                    secure: secure === 'true' || secure === true,
+                    secureOptions: secureOptions || { rejectUnauthorized: false }
                 });
 
                 // Test if we can list directory (basic connectivity test)
-                // await client.list();
+                const listing = await client.list();
+                
+                // Extract folder names from the listing
+                availableFolders = listing
+                    .filter(item => item.type === 2) // 2 = directory, 1 = file
+                    .map(item => ({
+                        name: item.name,
+                        size: item.size,
+                        modifiedAt: item.modifiedAt,
+                        permissions: item.permissions
+                    }))
+                    .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
 
                 connectionSuccessful = true;
                 
@@ -443,14 +434,21 @@ class parkingAreaController {
             }
 
             // Return the result
+            if (!connectionSuccessful) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'FTP server connection failed!',
+                    error: errorMessage
+                });
+            }
+
             return res.status(200).json({
                 success: true,
                 data: {
                     canConnect: connectionSuccessful,
-                    message: connectionSuccessful 
-                        ? 'FTP server connection successful' 
-                        : `FTP server connection failed: ${errorMessage}`,
-                    error: connectionSuccessful ? null : errorMessage
+                    message: 'FTP server connection successful',
+                    availableFolders: availableFolders,
+                    totalFolders: availableFolders.length
                 }
             });
 

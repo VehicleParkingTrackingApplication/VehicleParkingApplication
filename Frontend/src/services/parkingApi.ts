@@ -1,17 +1,17 @@
 import { 
   fetchAuthApi, 
-  postAuthApi, 
-  putAuthApi 
+  postAuthApi
 } from '@/services/api';
 
 
 export interface FtpPayload {
-  protocol: string;
-  encryption: string;
   host: string;
   port: number;
   user: string;
   password: string;
+  secure: boolean;
+  secureOptions?: object;
+  selectedFolder?: string;
 }
 
 export interface AreaPayload {
@@ -43,9 +43,15 @@ export const inputParkingArea = async (payload: CreateAreaPayload) => {
   return res.json();
 };
 
-export const updateFtpServer = async (areaId: string, ftp: FtpPayload) => {
-  const res = await putAuthApi(`parking-areas/${areaId}/ftp`, undefined, JSON.stringify(ftp));
-  if (!res.ok) throw new Error('Failed to update FTP server');
+export const saveFtpServer = async (areaId: string, ftp: FtpPayload) => {
+  const res = await postAuthApi(`parking/area/${areaId}/input-ftpserver`, undefined, JSON.stringify(ftp));
+  if (!res.ok) throw new Error('Failed to save FTP server');
+  return res.json();
+};
+
+export const checkFtpServerStatus = async (areaId: string, ftp: FtpPayload) => {
+  const res = await postAuthApi(`parking/area/${areaId}/status-ftpserver`, undefined, JSON.stringify(ftp));
+  if (!res.ok) throw new Error('Failed to check FTP server status');
   return res.json();
 };
 

@@ -14,8 +14,10 @@ import { createServer } from 'http';
 
 // Import scheduler services
 import { ScheduledFtpService } from './src/app/services/scheduledFtpService.js';
-import { ScheduledSimulationService } from './src/app/services/scheduledSimulationService.js';
-import { WebSocketService } from './src/app/services/webSocketService.js';
+// import { ScheduledSimulationService } from './src/app/services/scheduledSimulationService.js';
+import { ScheduledMonitoringService } from './src/app/services/scheduledMonitoringService.js';
+import { WebSocketService } from './src/app/services/webSocketServiceSimulation.js';
+import { WebSocketServiceFtp } from './src/app/services/webSocketServiceFtpServer.js';
 
 dotenv.config();
 
@@ -30,24 +32,31 @@ const PORT = process.env.PORT || 1313;
 dbConnect();
 
 // Init web socket service
-const webSocketService = new WebSocketService();
-webSocketService.initialize(server);
+// const webSocketService = new WebSocketService();
+// webSocketService.initialize(server);
 
+// Init web socket for ftp server
+const webSocketServiceFtp = new WebSocketServiceFtp();
+webSocketServiceFtp.initialize(server);
 
 // Init schedulers services for data simulation processing
 // const scheduledSimulationService = new ScheduledSimulationService();
 // scheduledSimulationService.startScheduledProcessing();
 
 // Init schedulers services for data FTP
-// const scheduledFtpService = new ScheduledFtpService();
-// scheduledFtpService.startScheduledProcessing();
+const scheduledFtpService = new ScheduledFtpService();
+scheduledFtpService.startScheduledProcessing();
+
+// Init scheduled monitoring service for long-parked vehicles
+const scheduledMonitoringService = new ScheduledMonitoringService();
+scheduledMonitoringService.startScheduledMonitoring();
+
 
 // CORS configuration for development
-// app.use(cors());
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['https://yourdomain.com'] // Replace with your production domain
-        : ['http://localhost:5173', 'http://127.0.0.1:5173'], // Frontend dev server
+        : ['http://localhost:5173'], // Frontend dev server
     credentials: true, // Allow cookies and credentials
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

@@ -19,8 +19,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { authInterceptor } from '../services/authInterceptor';
-import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parking';
-import { saveReport } from '@/services/reports';
+import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parkingApi';
+import { saveReport } from '@/services/reportsApi';
 import { Save } from 'lucide-react';
 import { webSocketService } from '@/services/websocket';
 
@@ -561,7 +561,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
             areaId: selectedAreaId,
             type: chartType,
             chartData: chartData,
-            chartImage: null, // Temporarily disabled until dom-to-image-more is properly installed
+            chartImage: undefined, // Temporarily disabled until dom-to-image-more is properly installed
             filters: { startDate, endDate, searchTerm, overstayLimit, entriesPeriod },
             description
         };

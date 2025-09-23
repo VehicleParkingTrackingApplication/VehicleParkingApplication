@@ -1,25 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, X, Check, Trash2, AlertCircle, Info, CheckCircle, AlertTriangle } from 'lucide-react';
-import { Button } from './ui/button';
-import { fetchAuthApi, putAuthApi, deleteAuthApi } from '../services/api';
-
-// Local interfaces for notifications
-interface Notification {
-  _id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
-  isRead: boolean;
-  createdAt: string;
-  updatedAt: string;
-  userId?: string;
-}
-
-interface NotificationResponse {
-  notifications: Notification[];
-  unreadCount: number;
-  totalCount: number;
-}
+import { Button } from '../ui/button';
+import { 
+  getRecentNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead, 
+  deleteNotification,
+  type Notification
+} from '../../services/notificationApi';
 
 interface NotificationPopupProps {
   onClose: () => void;
@@ -31,6 +19,30 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const popupRef = useRef<HTMLDivElement>(null);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // Fetch last 10 notifications from backend
+      const data = await getRecentNotifications();
+      if (data) {
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
+      } else {
+        throw new Error('Failed to fetch notifications');
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError('Failed to load notifications');
+      // Set mock data for demonstration (limited to 10)
+      setNotifications(getMockNotifications().slice(0, 10));
+      setUnreadCount(3);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
@@ -46,35 +58,12 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose]);
-
-  const fetchNotifications = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      const response = await fetchAuthApi('notifications');
-      if (response.ok) {
-        const data: NotificationResponse = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      } else {
-        throw new Error('Failed to fetch notifications');
-      }
-    } catch (err) {
-      console.error('Error fetching notifications:', err);
-      setError('Failed to load notifications');
-      setNotifications(getMockNotifications());
-      setUnreadCount(getMockNotifications().filter(n => !n.isRead).length);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [onClose, fetchNotifications]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      const response = await putAuthApi(`notifications/${notificationId}/read`);
-      if (response.ok) {
+      const success = await markNotificationAsRead(notificationId);
+      if (success) {
         setNotifications(prev => 
           prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n)
         );
@@ -87,9 +76,11 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
 
   const handleMarkAllAsRead = async () => {
     try {
-      const response = await putAuthApi('notifications/read-all');
-      if (response.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      const success = await markAllNotificationsAsRead();
+      if (success) {
+        setNotifications(prev => 
+          prev.map(notification => ({ ...notification, isRead: true }))
+        );
         setUnreadCount(0);
       }
     } catch (err) {
@@ -99,8 +90,8 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
 
   const handleDeleteNotification = async (notificationId: string) => {
     try {
-      const response = await deleteAuthApi(`notifications/${notificationId}`);
-      if (response.ok) {
+      const success = await deleteNotification(notificationId);
+      if (success) {
         const notification = notifications.find(n => n._id === notificationId);
         setNotifications(prev => prev.filter(n => n._id !== notificationId));
         if (notification && !notification.isRead) {

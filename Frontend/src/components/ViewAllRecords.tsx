@@ -9,12 +9,12 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { getAllRecords } from '@/services/parking';
+import { getAllRecords } from '@/services/parkingApi';
 
 interface ParkingRecord {
   _id: string;
-  plate: string;
-  action: 'ENTRY' | 'EXIT';
+  plateNumber: string;
+  status: 'ENTRY' | 'EXIT';
   time: string;
   date: string;
   image?: string;
@@ -23,7 +23,7 @@ interface ParkingRecord {
 
 interface ApiResponse {
   success: boolean;
-  records: ParkingRecord[];
+  data: ParkingRecord[];
   pagination?: {
     total: number;
     page: number;
@@ -51,8 +51,8 @@ export default function ViewAllRecords() {
         const res: ApiResponse = await getAllRecords(areaId, page, RECORDS_PER_PAGE);
         console.log('✅ API Response:', res);
         
-        if (res.success && res.records) {
-          setRecords(res.records);
+        if (res.success && res.data) {
+          setRecords(res.data);
           
           // Calculate total pages based on pagination info or array length
           if (res.pagination) {
@@ -62,12 +62,12 @@ export default function ViewAllRecords() {
           } else {
             // Fallback: calculate from current page data
             // This assumes if we get a full page, there might be more
-            if (res.records.length === RECORDS_PER_PAGE) {
+            if (res.data.length === RECORDS_PER_PAGE) {
               setTotalPages(page + 1); // At least one more page
             } else {
               setTotalPages(page); // This is the last page
             }
-            setTotalRecords(res.records.length);
+            setTotalRecords(res.data.length);
           }
         }
         
@@ -119,10 +119,10 @@ export default function ViewAllRecords() {
               {records.length > 0 ? (
                 records.map((record, index) => (
                   <TableRow key={record._id || index} className="hover:bg-white/5">
-                    <TableCell className="font-medium text-white">{record.plate}</TableCell>
+                    <TableCell className="font-medium text-white">{record.plateNumber}</TableCell>
                     <TableCell>
-                      <span className={`font-semibold ${getActionColor(record.action)}`}>
-                        {record.action}
+                      <span className={`font-semibold ${getActionColor(record.status)}`}>
+                        {record.status}
                       </span>
                     </TableCell>
                     <TableCell className="text-white">{record.date}</TableCell>
@@ -132,7 +132,7 @@ export default function ViewAllRecords() {
                       {record.image && record.image !== 'image.jpg' ? (
                         <img 
                           src={record.image} 
-                          alt={`Vehicle ${record.plate}`}
+                          alt={`Vehicle ${record.plateNumber}`}
                           className="w-16 h-12 object-cover rounded"
                         />
                       ) : (
