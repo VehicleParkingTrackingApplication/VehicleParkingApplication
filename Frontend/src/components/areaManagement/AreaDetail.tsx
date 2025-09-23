@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { authInterceptor } from '../../services/authInterceptor';
 import { fetchAuthApi } from '../../services/api';
-import { getExistingVehicles, getAllRecords } from '@/services/parkingApi';
+import { getExistingVehicles, getAllRecords, triggerFtpFetch } from '@/services/parkingApi';
 import { FtpServerEditPopup } from './FtpServerEditPopup';
 
 interface Area {
@@ -170,6 +170,27 @@ export default function AreaDetail() {
     setShowFtpEditPopup(true);
   };
 
+  const handleTriggerFtp = async () => {
+    try {
+      if (!areaId) return;
+      // Basic check: must have some ftpServer configured
+      if (!area?.ftpServer || String(area.ftpServer).trim().length === 0) {
+        alert('Please configure FTP server first.');
+        return;
+      }
+      setLoading(true);
+      await triggerFtpFetch(areaId);
+      // Refresh details after triggering
+      await fetchAreaDetails();
+      alert('FTP fetch triggered successfully. Data refresh started.');
+    } catch (err) {
+      console.error('Failed to trigger FTP fetch:', err);
+      alert('Failed to trigger FTP fetch. Check console for details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFtpServerSuccess = () => {
     // Refresh area details to get updated FTP server info
     if (areaId) {
@@ -303,6 +324,13 @@ export default function AreaDetail() {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   Change FTP Server
+                </Button>
+                <Button
+                  onClick={handleTriggerFtp}
+                  variant="outline"
+                  className="border-yellow-500 text-yellow-300 hover:bg-yellow-600 hover:text-white"
+                >
+                  Trigger FTP Server
                 </Button>
               </div>
             </div>

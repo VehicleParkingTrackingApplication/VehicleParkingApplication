@@ -625,6 +625,7 @@ export default function AreaManagement() {
                             >
                               Records
                             </Button>
+                            
                             <Button
                               type="button"
                               variant="outline"
@@ -638,7 +639,23 @@ export default function AreaManagement() {
                               }}
                               className="text-green-400 border-green-400 hover:bg-green-400 hover:text-white"
                             >
+                              
                               Vehicles
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                navigate(`/area/${area._id}/details`, {
+                                  state: { areaName: area.name }
+                                });
+                              }}
+                              className="text-indigo-400 border-indigo-400 hover:bg-indigo-400 hover:text-white"
+                            >
+                              View Detail
                             </Button>
                           </div>
                         </TableCell>

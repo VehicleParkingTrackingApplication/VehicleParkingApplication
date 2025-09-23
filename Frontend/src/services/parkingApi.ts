@@ -82,3 +82,9 @@ export const getVehicleEntryPredictions = async (timestamps: string[]) => {
   if (!res.ok) throw new Error('Failed to fetch vehicle entry predictions');
   return res.json();
 };
+
+export const triggerFtpFetch = async (areaId: string) => {
+  const res = await postAuthApi(`parking/area/${areaId}/trigger-ftp`);
+  if (!res.ok) throw new Error('Failed to trigger FTP fetch');
+  return res.json();
+};

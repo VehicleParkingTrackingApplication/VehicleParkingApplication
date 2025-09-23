@@ -22,7 +22,7 @@ import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parkingApi';
 import { saveReport } from '@/services/reportsApi';
 import { Save } from 'lucide-react';
-import { webSocketService } from '@/services/websocket';
+// WebSocket removed for this page – dashboard now fetches via API only
 
 // --- INTERFACES ---
 interface VehicleRecord {
@@ -180,16 +180,12 @@ export default function ParkingDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
-  const [wsConnected, setWsConnected] = useState(false);
-  const [lastDataUpdate, setLastDataUpdate] = useState<string | null>(null);
-  const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
 
   // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [overstayLimit, setOverstayLimit] = useState(60);
     
   // --- ML Predictor State ---
-  const [predictLoading, setPredictLoading] = useState(false);
   const [rawHourlyPredictions, setRawHourlyPredictions] = useState<{ [key: string]: number }>({});
 
   // --- State for handling save report feedback ---
@@ -237,84 +233,11 @@ export default function ParkingDashboard() {
     if (filter) setActiveFilter(filter);
   }, [searchParams]);
 
-  // Memoized WebSocket event handlers
-  const handleDataUpdated = useCallback((data: any) => {
-    console.log('📊 Received data update notification:', data);
-    setLastDataUpdate(data.timestamp);
-    
-    // If the update is for the currently selected area, refresh the data
-    if (selectedAreaId && data.areaId === selectedAreaId) {
-      console.log('🔄 Refreshing data for current area due to WebSocket update');
-      setDashboardLoading(true);
-      // Trigger data refresh
-      setTimeout(() => {
-        fetchDashboardData(selectedAreaId);
-      }, 1000);
-    }
-  }, [selectedAreaId]);
+  // WebSocket event handlers removed
 
-  const handleDataError = useCallback((data: any) => {
-    console.error('❌ WebSocket data error:', data);
-    if (selectedAreaId && data.areaId === selectedAreaId) {
-      setError(`Data update failed: ${data.error}`);
-    }
-  }, [selectedAreaId]);
+  // WebSocket connection management removed
 
-  const handleRefreshComplete = useCallback((data: any) => {
-    console.log('🔄 Refresh complete:', data);
-    if (selectedAreaId && data.areaId === selectedAreaId) {
-      if (data.success) {
-        setError(''); // Clear any previous errors
-      } else {
-        setError(`Manual refresh failed: ${data.error}`);
-      }
-    }
-  }, [selectedAreaId]);
-
-  const handleLiveUpdatesToggled = useCallback((data: any) => {
-    console.log('📊 Live updates toggled:', data.enabled);
-    setLiveUpdatesEnabled(data.enabled);
-  }, []);
-
-  // Effect to manage WebSocket connection and events
-  useEffect(() => {
-    // Check WebSocket connection status
-    const checkConnection = () => {
-      const status = webSocketService.getConnectionStatus();
-      setWsConnected(status.isConnected);
-      setLiveUpdatesEnabled(status.liveUpdatesEnabled);
-    };
-
-    // Initial connection check
-    checkConnection();
-
-    // Set up WebSocket event listeners
-    const cleanupDataUpdated = webSocketService.addEventListener('websocket-data-updated', handleDataUpdated);
-    const cleanupDataError = webSocketService.addEventListener('websocket-data-error', handleDataError);
-    const cleanupRefreshComplete = webSocketService.addEventListener('websocket-refresh-complete', handleRefreshComplete);
-    const cleanupLiveUpdatesToggled = webSocketService.addEventListener('websocket-live-updates-toggled', handleLiveUpdatesToggled);
-
-    // Check connection status periodically
-    const connectionInterval = setInterval(checkConnection, 5000);
-
-    // Cleanup function
-    return () => {
-      cleanupDataUpdated();
-      cleanupDataError();
-      cleanupRefreshComplete();
-      cleanupLiveUpdatesToggled();
-      clearInterval(connectionInterval);
-    };
-  }, [selectedAreaId, handleDataUpdated, handleDataError, handleRefreshComplete, handleLiveUpdatesToggled]);
-
-  // Effect to clean up WebSocket room when component unmounts
-  useEffect(() => {
-    return () => {
-      if (selectedAreaId) {
-        webSocketService.leaveArea(selectedAreaId);
-      }
-    };
-  }, [selectedAreaId]);
+  // WebSocket cleanup removed
 
   // Memoized function to fetch areas
   const fetchAreas = useCallback(async () => {
@@ -401,8 +324,6 @@ export default function ParkingDashboard() {
 
   useEffect(() => {
     if (selectedAreaId) {
-      // Join WebSocket room for this area
-      webSocketService.joinArea(selectedAreaId);
       fetchDashboardData(selectedAreaId);
     }
   }, [selectedAreaId, fetchDashboardData]);
@@ -435,7 +356,7 @@ export default function ParkingDashboard() {
     }
 
     const fetchPredictions = async () => {
-      setPredictLoading(true);
+      // prediction loading state removed
       const lastRecordDate = new Date(Math.max(
           Date.now(),
           ...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)
@@ -461,7 +382,7 @@ export default function ParkingDashboard() {
         console.error("Prediction API call failed:", err);
         setRawHourlyPredictions({});
       } finally {
-        setPredictLoading(false);
+        // prediction loading state removed
       }
     };
     fetchPredictions();
@@ -657,65 +578,6 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
           <header className="text-center">
              <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
              <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
-             
-             {/* WebSocket Connection Status */}
-             <div className="flex items-center justify-center gap-4 mt-4">
-               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                 wsConnected 
-                   ? (liveUpdatesEnabled 
-                       ? 'bg-green-900/30 text-green-400 border border-green-700' 
-                       : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700')
-                   : 'bg-red-900/30 text-red-400 border border-red-700'
-               }`}>
-                 <div className={`w-2 h-2 rounded-full ${
-                   wsConnected 
-                     ? (liveUpdatesEnabled ? 'bg-green-400' : 'bg-yellow-400')
-                     : 'bg-red-400'
-                 }`}></div>
-                 {wsConnected 
-                   ? (liveUpdatesEnabled ? 'Live Updates Connected' : 'Live Updates Paused')
-                   : 'Live Updates Disconnected'
-                 }
-               </div>
-               
-               {selectedAreaId && (
-                 <>
-                   <Button 
-                     variant="outline" 
-                     size="sm"
-                     onClick={() => {
-                       webSocketService.refreshAreaData(selectedAreaId);
-                       setDashboardLoading(true);
-                       setTimeout(() => setDashboardLoading(false), 2000);
-                     }}
-                     disabled={!wsConnected || dashboardLoading}
-                     className="text-xs"
-                   >
-                     {dashboardLoading ? 'Refreshing...' : 'Manual Refresh'}
-                   </Button>
-                   
-                   <Button 
-                     variant="outline" 
-                     size="sm"
-                     onClick={() => webSocketService.toggleLiveUpdates()}
-                     disabled={!wsConnected}
-                     className={`text-xs ${
-                       liveUpdatesEnabled 
-                         ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
-                         : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
-                     }`}
-                   >
-                     {liveUpdatesEnabled ? 'Live Updates: ON' : 'Live Updates: OFF'}
-                   </Button>
-                 </>
-               )}
-               
-               {lastDataUpdate && (
-                 <div className="text-xs text-gray-400">
-                   Last update: {new Date(lastDataUpdate).toLocaleTimeString()}
-                 </div>
-               )}
-             </div>
           </header>
           {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}  
           {saveMessage && (
@@ -806,9 +668,6 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
-                  {/* Chart 1: Hourly Activity with Prediction */}
-{/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl lg:col-span-2"> --> */}
-                    <h3 className="text-lg font-semibold mb-4">Hourly Activity (Historical & Predicted)</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={combinedHourlyData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />

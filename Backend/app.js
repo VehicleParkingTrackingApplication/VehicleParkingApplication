@@ -25,7 +25,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const server = createServer(app);
+// const server = createServer(app);
 const PORT = process.env.PORT || 1313;
 
 // Connect to DB
@@ -36,20 +36,20 @@ dbConnect();
 // webSocketService.initialize(server);
 
 // Init web socket for ftp server
-const webSocketServiceFtp = new WebSocketServiceFtp();
-webSocketServiceFtp.initialize(server);
+// const webSocketServiceFtp = new WebSocketServiceFtp();
+// webSocketServiceFtp.initialize(server);
 
 // Init schedulers services for data simulation processing
 // const scheduledSimulationService = new ScheduledSimulationService();
 // scheduledSimulationService.startScheduledProcessing();
 
 // Init schedulers services for data FTP
-const scheduledFtpService = new ScheduledFtpService();
-scheduledFtpService.startScheduledProcessing();
+// const scheduledFtpService = new ScheduledFtpService();
+// scheduledFtpService.startScheduledProcessing();
 
 // Init scheduled monitoring service for long-parked vehicles
-const scheduledMonitoringService = new ScheduledMonitoringService();
-scheduledMonitoringService.startScheduledMonitoring();
+// const scheduledMonitoringService = new ScheduledMonitoringService();
+// scheduledMonitoringService.startScheduledMonitoring();
 
 
 // CORS configuration for development
@@ -101,12 +101,12 @@ app.set('views', join(__dirname, 'resources/views'));
 route(app);
 
 // start web socket server
-server.listen(PORT, () =>
-    console.log(`Server is running on http://localhost:${PORT}`),
-);
-// app.listen(PORT, () =>
+// server.listen(PORT, () =>
 //     console.log(`Server is running on http://localhost:${PORT}`),
 // );
+app.listen(PORT, () =>
+    console.log(`Server is running on http://localhost:${PORT}`),
+);
 
 const handleRequest = serverless(app);
 export const handler = async (event, context) => {
