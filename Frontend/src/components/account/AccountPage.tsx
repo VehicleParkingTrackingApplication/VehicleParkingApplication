@@ -294,7 +294,7 @@ export default function AccountPage() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </form>
 
 
                         {error && (
@@ -304,7 +304,7 @@ export default function AccountPage() {
                         )}
                     </CardContent>
                 </Card>
-            </div>
+            </main>
         </div>
     );
 }

@@ -347,7 +347,7 @@ export default function ParkingDashboard() {
         getExistingVehicles(areaId, 1, 1000)
       ]);
       
-      const rawRecords: RawRecord[] = recordsResponse.records || [];
+      const rawRecords: RawRecord[] = (recordsResponse && (recordsResponse.data || recordsResponse.records)) || [];
       
       // Process raw records into a more useful format with Date objects and duration
       const entryMap = new Map<string, RawRecord>();
@@ -391,7 +391,7 @@ export default function ParkingDashboard() {
           }
       });
       setAllRecords(processedRecords);
-      setExistingVehicles(vehiclesResponse.vehicles || []);
+      setExistingVehicles((vehiclesResponse && (vehiclesResponse.data || vehiclesResponse.vehicles)) || []);
     } catch (err) { 
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); 
     } finally { 
