@@ -159,13 +159,13 @@ class parkingAreaController {
             const { areaId } = req.params;
             const { host, port, user, password, secure, secureOptions, selectedFolder } = req.body;
             
+            console.log("CHECK ", areaId, host, port, user, password, selectedFolder);
             if (!areaId || !host || !port || !user || !password || !selectedFolder) {
                 return res.status(400).json({
                     success: false,
                     message: "Missing required fields: areaId, host, port, user, password, folder"
                 });
             }
-
             // First, check if the area exists
             const area = await Area.findById(areaId);
             if (!area) {
