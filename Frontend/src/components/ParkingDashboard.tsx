@@ -1,4 +1,4 @@
-import domtoimage from 'dom-to-image-more';
+// import domtoimage from 'dom-to-image-more'; // Temporarily commented out due to package issue
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
@@ -155,7 +155,7 @@ export default function ParkingDashboard() {
   const AngleTick = (props: any) => {
     const { x, y, payload } = props;
     return (
-      <text x={x} y={y} dy={16} textAnchor="end" transform={`rotate(-20, ${x}, ${y})`} fill="#888888" fontSize={12}>
+      <text x={x} y={y} dy={16} textAnchor="end" transform={`rotate(-20, ${x}, ${y})`} fill="rgba(255, 255, 255, 0.8)" fontSize={12}>
         {payload?.value}
       </text>
     );
@@ -543,21 +543,25 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
         // --- NEW: Add a small delay to ensure the chart is fully rendered ---
         await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
 
-        const chartImage = await domtoimage.toPng(chartElement, {
-            bgcolor: '#18181b'
-        });
+        // Temporarily disabled due to dom-to-image-more package issue
+        // const chartImage = await domtoimage.toPng(chartElement, {
+        //     bgcolor: '#18181b'
+        // });
         
-        // --- NEW: Explicitly check if the image capture was successful ---
-        if (!chartImage || chartImage.length < 100) { // Check if the result is valid
-             throw new Error("Image capture failed, the resulting data is empty.");
-        }
+        // // --- NEW: Explicitly check if the image capture was successful ---
+        // if (!chartImage || chartImage.length < 100) { // Check if the result is valid
+        //      throw new Error("Image capture failed, the resulting data is empty.");
+        // }
+        
+        // Temporary fallback - show alert instead of image export
+        alert('Chart export temporarily disabled - dom-to-image-more package needs to be installed');
 
         const payload = {
             name: reportName,
             areaId: selectedAreaId,
             type: chartType,
             chartData: chartData,
-            chartImage: chartImage,
+            chartImage: undefined, // Temporarily disabled until dom-to-image-more is properly installed
             filters: { startDate, endDate, searchTerm, overstayLimit, entriesPeriod },
             description
         };
@@ -730,8 +734,8 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                   setSelectedAreaId(e.target.value);
                   updateURLParams({ area: e.target.value || null });
                 }} className="w-full backdrop-blur-md bg-white/20 border-white/30 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
-                    <option value="" disabled>Choose an area...</option>
-                    {areas.map((area) => ( <option key={area._id} value={area._id}> {area.name} </option> ))}
+                    <option value="" disabled className="text-black">Choose an area...</option>
+                    {areas.map((area) => ( <option key={area._id} value={area._id} className="text-black"> {area.name} </option> ))}
                 </select>
               </div>
               <div>
@@ -795,7 +799,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                 </section>
                 
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div ref={hourlyChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md lg:col-span-2">
+                  <div ref={hourlyChartRef} className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl lg:col-span-2">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">Hourly Activity (Historical & Predicted)</h3>
                         <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('hourly-activity', combinedHourlyData, 'Hourly entries, exits, and next-day predictions.')}>
@@ -807,19 +811,19 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                     <h3 className="text-lg font-semibold mb-4">Hourly Activity (Historical & Predicted)</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={combinedHourlyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
-                        <YAxis stroke="#888888" fontSize={12} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
+                        <XAxis dataKey="hour" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
+                        <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
                         <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                         <Legend />
-                        <Bar dataKey="Entries" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Exits" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                         <Line type="monotone" dataKey="Predictor" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                        <Bar dataKey="Entries" fill="rgba(255, 255, 255, 0.7)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Exits" fill="rgba(255, 255, 255, 0.5)" radius={[4, 4, 0, 0]} />
+                         <Line type="monotone" dataKey="Predictor" stroke="rgba(255, 255, 255, 0.8)" strokeWidth={2} dot={{ r: 4 }} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                   
-                  <div ref={entriesChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                  <div ref={entriesChartRef} className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
                   {/* Chart 2: Historical Vehicle Entries */}
 {/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex justify-between items-center mb-4">
@@ -838,18 +842,18 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={combinedEntriesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="period" stroke="#888888" fontSize={12} tick={<AngleTick />} height={60} />
-                        <YAxis stroke="#888888" fontSize={12} allowDecimals={false}/>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
+                        <XAxis dataKey="period" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} tick={<AngleTick />} height={60} />
+                        <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} allowDecimals={false}/>
                         <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                         <Legend />
-                        <Line type="monotone" dataKey="Entries" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
-                        <Line type="monotone" dataKey="Predictor" stroke="#a78bfa" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+                        <Line type="monotone" dataKey="Entries" stroke="rgba(255, 255, 255, 0.8)" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="Predictor" stroke="rgba(255, 255, 255, 0.6)" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                  
-                  <div ref={overstayChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                  <div ref={overstayChartRef} className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
                      <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
                         <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, `Vehicles staying longer than ${overstayLimit} minutes.`)}>
@@ -866,18 +870,18 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={overstayChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="date" stroke="#888888" fontSize={12} />
-                        <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
+                        <XAxis dataKey="date" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
+                        <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} allowDecimals={false} />
                         <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
                         <Legend />
-                        <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Overstaying Vehicles" fill="rgba(255, 255, 255, 0.7)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </section>
                 
-                <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
                 {/* Records Table */}
 {/* <!--                 <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                   <h3 className="text-lg font-semibold mb-4">Filtered Records ({filteredRecords.length} found)</h3>

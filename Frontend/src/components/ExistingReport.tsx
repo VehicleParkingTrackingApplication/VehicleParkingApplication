@@ -57,7 +57,7 @@ export default function ExistingReportsPage() {
     return (...args: any[]) => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        func.apply(this, args);
+        func(...args);
       }, delay);
     };
   };
@@ -95,18 +95,18 @@ export default function ExistingReportsPage() {
 
   const handleDotClick = (index: number) => {
     const container = scrollContainerRef.current;
-    const childElement = container?.children[index] as HTMLElement;
-    if (childElement) {
-      const containerWidth = container.offsetWidth;
-      const childWidth = childElement.offsetWidth;
-      // Calculate the scroll position to center the child element
-      const scrollLeft = childElement.offsetLeft - (containerWidth / 2) + (childWidth / 2);
+    if (!container) return;
+    const childElement = container.children[index] as HTMLElement | undefined;
+    if (!childElement) return;
+    const containerWidth = container.offsetWidth;
+    const childWidth = childElement.offsetWidth;
+    // Calculate the scroll position to center the child element
+    const scrollLeft = childElement.offsetLeft - (containerWidth / 2) + (childWidth / 2);
 
-      container.scrollTo({
-        left: scrollLeft,
-        behavior: 'smooth'
-      });
-    }
+    container.scrollTo({
+      left: scrollLeft,
+      behavior: 'smooth'
+    });
   };
 
 
@@ -284,7 +284,7 @@ export default function ExistingReportsPage() {
                 <CardContent className="p-6 grid grid-cols-1 lg:grid-cols-5 gap-8">
                   <div className="lg:col-span-3 flex flex-col h-[452px]">
                     <h3 className="text-xl font-medium text-white mb-3 flex items-center"><BarChart2 className="mr-2 h-5 w-5 text-blue-300"/> Data Visualization</h3>
-                    <div className="flex-grow bg-black/30 rounded-xl p-4 border border-white/10 shadow-inner">
+                    <div className="flex-grow backdrop-blur-md bg-white/20 rounded-xl p-4 border border-white/30 shadow-2xl">
                       <Suspense fallback={<div className="flex items-center justify-center h-full text-white/70">Loading Chart...</div>}>
                         <ClientOnlyReportChart report={currentReport} />
                       </Suspense>

@@ -49,6 +49,9 @@ router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentReco
 // GET /api/parking/vehicle/:areaId/all-records
 router.get('/vehicle/:areaId/all-records', requireAuth, vehicle.getAllRecordsByAreaId);
 
+// GET /api/parking/records/:businessId/latest
+router.get('/records/:businessId/latest', requireAuth, vehicle.getAllRecordsByBusinessId);
+
 // New routes for manual input workflow with areaId
 // GET /api/parking/area/:areaId/details
 // router.get('/area/:areaId/details', requireAuth, vehicle.getAreaDetails);

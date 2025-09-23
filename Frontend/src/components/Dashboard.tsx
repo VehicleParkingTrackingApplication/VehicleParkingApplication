@@ -109,7 +109,7 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="backdrop-blur-md bg-white/10 rounded-2xl px-6 py-4 border border-white/20 shadow-2xl">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
+              <div className="p-2 bg-blue-500/20  rounded-lg">
                 <Car className="h-6 w-6 text-blue-300" />
               </div>
               <div className="ml-4">

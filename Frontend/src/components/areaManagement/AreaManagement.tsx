@@ -33,7 +33,7 @@ interface Area {
 
 interface ParkingRecord {
   _id: string;
-  vehicleId: string;
+  plateNumber: string;
   areaId: string;
   entryTime: string;
   exitTime?: string;
@@ -307,6 +307,17 @@ export default function AreaManagement() {
     if (percentage < 50) return 'bg-blue-600';
     if (percentage >= 50 && percentage < 75) return 'bg-yellow-600';
     return 'bg-red-600';
+  };
+
+  // Format duration in minutes as "Xh Ym"
+  const formatDuration = (totalMinutes?: number) => {
+    if (totalMinutes == null) return '-';
+    const minutes = Math.max(0, Math.round(totalMinutes));
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${mins}m`;
   };
 
   // Show loading while checking authentication
@@ -645,23 +656,21 @@ export default function AreaManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vehicle ID</TableHead>
+                  <TableHead>Plate Number</TableHead>
                   <TableHead>Area ID</TableHead>
                   <TableHead>Entry Time</TableHead>
                   <TableHead>Exit Time</TableHead>
                   <TableHead>Duration</TableHead>
-                  <TableHead>Fee</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {records.slice(0, 10).map((record) => (
                   <TableRow key={record._id}>
-                    <TableCell>{record.vehicleId}</TableCell>
+                    <TableCell>{record.plateNumber}</TableCell>
                     <TableCell>{record.areaId}</TableCell>
                     <TableCell>{new Date(record.entryTime).toLocaleString()}</TableCell>
                     <TableCell>{record.exitTime ? new Date(record.exitTime).toLocaleString() : '-'}</TableCell>
-                    <TableCell>{record.duration ? `${record.duration} min` : '-'}</TableCell>
-                    <TableCell>{record.fee ? `$${record.fee}` : '-'}</TableCell>
+                    <TableCell>{formatDuration(record.duration)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

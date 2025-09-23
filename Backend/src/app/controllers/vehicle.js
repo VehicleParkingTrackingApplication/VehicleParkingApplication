@@ -151,6 +151,45 @@ class parkingVehicleController {
         }
     }
 
+    // get all records 
+    async getAllRecordsByBusinessId(req, res) {
+          try {
+            const { businessId } = req.params;
+            if (!businessId) {
+                return res.status(400).json({ message: 'businessId is required' });
+            }
+
+            // Find all areas for the given business
+            const areas = await Area.find({ businessId }).select('_id');
+            const areaIds = areas.map(a => a._id.toString());
+            if (areaIds.length === 0) {
+                return res.json([]);
+            }
+
+            // For each area, fetch up to 10 latest records by entryTime
+            const perAreaPromises = areaIds.map(areaId =>
+                Record.find({ areaId })
+                    .sort({ entryTime: -1 })
+                    .limit(10)
+                    .lean()
+            );
+
+            const perAreaResults = await Promise.all(perAreaPromises);
+            const merged = perAreaResults.flat();
+
+            // Sort merged by entryTime desc and take top 10 overall
+            const latest = merged
+                .filter(r => r && r.entryTime)
+                .sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime))
+                .slice(0, 10);
+
+            res.json(latest);
+        } catch (error) {
+            console.error('Error fetching records:', error);
+            res.status(500).json({ message: 'Server error while fetching records.' });
+        }
+    }
+
     // get recent record for each parking area
     async getRecentRecordsByAreaId(req, res) {
         try {

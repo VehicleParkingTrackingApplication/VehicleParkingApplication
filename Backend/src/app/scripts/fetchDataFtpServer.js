@@ -1,7 +1,6 @@
 import { Client } from "basic-ftp";
 import csvParser from "csv-parser";
 import { PassThrough } from "stream";
-import mongoose from "mongoose";
 import Area from "../models/Area.js";
 import Record from "../models/Record.js";
 import Vehicle from "../models/Vehicle.js";
@@ -120,7 +119,13 @@ export async function fetchDataFtpServer(areaId, options = {}) {
     const saveTimestamp = area.savedTimestamp && area.savedTimestamp.trim() !== '' ? area.savedTimestamp.trim() : null;
     let saveDateObj = null;
     if (saveTimestamp) {
-        saveDateObj = new Date(toSydneyISO(saveTimestamp));
+        // saveDateObj = new Date(toSydneyISO(saveTimestamp));
+        const parsed = new Date(saveTimestamp);
+        if (!isNaN(parsed.getTime())) {
+            saveDateObj = parsed;
+        } else {
+            console.error('Invalid savedTimestamp on area, ignoring:', saveTimestamp);
+        }
     }
     if (!ftpInfo) {
         console.error("FTP server info not found for this area");
@@ -171,6 +176,10 @@ export async function fetchDataFtpServer(areaId, options = {}) {
                     }))
                     .on('data', (row) => {
                         const rowDateTime = mergeDateTime(row.date, row.time);
+                        if (!(rowDateTime instanceof Date) || isNaN(rowDateTime.getTime())) {
+                            console.error('Skipping row due to invalid datetime:', row);
+                            return;
+                        }
                         let shouldProcess = false;
                         if (!saveDateObj) {
                             shouldProcess = true;

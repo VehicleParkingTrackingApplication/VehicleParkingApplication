@@ -58,34 +58,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-<<<<<<< HEAD:Frontend/src/components/notification/NotificationPopup.tsx
   }, [onClose, fetchNotifications]);
-=======
-  }, [onClose]);
-
-  const fetchNotifications = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      const response = await fetchAuthApi('notifications');
-      if (response.ok) {
-        const data: NotificationResponse = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      } else {
-        throw new Error('Failed to fetch notifications');
-      }
-    } catch (err) {
-      console.error('Error fetching notifications:', err);
-      setError('Failed to load notifications');
-      setNotifications(getMockNotifications());
-      setUnreadCount(getMockNotifications().filter(n => !n.isRead).length);
-    } finally {
-      setIsLoading(false);
-    }
-  };
->>>>>>> main:Frontend/src/components/NotificationPopup.tsx
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -103,17 +76,11 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
 
   const handleMarkAllAsRead = async () => {
     try {
-<<<<<<< HEAD:Frontend/src/components/notification/NotificationPopup.tsx
       const success = await markAllNotificationsAsRead();
       if (success) {
         setNotifications(prev => 
           prev.map(notification => ({ ...notification, isRead: true }))
         );
-=======
-      const response = await putAuthApi('notifications/read-all');
-      if (response.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
->>>>>>> main:Frontend/src/components/NotificationPopup.tsx
         setUnreadCount(0);
       }
     } catch (err) {
