@@ -22,7 +22,10 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
     try {
+      console.log("username :", username)
+      console.log("password :", password)
       const result = await login(username, password);
+      console.log("result :", result)
       if (result && result.accessToken) {
         localStorage.setItem('token', result.accessToken);
         window.dispatchEvent(new CustomEvent('authChange'));

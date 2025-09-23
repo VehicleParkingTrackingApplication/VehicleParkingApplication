@@ -17,6 +17,9 @@ export default function AccountPage() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [userPassword, setUserPassword] = useState('••••••••••');
   
     useEffect(() => {
         const fetchUserData = async () => {

@@ -1,17 +1,18 @@
 import { 
   fetchAuthApi, 
-  postAuthApi, 
-  putAuthApi 
+  postAuthApi,
+  putAuthApi
 } from '@/services/api';
 
 
 export interface FtpPayload {
-  protocol: string;
-  encryption: string;
   host: string;
   port: number;
   user: string;
   password: string;
+  secure: boolean;
+  secureOptions?: object;
+  selectedFolder?: string;
 }
 
 export interface AreaPayload {
@@ -49,6 +50,18 @@ export const updateFtpServer = async (areaId: string, ftp: FtpPayload) => {
   return res.json();
 };
 
+export const saveFtpServer = async (areaId: string, ftp: FtpPayload) => {
+  const res = await postAuthApi(`parking/area/${areaId}/input-ftpserver`, undefined, JSON.stringify(ftp));
+  if (!res.ok) throw new Error('Failed to save FTP server');
+  return res.json();
+};
+
+export const checkFtpServerStatus = async (areaId: string, ftp: FtpPayload) => {
+  const res = await postAuthApi(`parking/area/${areaId}/status-ftpserver`, undefined, JSON.stringify(ftp));
+  if (!res.ok) throw new Error('Failed to check FTP server status');
+  return res.json();
+};
+
 export const getRecentRecords = async (areaId: string) => {
   const res = await fetchAuthApi(`parking/vehicle/${areaId}/recent-records`);
   if (!res.ok) throw new Error('Failed to fetch recent records');
@@ -74,5 +87,11 @@ export const getVehicleEntryPredictions = async (timestamps: string[]) => {
     body: JSON.stringify({ timestamps }),
   });
   if (!res.ok) throw new Error('Failed to fetch vehicle entry predictions');
+  return res.json();
+};
+
+export const triggerFtpFetch = async (areaId: string) => {
+  const res = await postAuthApi(`parking/area/${areaId}/trigger-ftp`);
+  if (!res.ok) throw new Error('Failed to trigger FTP fetch');
   return res.json();
 };

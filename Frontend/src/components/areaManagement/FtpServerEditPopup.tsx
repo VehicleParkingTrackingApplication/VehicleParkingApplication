@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { putAuthApi } from '../../services/api';
+import { checkFtpServerStatus, saveFtpServer } from '../../services/parkingApi';
 
 interface FtpServerConfig {
   host: string;
@@ -26,6 +26,14 @@ interface FtpServerConfig {
   password: string;
   secure: boolean;
   secureOptions: string;
+  rejectUnauthorized: boolean;
+  selectedFolder?: string;
+}
+
+interface FolderInfo {
+  name: string;
+  size: number;
+  modifiedAt: string;
 }
 
 interface FtpServerEditPopupProps {
@@ -49,10 +57,15 @@ export function FtpServerEditPopup({
     user: '',
     password: '',
     secure: false,
-    secureOptions: 'implicit'
+    secureOptions: 'implicit',
+    rejectUnauthorized: false,
+    selectedFolder: ''
   });
   const [loading, setLoading] = useState(false);
+  const [checkingConnection, setCheckingConnection] = useState(false);
   const [error, setError] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [availableFolders, setAvailableFolders] = useState<FolderInfo[]>([]);
 
   // Parse current FTP server string if provided
   useEffect(() => {
@@ -66,7 +79,9 @@ export function FtpServerEditPopup({
           user: parsed.user || '',
           password: parsed.password || '',
           secure: parsed.secure || false,
-          secureOptions: parsed.secureOptions || 'implicit'
+          secureOptions: parsed.secureOptions || 'implicit',
+          rejectUnauthorized: parsed.rejectUnauthorized || false,
+          selectedFolder: parsed.selectedFolder || ''
         });
       } catch {
         // If not JSON, treat as simple string (host only)
@@ -84,6 +99,7 @@ export function FtpServerEditPopup({
       [field]: value
     }));
     setError('');
+    setConnectionStatus(null); // Clear connection status when form changes
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,35 +126,102 @@ export function FtpServerEditPopup({
         user: formData.user.trim(),
         password: formData.password.trim(),
         secure: formData.secure,
-        secureOptions: formData.secureOptions
+        secureOptions: formData.secure ? {
+          rejectUnauthorized: formData.rejectUnauthorized
+        } : undefined,
+        selectedFolder: formData.selectedFolder || undefined
       };
 
       // Convert to JSON string for storage
-      const ftpServerString = JSON.stringify(ftpConfig);
+      // const ftpServerString = JSON.stringify(ftpConfig);
 
       // Send to API
-      const response = await putAuthApi(`parking/area/${areaId}/ftp-server`, undefined, JSON.stringify({
-        ftpServer: ftpServerString
-      }));
+      const response = await saveFtpServer(areaId, ftpConfig);
 
-      if (response.ok) {
+      if (response.success) {
         onSuccess();
         onClose();
       } else {
         const errorText = await response.text();
-        throw new Error(`Failed to update FTP server: ${response.status} ${errorText}`);
+        throw new Error(`Failed to save FTP server: ${response.status} ${errorText}`);
       }
     } catch (err) {
-      console.error('Error updating FTP server:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update FTP server');
+      console.error('Error save FTP server:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save FTP server');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCheckConnection = async () => {
+    setCheckingConnection(true);
+    setError('');
+    setConnectionStatus(null);
+
+    try {
+      // Validate required fields
+      if (!formData.host.trim()) {
+        throw new Error('Host is required');
+      }
+      if (!formData.user.trim()) {
+        throw new Error('Username is required');
+      }
+      if (!formData.password.trim()) {
+        throw new Error('Password is required');
+      }
+
+      // Create FTP server configuration object
+      const ftpConfig = {
+        host: formData.host.trim(),
+        port: formData.port,
+        user: formData.user.trim(),
+        password: formData.password.trim(),
+        secure: formData.secure,
+        secureOptions: formData.secure ? {
+          rejectUnauthorized: formData.rejectUnauthorized
+        } : undefined,
+        selectedFolder: formData.selectedFolder || undefined
+      };
+
+      // Send to API
+      const response = await checkFtpServerStatus(areaId, ftpConfig);
+      if (response.success) {
+        setConnectionStatus({
+          success: true,
+          message: response.data.message || 'Connection successful!'
+        });
+        
+        // Set available folders if they exist in the response
+        if (response.data.availableFolders && Array.isArray(response.data.availableFolders)) {
+          setAvailableFolders(response.data.availableFolders);
+        } else {
+          setAvailableFolders([]);
+        }
+      } else {
+        const errorText = await response.text();
+        setConnectionStatus({
+          success: false,
+          message: `Connection failed: ${response.status} ${errorText}`
+        });
+        setAvailableFolders([]);
+      }
+    } catch (err) {
+      console.error('Error checking FTP connection:', err);
+      setConnectionStatus({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to check connection'
+      });
+      setAvailableFolders([]);
+    } finally {
+      setCheckingConnection(false);
+    }
+  };
+
   const handleClose = () => {
-    if (!loading) {
+    if (!loading && !checkingConnection) {
       setError('');
+      setConnectionStatus(null);
+      setAvailableFolders([]);
       onClose();
     }
   };
@@ -157,6 +240,16 @@ export function FtpServerEditPopup({
           {error && (
             <div className="bg-red-900 border border-red-700 rounded-lg p-3 text-red-200 text-sm">
               {error}
+            </div>
+          )}
+
+          {connectionStatus && (
+            <div className={`rounded-lg p-3 text-sm ${
+              connectionStatus.success 
+                ? 'bg-green-900 border border-green-700 text-green-200' 
+                : 'bg-red-900 border border-red-700 text-red-200'
+            }`}>
+              {connectionStatus.message}
             </div>
           )}
 
@@ -223,6 +316,38 @@ export function FtpServerEditPopup({
             />
           </div>
 
+          {availableFolders.length > 0 && (
+            <div className="space-y-2">
+              <label htmlFor="folder" className="text-sm font-medium text-gray-300">
+                Select Folder
+              </label>
+              <Select
+                value={formData.selectedFolder || ''}
+                onValueChange={(value) => handleInputChange('selectedFolder', value)}
+              >
+                <SelectTrigger className="bg-neutral-700 border-neutral-600 text-white">
+                  <SelectValue placeholder="Choose a folder..." />
+                </SelectTrigger>
+                <SelectContent className="bg-neutral-700 border-neutral-600">
+                  {availableFolders.map((folder) => (
+                    <SelectItem 
+                      key={folder.name} 
+                      value={folder.name}
+                      className="text-white hover:bg-neutral-600"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{folder.name}</span>
+                        <span className="text-xs text-gray-400">
+                          Modified: {new Date(folder.modifiedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="flex items-center space-x-2">
             <Checkbox
               id="secure"
@@ -236,26 +361,40 @@ export function FtpServerEditPopup({
           </div>
 
           {formData.secure && (
-            <div className="space-y-2">
-              <label htmlFor="secureOptions" className="text-sm font-medium text-gray-300">
-                Secure Options
-              </label>
-              <Select
-                value={formData.secureOptions}
-                onValueChange={(value) => handleInputChange('secureOptions', value)}
-              >
-                <SelectTrigger className="bg-neutral-700 border-neutral-600 text-white">
-                  <SelectValue placeholder="Select secure option" />
-                </SelectTrigger>
-                <SelectContent className="bg-neutral-700 border-neutral-600">
-                  <SelectItem value="implicit" className="text-white hover:bg-neutral-600">
-                    Implicit (FTPS)
-                  </SelectItem>
-                  <SelectItem value="explicit" className="text-white hover:bg-neutral-600">
-                    Explicit (FTPES)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="secureOptions" className="text-sm font-medium text-gray-300">
+                  Secure Options
+                </label>
+                <Select
+                  value={formData.secureOptions}
+                  onValueChange={(value) => handleInputChange('secureOptions', value)}
+                >
+                  <SelectTrigger className="bg-neutral-700 border-neutral-600 text-white">
+                    <SelectValue placeholder="Select secure option" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-neutral-700 border-neutral-600">
+                    <SelectItem value="implicit" className="text-white hover:bg-neutral-600">
+                      Implicit (FTPS)
+                    </SelectItem>
+                    <SelectItem value="explicit" className="text-white hover:bg-neutral-600">
+                      Explicit (FTPES)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="rejectUnauthorized"
+                  checked={formData.rejectUnauthorized}
+                  onCheckedChange={(checked) => handleInputChange('rejectUnauthorized', checked === true)}
+                  className="border-neutral-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+                <label htmlFor="rejectUnauthorized" className="text-sm font-medium text-gray-300">
+                  Reject unauthorized certificates
+                </label>
+              </div>
             </div>
           )}
 
@@ -264,14 +403,23 @@ export function FtpServerEditPopup({
               type="button"
               variant="outline"
               onClick={handleClose}
-              disabled={loading}
+              disabled={loading || checkingConnection}
               className="bg-neutral-700 border-neutral-600 text-white hover:bg-neutral-600"
             >
               Cancel
             </Button>
             <Button
+              type="button"
+              variant="outline"
+              onClick={handleCheckConnection}
+              disabled={loading || checkingConnection || !formData.host.trim() || !formData.user.trim() || !formData.password.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+            >
+              {checkingConnection ? 'Checking...' : 'Check Connection'}
+            </Button>
+            <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || checkingConnection}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               {loading ? 'Saving...' : 'Save Configuration'}

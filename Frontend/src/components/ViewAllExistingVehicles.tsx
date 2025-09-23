@@ -8,7 +8,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { getExistingVehicles } from '@/services/parking';
+import { getExistingVehicles } from '@/services/parkingApi';
 import { useState, useEffect } from 'react';
 
 interface VehicleRecord {
@@ -29,7 +29,7 @@ interface VehicleRecord {
 
 interface ApiResponse {
   success: boolean;
-  vehicles: VehicleRecord[];
+  data: VehicleRecord[];
   pagination?: {
     total: number;
     page: number;
@@ -57,8 +57,8 @@ export default function ViewAllVehicles() {
         const res: ApiResponse = await getExistingVehicles(areaId, page, RECORDS_PER_PAGE);
         console.log('✅ API Response:', res);
         
-        if (res.success && res.vehicles) {
-          setVehicles(res.vehicles);
+        if (res.success && res.data) {
+          setVehicles(res.data);
           
           // Calculate total pages based on pagination info or array length
           if (res.pagination) {
@@ -68,12 +68,12 @@ export default function ViewAllVehicles() {
           } else {
             // Fallback: calculate from current page data
             // This assumes if we get a full page, there might be more
-            if (res.vehicles.length === RECORDS_PER_PAGE) {
+            if (res.data.length === RECORDS_PER_PAGE) {
               setTotalPages(page + 1); // At least one more page
             } else {
               setTotalPages(page); // This is the last page
             }
-            setTotalVehicles(res.vehicles.length);
+            setTotalVehicles(res.data.length);
           }
         }
         

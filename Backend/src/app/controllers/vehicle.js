@@ -1,6 +1,7 @@
 import Record from '../models/Record.js';
 import Vehicle from '../models/Vehicle.js';
 import Area from '../models/Area.js';
+import { convertToTimeZone } from '../services/convertTimeZone/sydneyTimeZoneConvert.js';
 
 class parkingVehicleController {
     // Helper function to update area capacity
@@ -83,7 +84,7 @@ class parkingVehicleController {
         }
     }
     
-    async getExistingVehicleByAreaId(req, res) {
+    async getParkingVehicleByAreaId(req, res) {
         try {
             const { areaId } = req.params;
             if (!areaId) {
@@ -96,30 +97,25 @@ class parkingVehicleController {
             // Get pagination parameters from URL query
             const page = parseInt(req.query.page) - 1 || 0;
             const limit = parseInt(req.query.limit) || 10;
-            
             // Get total count for pagination
             const total = await Vehicle.countDocuments({
                 areaId: areaId
             });
-
+            
             // Get vehicles with pagination
-            const vehicles = await Vehicle.find(
-                { 
-                    areaId: areaId
-                })
+            const vehicles = await Vehicle.find({ areaId: areaId })
+                .sort({ entryTime: 1 })
                 .skip(page * limit)
-                .limit(limit)
-                .sort({
-                    datetime: -1
-                });
+                .limit(limit);
+
 
             // Calculate current duration for each vehicle
             const vehiclesWithDuration = vehicles.map(vehicle => {
                 const vehicleObj = vehicle.toObject();
                 
                 // Calculate current duration
-                const currentTime = new Date();
-                const entryTime = vehicle.datetime;
+                const currentTime = convertToTimeZone(new Date(), 'Australia/Sydney');
+                const entryTime = convertToTimeZone(vehicle.entryTime, 'Australia/Sydney');
                 const durationMs = currentTime.getTime() - entryTime.getTime();
                 const durationMinutes = Math.floor(durationMs / (1000 * 60));
                 const durationHours = Math.floor(durationMinutes / 60);
@@ -128,10 +124,8 @@ class parkingVehicleController {
                 return {
                     ...vehicleObj,
                     currentDuration: {
-                        totalMinutes: durationMinutes,
                         hours: durationHours,
-                        minutes: remainingMinutes,
-                        milliseconds: durationMs / 1000
+                        minutes: remainingMinutes
                     },
                     entryTime: entryTime,
                     currentTime: currentTime
@@ -157,8 +151,47 @@ class parkingVehicleController {
         }
     }
 
+    // get all records 
+    async getAllRecordsByBusinessId(req, res) {
+          try {
+            const { businessId } = req.params;
+            if (!businessId) {
+                return res.status(400).json({ message: 'businessId is required' });
+            }
+
+            // Find all areas for the given business
+            const areas = await Area.find({ businessId }).select('_id');
+            const areaIds = areas.map(a => a._id.toString());
+            if (areaIds.length === 0) {
+                return res.json([]);
+            }
+
+            // For each area, fetch up to 10 latest records by entryTime
+            const perAreaPromises = areaIds.map(areaId =>
+                Record.find({ areaId })
+                    .sort({ entryTime: -1 })
+                    .limit(10)
+                    .lean()
+            );
+
+            const perAreaResults = await Promise.all(perAreaPromises);
+            const merged = perAreaResults.flat();
+
+            // Sort merged by entryTime desc and take top 10 overall
+            const latest = merged
+                .filter(r => r && r.entryTime)
+                .sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime))
+                .slice(0, 10);
+
+            res.json(latest);
+        } catch (error) {
+            console.error('Error fetching records:', error);
+            res.status(500).json({ message: 'Server error while fetching records.' });
+        }
+    }
+
     // get recent record for each parking area
-    async getRecentRecords(req, res) {
+    async getRecentRecordsByAreaId(req, res) {
         try {
             const { areaId } = req.params;
             
@@ -173,24 +206,16 @@ class parkingVehicleController {
             const recentRecords = await Record.find({ areaId })
                 .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
                 .limit(5) // Limit to 5 records
-                .select('plateNumber status datetime') // Only select needed fields
+                .select('plateNumber entryTime leavingTime duration') // Only select needed fields
                 .lean(); // Convert to plain JavaScript objects for better performance
 
             // Format the response to match the frontend expectations
             const formattedRecords = recentRecords.map(record => ({
                 plate: record.plateNumber,
-                action: record.status === 'APPROACHING' ? 'ENTRY' : 'EXIT',
-                time: record.datetime.toLocaleTimeString('en-US', { 
-                    hour12: false,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                }),
-                date: record.datetime.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                })
+                entryTime: record.entryTime ? convertToTimeZone(record.entryTime, 'Australia/Sydney') : 'N/A',
+                leavingTime: record.leavingTime ? convertToTimeZone(record.leavingTime, 'Australia/Sydney') : 'Still Parking',
+                hours:Math.floor(record.duration / 60), // Duration in minutes
+                minutes: record.duration % 60
             }));
 
             return res.status(200).json({
@@ -210,6 +235,64 @@ class parkingVehicleController {
 
     // get all records for a parking area with pagination
     async getAllRecordsByAreaId(req, res) {
+        try {
+            const { areaId } = req.params;
+            
+            if (!areaId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Area ID is required'
+                });
+            }
+
+            // Get pagination parameters from URL query
+            const page = parseInt(req.query.page) - 1 || 0;
+            const limit = parseInt(req.query.limit) || 10;
+
+            // Get total count for pagination
+            const totalRecords = await Record.countDocuments({
+                areaId: areaId
+            });
+
+            // Const get all records in Record collection with pagination
+            const records = await Record.find({ areaId })
+                .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
+                .skip(page * limit)
+                .limit(limit)
+                .select('plateNumber status entryTime leavingTime duration image country') // Include angle and confidence
+                .lean(); // Convert to plain JavaScript objects for better performance
+            const formattedRecords = records.map(record => ({
+                plateNumber: record.plateNumber,
+                entryTime: record.entryTime ? record.entryTime.toISOString() : 'N/A',
+                leavingTime: record.leavingTime ? record.leavingTime.toISOString() : 'Still Parking',
+                hours:Math.floor(record.duration / 60), // Duration in minutes
+                minutes: record.duration % 60,
+                image: record.image,
+                country: record.country,
+                status: record.leavingTime ? 'Leaved' : 'Parking'
+            }));
+
+            return res.status(200).json({
+                success: true,
+                data: formattedRecords,
+                pagination: {
+                    totalRecords,
+                    page: page + 1,
+                    limit,
+                    totalPages: Math.ceil(totalRecords / limit)
+                }
+            });
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error fetching all records',
+                error: error.message
+            });
+        }
+    }
+    // get all records for a parking area with pagination
+    async filterAllRecordsByAreaId(req, res) {
         try {
             const { areaId } = req.params;
             
@@ -347,37 +430,6 @@ class parkingVehicleController {
             });
         }
     }
-
-    // Get areas by business ID for dropdown selection
-    async getAreasByBusiness(req, res) {
-        try {
-            const { businessId } = req.params;
-            
-            if (!businessId) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Business ID is required'
-                });
-            }
-
-            const areas = await Area.find({ businessId })
-                .select('_id name location capacity currentCapacity')
-                .lean();
-
-            return res.status(200).json({
-                success: true,
-                areas: areas
-            });
-
-        } catch (error) {
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching areas by business',
-                error: error.message
-            });
-        }
-    }
-
     // Get existing vehicles for removal dropdown (for specific area)
     async getVehiclesForRemoval(req, res) {
         try {

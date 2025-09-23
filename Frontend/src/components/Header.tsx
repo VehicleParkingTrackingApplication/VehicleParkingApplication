@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, LayoutDashboard, BarChart2, FileText, Car, Plug, Users, User, Settings } from 'lucide-react';
 import { Button } from './ui/button';
-import { NotificationPopup } from './NotificationPopup';
+
+import { NotificationPopup } from './notification/NotificationPopup';
+
+// import { NotificationPopup } from './NotificationPopup';
+
 import { authInterceptor } from '../services/authInterceptor';
 import { getCurrentUser } from '../services/backend';
 

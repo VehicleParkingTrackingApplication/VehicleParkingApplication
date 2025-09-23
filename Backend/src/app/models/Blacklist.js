@@ -5,14 +5,17 @@ const Blacklist = new Schema({
         type: Schema.Types.ObjectId, 
         ref: 'businesses', 
         required: true },    
+    areaId: {
+        type: Schema.Types.ObjectId,
+        ref: 'areas'
+    },
     plateNumber: { 
         type: String, 
         required: true, 
         maxLength: 100 },
     reason: { 
         type: String, 
-        required: true, 
-        maxLength: 100 },
+        required: true },
     createdAt: { 
         type: Date, 
         default: Date.now }

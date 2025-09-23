@@ -38,8 +38,6 @@ class accountController {
                     address: user.address,
                     role: user.role,
                     businessId: user.businessId,
-                    createAt: user.createAt,
-                    updateAt: user.updateAt,
                     profileCompleted: user.profileCompleted
                 }
             });

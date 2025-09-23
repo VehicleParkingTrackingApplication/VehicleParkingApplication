@@ -4,9 +4,11 @@ import Area from '../models/Area.js';
 
 class NotificationController {
     // Get all notifications for a business (through areas)
-    async getNotificationsByBusiness(req, res) {
+    async getNotificationsByBusinessId(req, res) {
         try {
-            const { businessId } = req.params;
+            console.log(req.user);
+            const businessId = req.user.businessId;
+            console.log(req.user.id, req.user.role);
             const { status, page = 1, limit = 10 } = req.query;
             
             if (!businessId) {
@@ -95,6 +97,31 @@ class NotificationController {
             return res.status(500).json({
                 success: false,
                 message: 'Error marking notification as read',
+                error: error.message
+            });
+        }
+    }
+
+    // Get 10 latest notifications
+    async getRecentNotifications(req, res) {
+        try {
+            // Get the 10 most recent notifications
+            const notifications = await Notification.find()
+                .populate('areaId', 'name location')
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .lean();
+
+            return res.status(200).json({
+                success: true,
+                notifications,
+                count: notifications.length
+            });
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error fetching recent notifications',
                 error: error.message
             });
         }

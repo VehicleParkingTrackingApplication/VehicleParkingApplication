@@ -135,7 +135,6 @@ export async function fetchAuthApi(path: string, query?: URLSearchParams | Recor
  */
 export async function postAuthApi(path: string, query?: URLSearchParams | Record<string, any>, body?: BodyInit): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  
   return authInterceptor.makeAuthenticatedRequest(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     method: "POST",
@@ -191,19 +190,17 @@ export async function deleteAuthApi(path: string, query?: URLSearchParams | Reco
 function getApiUrlInternal(path: string, query?: URLSearchParams | Record<string, unknown>): URL {
   const base = new URL(API_BASE, window.location.href);
   const url = new URL(path, base);
-
- if (query && !(query instanceof URLSearchParams)) {
-  const stringQuery: Record<string, string> = Object.fromEntries(
-    Object.entries(query).map(([k, v]) => [k, String(v)])
-  );
-  query = new URLSearchParams(stringQuery);
-}
+  if (query && !(query instanceof URLSearchParams)) {
+    const stringQuery: Record<string, string> = Object.fromEntries(
+      Object.entries(query).map(([k, v]) => [k, String(v)])
+    );
+    query = new URLSearchParams(stringQuery);
+  }
 
 
   query?.forEach((value: string, key: string) => {
     url.searchParams.append(key, value);
   });
-
   return url;
 }
 

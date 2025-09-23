@@ -7,7 +7,7 @@ const Vehicle = new Schema({
         ref: 'areas',
         required: true
     },
-    datetime:{
+    entryTime: {
         type: Date,
         default: null
     },
@@ -24,8 +24,7 @@ const Vehicle = new Schema({
         type: String,
         required: true,
         default: "image.jpg"
-    },
-    status: { type: String, required: true}
+    }
 });
 
 export default mongoose.model('vehicles', Vehicle)
