@@ -34,10 +34,11 @@ class accountController {
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
+                    phoneNumber: user.phoneNumber,
+                    address: user.address,
                     role: user.role,
                     businessId: user.businessId,
-                    createAt: user.createAt,
-                    updateAt: user.updateAt
+                    profileCompleted: user.profileCompleted
                 }
             });
         } catch (error) {
@@ -98,13 +99,15 @@ class accountController {
             // retrieve data from request
             const firstName = req.body.firstName;
             const lastName = req.body.lastName;
+            const phoneNumber = req.body.phoneNumber;
+            const address = req.body.address;
 
             if (!firstName || !lastName) return res.status(400).json({ message:"Names cannot be empty" });
 
             const updatedUser = await User.findByIdAndUpdate(
                 userID,
                 {
-                    $set: {firstName, lastName, updateAt: Date.now()}
+                    $set: {firstName, lastName, phoneNumber, address, profileCompleted: true, updateAt: Date.now()}
                 },
                 {new: true}
             );
@@ -125,6 +128,26 @@ class accountController {
                 message: 'Internal server error',
                 error: err.message
             });
+        }
+    }
+
+    async listUsersInBusiness(req, res) {
+        try {
+            const requesterRole = req.user.role;
+            const businessId = req.user.businessId;
+
+            if (!businessId) {
+                return res.status(400).json({ success: false, message: 'Business ID missing' });
+            }
+            if (String(requesterRole).toLowerCase() !== 'admin') {
+                return res.status(403).json({ success: false, message: 'Access denied' });
+            }
+
+            const users = await User.find({ businessId })
+                .select('_id username email firstName lastName role businessId createdAt updatedAt phoneNumber address');
+            return res.status(200).json({ success: true, data: users });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
         }
     }
 }

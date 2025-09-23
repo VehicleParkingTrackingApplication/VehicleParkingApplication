@@ -288,7 +288,8 @@ export async function getRecord(recordId: string): Promise<ParkingRecord | null>
 }
 
 /**
- * @param {string=} areaId
+ * @param {Date=} startDate
+ * @param {Date=} endDate
  * @returns {Promise<ParkingRecord[]>}
  */
 export async function getRecordsByArea(areaId?: string): Promise<ParkingRecord[]> {
@@ -501,10 +502,19 @@ export async function login(username: string, password: string): Promise<{ messa
  * @param {string} username
  * @param {string} email
  * @param {string} password
+ * @param {string} businessId
+ * @param {('user'|'admin')=} role
  * @returns {Promise<{ message: string; accessToken: string } | null>}
  */
+<<<<<<< HEAD
 export async function register(username: string, email: string, password: string): Promise<{ message: string; accessToken: string } | null> {
   const response = await postAuthApi("auth/register", {}, JSON.stringify({ username, email, password }));
+=======
+export async function register(username: string, email: string, password: string, businessId: string, role?: 'user'|'admin'): Promise<{ message: string; accessToken: string } | null> {
+  const payload: Record<string, any> = { username, email, password, businessId };
+  if (role) payload.role = role;
+  const response = await postApi("auth/register", {}, JSON.stringify(payload));
+>>>>>>> main
   if (!response.ok) {
     return null;
   }

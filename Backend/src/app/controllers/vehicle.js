@@ -1,6 +1,7 @@
 import Record from '../models/Record.js';
 import Vehicle from '../models/Vehicle.js';
 import Area from '../models/Area.js';
+import { convertToTimeZone } from '../services/convertTimeZone/sydneyTimeZoneConvert.js';
 
 class parkingVehicleController {
     // Helper function to update area capacity
@@ -96,25 +97,25 @@ class parkingVehicleController {
             // Get pagination parameters from URL query
             const page = parseInt(req.query.page) - 1 || 0;
             const limit = parseInt(req.query.limit) || 10;
-            
             // Get total count for pagination
             const total = await Vehicle.countDocuments({
                 areaId: areaId
             });
-
+            
             // Get vehicles with pagination
             const vehicles = await Vehicle.find({ areaId: areaId })
                 .sort({ entryTime: 1 })
                 .skip(page * limit)
                 .limit(limit);
 
+
             // Calculate current duration for each vehicle
             const vehiclesWithDuration = vehicles.map(vehicle => {
                 const vehicleObj = vehicle.toObject();
                 
                 // Calculate current duration
-                const currentTime = new Date();
-                const entryTime = vehicle.entryTime;
+                const currentTime = convertToTimeZone(new Date(), 'Australia/Sydney');
+                const entryTime = convertToTimeZone(vehicle.entryTime, 'Australia/Sydney');
                 const durationMs = currentTime.getTime() - entryTime.getTime();
                 const durationMinutes = Math.floor(durationMs / (1000 * 60));
                 const durationHours = Math.floor(durationMinutes / 60);
@@ -132,7 +133,7 @@ class parkingVehicleController {
             });
             
             return res.status(200).json({
-                success: True,
+                success: true,
                 data: vehiclesWithDuration,
                 pagination: {
                     total,
@@ -172,14 +173,10 @@ class parkingVehicleController {
             // Format the response to match the frontend expectations
             const formattedRecords = recentRecords.map(record => ({
                 plate: record.plateNumber,
-                entryTime: record.entryTime ? record.entryTime.toISOString() : 'N/A',
-                leavingTime: record.leavingTime ? record.leavingTime.toISOString() : 'Still Parking',
-                duration: record.duration || 0, // Duration in minutes
-                date: record.entryTime ? record.entryTime.toLocaleDateString('en-AU', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                }) : 'N/A'
+                entryTime: record.entryTime ? convertToTimeZone(record.entryTime, 'Australia/Sydney') : 'N/A',
+                leavingTime: record.leavingTime ? convertToTimeZone(record.leavingTime, 'Australia/Sydney') : 'Still Parking',
+                hours:Math.floor(record.duration / 60), // Duration in minutes
+                minutes: record.duration % 60
             }));
 
             return res.status(200).json({
@@ -214,7 +211,7 @@ class parkingVehicleController {
             const limit = parseInt(req.query.limit) || 10;
 
             // Get total count for pagination
-            const total = await Record.countDocuments({
+            const totalRecords = await Record.countDocuments({
                 areaId: areaId
             });
 
@@ -229,13 +226,23 @@ class parkingVehicleController {
                 plateNumber: record.plateNumber,
                 entryTime: record.entryTime ? record.entryTime.toISOString() : 'N/A',
                 leavingTime: record.leavingTime ? record.leavingTime.toISOString() : 'Still Parking',
-                duration: record.duration,
+                hours:Math.floor(record.duration / 60), // Duration in minutes
+                minutes: record.duration % 60,
                 image: record.image,
                 country: record.country,
                 status: record.leavingTime ? 'Leaved' : 'Parking'
             }));
 
-            return res
+            return res.status(200).json({
+                success: true,
+                data: formattedRecords,
+                pagination: {
+                    totalRecords,
+                    page: page + 1,
+                    limit,
+                    totalPages: Math.ceil(totalRecords / limit)
+                }
+            });
 
         } catch (error) {
             return res.status(500).json({

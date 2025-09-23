@@ -2,9 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/input';
-import { Footer } from './Footer';
-import { login } from '../services/backend';
+import { login, getCurrentUser } from '../services/backend';
 import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const nav = useNavigate();
@@ -18,101 +19,129 @@ export default function LoginPage() {
       setError('Please enter both username and password');
       return;
     }
-
     setIsLoading(true);
     setError('');
-
     try {
       const result = await login(username, password);
-      
       if (result && result.accessToken) {
-        // In a real app, you would store the token securely
         localStorage.setItem('token', result.accessToken);
         window.dispatchEvent(new CustomEvent('authChange'));
-        nav('/dashboard');
+        try {
+          const me = await getCurrentUser();
+          if (me && (me as any).profileCompleted === false) {
+            nav('/complete-profile');
+          } else {
+            nav('/dashboard');
+          }
+        } catch {
+          nav('/dashboard');
+        }
       } else {
         setError(result?.message || 'Invalid username or password');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || 'Network error. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Network error. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-    return (
-        <>
-            <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden">
-                <div 
-                    className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
-                    style={{ transform: 'translate(50%, -50%)' }}
-                ></div>
-                <div 
-                    className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
-                    style={{ transform: 'translate(-50%, 50%)' }}
-                ></div>
-                <div className="flex-1 flex items-center justify-center p-8 relative z-10">
-                    <Card className="w-full max-w-md bg-gray-700 border-gray-600">
-                    <CardContent className="space-y-6 pt-6">
-                        <h3 className="text-2xl font-semibold text-center text-white">Sign in</h3>
-                        {error && (
-                            <div className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded">
-                                {error}
-                            </div>
-                        )}
-                        <Input 
-                            type="text" 
-                            placeholder="Username" 
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                        />
-                        <Input 
-                            type="password" 
-                            placeholder="Password" 
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleLogin();
-                                }
-                            }}
-                            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                        />
-                        <Button 
-                            size="lg" 
-                            className="w-full bg-blue-600 hover:bg-blue-700" 
-                            onClick={handleLogin}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? 'Logging in...' : 'Login'}
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            className="w-full text-gray-300 hover:text-white" 
-                            onClick={() => nav('/register')}
-                        >
-                            Don't have an account? Register
-                        </Button>
-                    </CardContent>
-                    </Card>
+  return (
+    <div className="flex flex-col min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)' }}>
+      <div className="absolute inset-0 overflow-hidden z-0">
+        <motion.div animate={{ x: [0, 50, 0], y: [0, -30, 0] }} transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }} className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl transform translate-x-32 -translate-y-32"></motion.div>
+        <motion.div animate={{ x: [0, -40, 0], y: [0, 20, 0] }} transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-0 left-0 w-80 h-80 bg-yellow-400/10 rounded-full blur-2xl transform -translate-x-40 translate-y-40"></motion.div>
+      </div>
+
+      <motion.nav 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="px-6 py-4 absolute top-0 left-0 right-0 z-50"
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between backdrop-blur-lg bg-white/5 rounded-2xl px-6 py-2 border border-white/10 shadow-xl">
+          <div className="flex items-center">
+            <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              className="text-white hover:bg-white/10 hover:text-yellow-400 flex items-center gap-2" 
+              onClick={() => nav('/')}
+            >
+              <ArrowLeft size={16} />
+              Back to Home
+            </Button>
+            <Button 
+              className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium" 
+              onClick={() => nav('/register')}
+            >
+              Register
+            </Button>
+          </div>
+        </div>
+      </motion.nav>
+
+      <div className="flex-1 flex items-center justify-center p-8 relative z-10 pt-32 md:pt-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <Card className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+            <CardContent className="space-y-6 pt-6">
+              <h3 className="text-2xl font-semibold text-center text-white">Sign in to MoniPark</h3>
+              {error && (
+                <div className="text-red-300 text-sm text-center bg-red-500/20 p-3 rounded-lg border border-red-500/30">
+                  {error}
                 </div>
-                <div className="flex-1 bg-gradient-to-b from-blue-900 via-black to-yellow-900 flex items-center justify-center p-8">
-                    <div className="text-white text-center max-w-sm">
-                    <h2 className="text-3xl font-bold mb-4">MoniPark</h2>
-                    <p>An AI-driven car park monitoring solution tailored for SMEs — seamlessly integrating Real-Time Occupancy Tracking, Smart Vehicle Analytics, and Automated Visitor Insights. Unlock next-level efficiency by transforming parking spaces into data-powered growth hubs.</p>
-                    <Button 
-                        variant="outline" 
-                        className="mt-4 bg-transparent border-white text-white hover:bg-white hover:text-black" 
-                        onClick={() => nav('/')}
-                    >
-                        Back to Home
-                    </Button>
-                    </div>
-                </div>
-            </div>
-            <Footer />
-        </>
-    );
+              )}
+              <div className="space-y-4">
+                <Input 
+                  type="text" 
+                  placeholder="Username" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-black/20 border-white/20 text-white placeholder-gray-400 focus:ring-yellow-400 focus:border-yellow-400"
+                />
+                <Input 
+                  type="password" 
+                  placeholder="Password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                  className="bg-black/20 border-white/20 text-white placeholder-gray-400 focus:ring-yellow-400 focus:border-yellow-400"
+                />
+              </div>
+              <Button 
+                size="lg" 
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-medium" 
+                onClick={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="animate-pulse">Signing in...</span>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-5 w-5" /> Sign In
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="link" 
+                className="w-full text-blue-300 hover:text-yellow-300" 
+                onClick={() => nav('/register')}
+              >
+                Don't have an account? Register
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    
+    </div>
+    
+  );
 }

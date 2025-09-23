@@ -21,21 +21,9 @@ const Notification = new Schema(
     },
     type: {
       type: String,
-      enum: ['capacity_warning', 'capacity_critical', 'long_parking', 'system'],
+      enum: ['over_24_hours_long_parking', "over_4_hours_long_parking"],
       default: 'capacity_warning',
-    },
-    threshold: {
-      type: Number,
-      default: 80, // percentage threshold
-    },
-    currentCapacity: {
-      type: Number,
-      required: true,
-    },
-    totalCapacity: {
-      type: Number,
-      required: true,
-    },
+    }
   },
   { timestamps: true },
 );

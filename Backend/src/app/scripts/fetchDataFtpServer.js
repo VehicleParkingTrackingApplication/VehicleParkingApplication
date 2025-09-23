@@ -7,12 +7,10 @@ import Record from "../models/Record.js";
 import Vehicle from "../models/Vehicle.js";
 import Blacklist from "../models/Blacklist.js";
 import dotenv from 'dotenv';
+import { toSydneyISO } from "../services/convertTimeZone/sydneyTimeZoneConvert.js";
 
 // load environment variables
 dotenv.config();
-
-const MONGO_URI_Sample = 'mongodb+srv://binh:123@cluster0.lcfx9nt.mongodb.net/car_parking?retryWrites=true&w=majority&appName=Cluster0';
-const MONGO_URI = process.env.CONNECTION_STRING || MONGO_URI_Sample;
 
 function mergeDateTime(date, time) {
     let datePart = date;
@@ -112,9 +110,6 @@ function calulateSimilarityPlatenumber(plateNumber1, plateNumber2) {
 
 // input areaId and options to access that ftp server to fetch data
 export async function fetchDataFtpServer(areaId, options = {}) {
-    if (mongoose.connection.readyState === 0) {
-        await mongoose.connect(MONGO_URI);
-    }
     // access the area collection from areaId to get the ftp-server info
     const area = await Area.findById(areaId).populate('ftpServer');
     if (!area) {
@@ -125,7 +120,7 @@ export async function fetchDataFtpServer(areaId, options = {}) {
     const saveTimestamp = area.savedTimestamp && area.savedTimestamp.trim() !== '' ? area.savedTimestamp.trim() : null;
     let saveDateObj = null;
     if (saveTimestamp) {
-        saveDateObj = new Date(saveTimestamp);
+        saveDateObj = new Date(toSydneyISO(saveTimestamp));
     }
     if (!ftpInfo) {
         console.error("FTP server info not found for this area");
@@ -149,8 +144,8 @@ export async function fetchDataFtpServer(areaId, options = {}) {
         await client.cd(targetFolder);
         const contents = await client.list();
         const csvFiles = contents
-            .filter(item => item.type === 1 && item.name.toLowerCase().endsWith(".csv"))
-            .sort((a, b) => new Date(a.modifiedAt) - new Date(b.modifiedAt));
+            .filter(item => item.type === 1 && item.name.toLowerCase().endsWith(".csv"));
+            // .sort((a, b) => new Date(a.modifiedAt) - new Date(b.modifiedAt));
         for (const file of csvFiles) {
             const passThrough = new PassThrough();
             const downloadPromise = client.downloadTo(passThrough, file.name);
@@ -245,6 +240,11 @@ export async function fetchDataFtpServer(areaId, options = {}) {
                                         if (parkingVehicle) {
                                             // Delete the vehicle parking in the area
                                             await Vehicle.deleteOne({ areaId, plateNumber: row.plateNumber });
+                                            const openRecord = await Record.findOne({ areaId, plateNumber: row.plateNumber, leavingTime: null });
+                                            if (openRecord) {
+                                                const calculatedDuration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+                                                await Record.updateOne({ _id: openRecord._id }, { $set: { leavingTime: rowDateTime, duration: calculatedDuration } });
+                                            }
                                         } else {
                                             // Find the plate number has nearly same as the the current plate number
                                             // Because the confidence of data
@@ -265,29 +265,17 @@ export async function fetchDataFtpServer(areaId, options = {}) {
                                             if (openRecord) {
                                                 const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
                                                 await Record.updateOne({ areaId, plateNumber: similarPlateNumber }, { $set: { leavingTime: rowDateTime, duration: duration } });
-                                            } else {
-                                                // No matching vehicle found and no similar plate number found
-                                                // Add this leaving event to blacklist
-                                                try {
-                                                    // Check if this plate number is already in blacklist for this business
-                                                    const existingBlacklist = await Blacklist.findOne({ 
-                                                        businessId: area.businessId, 
-                                                        plateNumber: row.plateNumber 
-                                                    });
-                                                    
-                                                    if (!existingBlacklist) {
-                                                        await Blacklist.create({
-                                                            businessId: area.businessId,
-                                                            plateNumber: row.plateNumber,
-                                                            areaId,
-                                                            reason: `Unauthorized exit detected - vehicle left without proper entry record at ${formatAustralianTime(rowDateTime)}`
-                                                        });
-                                                        console.log(`Added to blacklist: ${row.plateNumber} - Unauthorized exit detected`);
-                                                    }
-                                                } catch (blacklistError) {
-                                                    console.error('Error adding to blacklist:', blacklistError);
-                                                }
-                                            }
+                                            } 
+                                            // else {
+                                            //     // No matching vehicle found and no similar plate number found
+                                            //     await Blacklist.create({
+                                            //         businessId: area.businessId,
+                                            //         plateNumber: row.plateNumber,
+                                            //         areaId,
+                                            //         reason: `Unauthorized exit detected - vehicle left without proper entry record at ${formatAustralianTime(rowDateTime)}`
+                                            //     });
+                                            //     console.log(`Added to blacklist: ${row.plateNumber} - Unauthorized exit detected`);
+                                            // }
                                         }
                                     }
                                     

@@ -1,7 +1,10 @@
 import cron from 'node-cron';
 import Vehicle from '../models/Vehicle.js';
 import Notification from '../models/Notification.js';
+import Blacklist from '../models/Blacklist.js';
+import Record from '../models/Record.js';
 import dbConnect from '../../config/db/index.js';
+import { convertToTimeZone } from './convertTimeZone/sydneyTimeZoneConvert.js';
 
 class ScheduledMonitoringService {
     constructor() {
@@ -11,7 +14,7 @@ class ScheduledMonitoringService {
 
     /**
      * Start the scheduled monitoring service
-     * Runs every 30 minutes to check for vehicles parked longer than 24 hours
+     * Runs every 1 minute to check for vehicles parked longer than 24 hours
      */
     startScheduledMonitoring() {
         if (this.isRunning) {
@@ -30,7 +33,7 @@ class ScheduledMonitoringService {
 
         this.task.start();
         this.isRunning = true;
-        console.log('Scheduled monitoring service started - checking every 30 minutes');
+        console.log('Scheduled monitoring service started - checking every 1 minute');
     }
 
     /**
@@ -52,12 +55,12 @@ class ScheduledMonitoringService {
     async checkLongParkedVehicles() {
         try {
             // Connect to database if not already connected
-            await dbConnect();
+            // await dbConnect();
 
             // 24 hours
-            const overTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const overTime = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
             
-            console.log("Check long parked vehicles over time: ", overTime);
+            console.log("Check long parked vehicles over time: ", convertToTimeZone(overTime, 'Australia/Sydney'));
 
             // Find vehicles that have been parked for more than 24 hours
             // Only check vehicles that are still in APPROACHING status (haven't left)
@@ -69,7 +72,7 @@ class ScheduledMonitoringService {
 
             // Process each long-parked vehicle
             for (const vehicle of longParkedVehicles) {
-                await this.createLongParkingNotification(vehicle);
+                await this.processLongParkedVehicle(vehicle);
             }
 
         } catch (error) {
@@ -81,7 +84,7 @@ class ScheduledMonitoringService {
      * Create a notification for a vehicle that has been parked for more than 24 hours
      * @param {Object} vehicle - The vehicle object with populated areaId
      */
-    async createLongParkingNotification(vehicle) {
+    async processLongParkedVehicle(vehicle) {
         try {
             const { areaId, plateNumber, entryTime } = vehicle;
             
@@ -99,37 +102,23 @@ class ScheduledMonitoringService {
                 status: 'unread'
             }).sort({ createdAt: -1 });
             
-            // Only create notification if:
-            // 1. No existing unread notification for this vehicle, OR
-            // 2. The last notification was created more than 6 hours ago (to avoid spam)
-            let shouldCreateNotification = true;
+            const durationText = parkedDays > 0 
+                ? `${parkedDays} day${parkedDays > 1 ? 's' : ''} and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`
+                : `${parkedHours} hour${parkedHours !== 1 ? 's' : ''}`;
             
-            if (existingNotification) {
-                const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
-                // the existing notification exisit as unread but just created smaller than 6 hours so no create again
-                if (existingNotification.createdAt > sixHoursAgo) {
-                    shouldCreateNotification = false;
-                }
-            }
+            // 1. Create notification
+            await this.createLongParkingNotification(vehicle, durationText);
 
-            if (shouldCreateNotification) {
-                const durationText = parkedDays > 0 
-                    ? `${parkedDays} day${parkedDays > 1 ? 's' : ''} and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`
-                    : `${parkedHours} hour${parkedHours !== 1 ? 's' : ''}`;
+            // 2. Create blacklist entry
+            await this.createBlacklistEntry(vehicle, durationText);
 
-                const notificationData = {
-                    areaId: areaId._id,
-                    status: 'unread',
-                    message: `Vehicle ${plateNumber} has been parked in ${areaId.name} for ${durationText}. Please check if this vehicle needs attention.`,
-                    type: 'long_parking',
-                    threshold: 24, // 24 hours threshold
-                    currentCapacity: 0, // Not applicable for long parking notifications
-                    totalCapacity: 0   // Not applicable for long parking notifications
-                };
+            // 3. Update record with leaving time
+            await this.updateRecordWithLeavingTime(vehicle);
 
-                await Notification.create(notificationData);
-                console.log(`Created long parking notification for vehicle ${plateNumber} in area ${areaId.name}`);
-            }
+            // 4. Remove vehicle from vehicles collection
+            await Vehicle.findByIdAndDelete(vehicle._id);
+
+            console.log(`Processed long-parked vehicle ${plateNumber}: blacklisted, removed from vehicles, and record updated`);
 
         } catch (error) {
             console.error(`Error creating long parking notification for vehicle ${vehicle.plateNumber}:`, error);
@@ -137,22 +126,102 @@ class ScheduledMonitoringService {
     }
 
     /**
-     * Get monitoring service status
+     * Create a notification for over 24 hours parked vehicle
+     * @param {Object} vehicle
+     * @param {String} durationText 
      */
-    // getStatus() {
-    //     return {
-    //         isRunning: this.isRunning,
-    //         nextRun: this.task ? this.task.nextDate() : null
-    //     };
-    // }
+    async createLongParkingNotification(vehicle, durationText) {
+        try {
+            const { areaId, plateNumber } = vehicle;
+
+            const notificationData = {
+                areaId: areaId._id,
+                status: 'unread',
+                message: `Vehicle ${plateNumber} has been parked in ${areaId.name} for ${durationText} and has been automatically added too blacklist and updated database record.`,
+                type: 'over_24_hours_long_parking'
+
+            };
+
+            await Notification.create(notificationData);
+            console.log(`Created over 24 hours long parking notification for vehicle ${plateNumber} in area ${areaId.name}`);
+
+        } catch (error) {
+            console.error(`Error creating over 24 hours long parking notification for vehicle ${vehicle.plateNumber}:`, error);
+        }
+    }
 
     /**
-     * Manually trigger a monitoring check (for testing purposes)
+     * Create a blacklist for over 24 hours parked vehicle
+     * @param {Object} vehicle - The vehicle object with populated areaId
+     * @param {String} durationText - Formatted duration text
      */
-    async triggerManualCheck() {
-        console.log('Manually triggering vehicle monitoring check...');
-        await this.checkLongParkedVehicles();
+    async createBlacklistEntry(vehicle, durationText) {
+        try {
+            const { areaId, plateNumber, entryTime } = vehicle;
+
+            // Check if vehicle is already blacklisted
+            // const existingBlacklist = await Blacklist.findOne({
+            //     businessId: areaId.businessId,
+            //     plateNumber: plateNumber
+            // });
+
+            // if (existingBlacklist) {
+            //     console.log(`Vehicle ${plateNumber} is already blacklisted`);
+            //     return;
+            // }
+
+            const blacklistData = {
+                businessId: areaId.businessId,
+                areaId: areaId._id,
+                plateNumber: plateNumber,
+                reason: `Stayed over 24 hours from ${entryTime.toISOString()} to ${new Date().toISOString()} (${durationText})`
+            };
+
+            await Blacklist.create(blacklistData);
+            console.log(`Created blacklist entry for vehicle ${plateNumber}`);
+
+        } catch (error) {
+            console.error(`Error creating blacklist entry for vehicle ${vehicle.plateNumber}:`, error);
+        }
     }
+
+    /**
+     * Update the record with leaving time for the long-parked vehicle
+     * @param {Object} vehicle - The vehicle object with populated areaId
+     */
+    async updateRecordWithLeavingTime(vehicle) {
+        try {
+            const { areaId, plateNumber, country, entryTime } = vehicle;
+            const leavingTime = new Date();
+
+            // Find the open record (without leaving time) for this vehicle
+            const openRecord = await Record.findOne({
+                areaId: areaId._id.toString(),
+                plateNumber: plateNumber,
+                entryTime: entryTime,
+                leavingTime: null
+            });
+
+            if (openRecord) {
+                // Calculate duration in minutes
+                const duration = Math.floor((leavingTime.getTime() - entryTime.getTime()) / (1000 * 60));
+
+                // Update the record with leaving time and duration
+                await Record.findByIdAndUpdate(openRecord._id, {
+                    leavingTime: leavingTime,
+                    duration: duration
+                });
+
+                console.log(`Updated record for vehicle ${plateNumber} with leaving time and duration: ${duration} minutes`);
+            } else {
+                console.log(`No open record found for vehicle ${plateNumber}`);
+            }
+
+        } catch (error) {
+            console.error(`Error updating record for vehicle ${vehicle.plateNumber}:`, error);
+        }
+    }
+
 }
 
 export { ScheduledMonitoringService };
