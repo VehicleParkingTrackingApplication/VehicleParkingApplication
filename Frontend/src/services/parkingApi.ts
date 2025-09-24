@@ -1,6 +1,7 @@
 import { 
   fetchAuthApi, 
-  postAuthApi
+  postAuthApi,
+  putAuthApi
 } from '@/services/api';
 
 
@@ -32,7 +33,7 @@ export const getAllParkingAreas = async () => {
 };
 
 export const createParkingArea = async (payload: AreaPayload) => {
-  const res = await postAuthApi('parking/area', undefined, JSON.stringify(payload));
+  const res = await postAuthApi('parking/area/input-area', undefined, JSON.stringify(payload));
   if (!res.ok) throw new Error('Failed to create parking area');
   return res.json();
 };
@@ -40,6 +41,12 @@ export const createParkingArea = async (payload: AreaPayload) => {
 export const inputParkingArea = async (payload: CreateAreaPayload) => {
   const res = await postAuthApi('parking/area/input-area', undefined, JSON.stringify(payload));
   if (!res.ok) throw new Error('Failed to create parking area');
+  return res.json();
+};
+
+export const updateFtpServer = async (areaId: string, ftp: FtpPayload) => {
+  const res = await putAuthApi(`parking/area/${areaId}/update-ftpserver`, undefined, JSON.stringify(ftp));
+  if (!res.ok) throw new Error('Failed to update FTP server');
   return res.json();
 };
 
