@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard';
 import AccountPage from './components/account/AccountPage';
 import AreaManagement from './components/areaManagement/AreaManagement';
 import ParkingDashboard from './components/ParkingDashboard';
+import VehicleDashboard from './components/VehicleDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import StaffManagement from './components/StaffManagement';
 import ExistingReportsPage from './components/ExistingReport';
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/account" element={<AccountPage />} />
           <Route path="/staff-management" element={<StaffManagement />} />
           <Route path="/parking-dashboard" element={<ParkingDashboard />} />
+          <Route path="/vehicle" element={<VehicleDashboard />} />
           <Route path="/reports" element={<ExistingReportsPage />} />
           <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
           <Route path="/area/:areaId/records" element={<ViewAllRecords />} />

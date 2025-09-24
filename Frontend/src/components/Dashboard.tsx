@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  getVehicles, 
-  getAreas, 
-  getRecords, 
-  getStatistics, 
   type Vehicle,
   type Area,
   type ParkingRecord,
   type Statistics,
+  type BlacklistEntry,
+  getCurrentUser,
+  getBlacklistByBusiness
 } from '../services/backend';
-import { Car, MapPin, FileText, TrendingUp, AlertCircle } from 'lucide-react';
+import { getAllParkingAreas, getAllRecords, getExistingVehicles } from '../services/parkingApi';
+import { Car, MapPin, FileText, TrendingUp, AlertCircle, Shield, Ban } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [records, setRecords] = useState<ParkingRecord[]>([]);
+  const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,18 +26,77 @@ const Dashboard: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch all data in parallel
-        const [vehiclesData, areasData, recordsData, statsData] = await Promise.all([
-          getVehicles(),
-          getAreas(),
-          getRecords(),
-          getStatistics()
-        ]);
+        // Get current user first to get businessId
+        const user = await getCurrentUser();
 
-        setVehicles(vehiclesData);
-        setAreas(areasData);
-        setRecords(recordsData);
-        setStatistics(statsData);
+        // Fetch areas first
+        const areasResponse = await getAllParkingAreas();
+        if (areasResponse.success && areasResponse.data) {
+          setAreas(areasResponse.data);
+        }
+
+        // Fetch data for each area
+        let allVehicles: any[] = [];
+        let allRecords: any[] = [];
+
+        if (areasResponse.success && areasResponse.data) {
+          for (const area of areasResponse.data) {
+            try {
+              const [vehiclesResponse, recordsResponse] = await Promise.all([
+                getExistingVehicles(area._id, 1, 1000),
+                getAllRecords(area._id, 1, 1000)
+              ]);
+
+              if (vehiclesResponse.success && vehiclesResponse.data) {
+                allVehicles = [...allVehicles, ...vehiclesResponse.data];
+              }
+
+              if (recordsResponse.success && recordsResponse.data) {
+                allRecords = [...allRecords, ...recordsResponse.data];
+              }
+            } catch (areaError) {
+              console.error(`Error fetching data for area ${area._id}:`, areaError);
+            }
+          }
+        }
+
+        setVehicles(allVehicles);
+        setRecords(allRecords);
+
+        // Fetch blacklist data if user has businessId
+        if (user?.businessId) {
+          try {
+            const blacklistResponse = await getBlacklistByBusiness(user.businessId, 1, 10);
+            if (blacklistResponse?.success && blacklistResponse.data) {
+              setBlacklist(blacklistResponse.data);
+            }
+          } catch (blacklistError) {
+            console.error('Error fetching blacklist:', blacklistError);
+          }
+        }
+
+        // Debug logging
+        console.log('Dashboard data loaded:', {
+          areas: areasResponse.data?.length || 0,
+          vehicles: allVehicles.length,
+          records: allRecords.length,
+          blacklist: blacklist.length,
+          areasData: areasResponse.data,
+          vehiclesData: allVehicles,
+          recordsData: allRecords
+        });
+
+        // Calculate statistics
+        const stats = {
+          totalVehicles: allVehicles.length,
+          totalAreas: areasResponse.data?.length || 0,
+          totalRecords: allRecords.length,
+          totalRevenue: 0, // Calculate based on your revenue logic
+          activeVehicles: allVehicles.length, // All vehicles are currently active
+          dailyStats: []
+        };
+        setStatistics(stats);
+
       } catch (err) {
         setError('Failed to load dashboard data');
         console.error('Dashboard data fetch error:', err);
@@ -99,85 +159,204 @@ const Dashboard: React.FC = () => {
       ></div>
       <div className="relative z-10 p-6">
         <div className="max-w-7xl mx-auto">
+          <br></br>
+          <br></br>
           {/* Header */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <h1 className="text-3xl font-bold text-white">Dashboard</h1>
             <p className="text-gray-300 mt-2">Overview of your parking management system</p>
-          </div>
+          </div> */}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="backdrop-blur-md bg-white/10 rounded-2xl px-6 py-4 border border-white/20 shadow-2xl">
+          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-500/20  rounded-lg">
-                <Car className="h-6 w-6 text-blue-300" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Car className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-white/80">Total Vehicles</p>
-                <p className="text-2xl font-bold text-white">{statistics?.totalVehicles || 0}</p>
+                <p className="text-sm font-medium text-gray-600">Total Vehicles</p>
+                <p className="text-2xl font-bold text-gray-900">{statistics?.totalVehicles || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="backdrop-blur-md bg-white/10 rounded-2xl px-6 py-4 border border-white/20 shadow-2xl">
+          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
             <div className="flex items-center">
-              <div className="p-2 bg-green-500/20 rounded-lg">
-                <MapPin className="h-6 w-6 text-green-300" />
+              <div className="p-2 bg-green-100 rounded-lg">
+                <MapPin className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-white/80">Total Areas</p>
-                <p className="text-2xl font-bold text-white">{statistics?.totalAreas || 0}</p>
+                <p className="text-sm font-medium text-gray-600">Total Areas</p>
+                <p className="text-2xl font-bold text-gray-900">{statistics?.totalAreas || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="backdrop-blur-md bg-white/10 rounded-2xl px-6 py-4 border border-white/20 shadow-2xl">
+          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
-                <FileText className="h-6 w-6 text-purple-300" />
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <FileText className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-white/80">Total Records</p>
-                <p className="text-2xl font-bold text-white">{statistics?.totalRecords || 0}</p>
+                <p className="text-sm font-medium text-gray-600">Total Records</p>
+                <p className="text-2xl font-bold text-gray-900">{statistics?.totalRecords || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="backdrop-blur-md bg-white/10 rounded-2xl px-6 py-4 border border-white/20 shadow-2xl">
+          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-500/20 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-yellow-300" />
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Shield className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-white/80">Total Revenue</p>
-                <p className="text-2xl font-bold text-white">${statistics?.totalRevenue || 0}</p>
+                <p className="text-sm font-medium text-gray-600">Blacklisted Vehicles</p>
+                <p className="text-2xl font-bold text-gray-900">{blacklist.length}</p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Areas Overview */}
+        <div className="mt-8 bg-white rounded-2xl border border-gray-200 shadow-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Parking Areas Overview</h3>
+            <p className="text-sm text-gray-600 mt-1">Comprehensive metrics for all parking areas</p>
+          </div>
+          <div className="p-6">
+            {areas.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No areas found</p>
+            ) : (
+              <div className="space-y-6">
+                {/* Overall Statistics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">Total Areas</p>
+                        <p className="text-2xl font-bold text-gray-900">{areas.length}</p>
+                      </div>
+                      <MapPin className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">Total Capacity</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {areas.reduce((sum, area) => sum + (area.capacity || 0), 0)}
+                        </p>
+                      </div>
+                      <Car className="h-8 w-8 text-green-600" />
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600">Active Areas</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {areas.filter(area => area.isActive).length}
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-yellow-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Area Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {areas.map((area) => {
+                    // Calculate area-specific metrics
+                    const areaVehicles = vehicles.filter(v => v.areaId === area._id);
+                    const areaRecords = records.filter(r => r.areaId === area._id);
+                    const currentOccupancy = areaVehicles.length; // All vehicles in this area are currently parked
+                    const occupancyRate = area.capacity > 0 ? (currentOccupancy / area.capacity * 100) : 0;
+                    
+                    return (
+                      <div key={area._id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all duration-200">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 text-lg">{area.name}</h4>
+                            <p className="text-sm text-gray-600 mt-1">{area.location}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            area.isActive 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {area.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        
+                        {/* Occupancy Bar */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-gray-600">Occupancy</span>
+                            <span className="text-gray-900 font-medium">{currentOccupancy}/{area.capacity}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                occupancyRate > 80 ? 'bg-red-500' : 
+                                occupancyRate > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min(occupancyRate, 100)}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{occupancyRate.toFixed(1)}% occupied</p>
+                        </div>
+
+                        {/* Area Metrics */}
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="text-center p-2 bg-white rounded-lg border border-gray-200">
+                            <p className="text-gray-600">Current</p>
+                            <p className="text-gray-900 font-semibold">{currentOccupancy}</p>
+                          </div>
+                          <div className="text-center p-2 bg-white rounded-lg border border-gray-200">
+                            <p className="text-gray-600">Capacity</p>
+                            <p className="text-gray-900 font-semibold">{area.capacity}</p>
+                          </div>
+                          <div className="text-center p-2 bg-white rounded-lg border border-gray-200">
+                            <p className="text-gray-600">Records</p>
+                            <p className="text-gray-900 font-semibold">{areaRecords.length}</p>
+                          </div>
+                          <div className="text-center p-2 bg-white rounded-lg border border-gray-200">
+                            <p className="text-gray-600">Available</p>
+                            <p className="text-gray-900 font-semibold">{Math.max(0, area.capacity - currentOccupancy)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Data Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
           {/* Recent Vehicles */}
-          <div className="backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl">
-            <div className="px-6 py-4 border-b border-white/20">
-              <h3 className="text-lg font-semibold text-white">Recent Vehicles</h3>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Vehicles</h3>
             </div>
             <div className="p-6">
               {vehicles.length === 0 ? (
-                <p className="text-white/60 text-center py-4">No vehicles found</p>
+                <p className="text-gray-500 text-center py-4">No vehicles found</p>
               ) : (
                 <div className="space-y-4">
                   {vehicles.slice(0, 5).map((vehicle) => (
-                    <div key={vehicle._id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                    <div key={vehicle._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                       <div>
-                        <p className="font-medium text-white">{vehicle.plateNumber}</p>
-                        <p className="text-sm text-white/70">{vehicle.ownerName}</p>
+                        <p className="font-medium text-gray-900">{vehicle.plateNumber}</p>
+                        <p className="text-sm text-gray-600">{vehicle.ownerName}</p>
                       </div>
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         vehicle.isActive 
-                          ? 'bg-green-500/20 text-green-300' 
-                          : 'bg-red-500/20 text-red-300'
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-red-100 text-red-700'
                       }`}>
                         {vehicle.isActive ? 'Active' : 'Inactive'}
                       </span>
@@ -188,31 +367,42 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Recent Records */}
-          <div className="backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl">
-            <div className="px-6 py-4 border-b border-white/20">
-              <h3 className="text-lg font-semibold text-white">Recent Records</h3>
+          {/* Blacklist Management */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center">
+                <Shield className="h-5 w-5 text-red-600 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">Blacklist Management</h3>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Recently blacklisted vehicles</p>
             </div>
             <div className="p-6">
-              {records.length === 0 ? (
-                <p className="text-white/60 text-center py-4">No records found</p>
+              {blacklist.length === 0 ? (
+                <div className="text-center py-8">
+                  <Ban className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No blacklisted vehicles found</p>
+                  <p className="text-sm text-gray-400 mt-1">All vehicles are currently allowed</p>
+                </div>
               ) : (
                 <div className="space-y-4">
-                  {records.slice(0, 5).map((record) => (
-                    <div key={record._id} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                      <div>
-                        <p className="font-medium text-white">Vehicle: {record.vehicleId}</p>
-                        <p className="text-sm text-white/70">
-                          {new Date(record.entryTime).toLocaleDateString()}
-                        </p>
+                  {blacklist.slice(0, 5).map((entry) => (
+                    <div key={entry._id} className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-red-100 rounded-lg mr-3">
+                          <Ban className="h-4 w-4 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{entry.plateNumber}</p>
+                          <p className="text-sm text-gray-600">{entry.reason}</p>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium text-white">
-                          ${record.fee || 0}
+                        <p className="text-xs text-gray-500">
+                          {new Date(entry.createdAt).toLocaleDateString()}
                         </p>
-                        <p className="text-xs text-white/70">
-                          {record.duration ? `${record.duration}h` : 'Active'}
-                        </p>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Blacklisted
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -221,41 +411,10 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Areas Overview */}
-        <div className="mt-8 backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl">
-          <div className="px-6 py-4 border-b border-white/20">
-            <h3 className="text-lg font-semibold text-white">Parking Areas</h3>
-          </div>
-          <div className="p-6">
-            {areas.length === 0 ? (
-              <p className="text-white/60 text-center py-4">No areas found</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {areas.map((area) => (
-                  <div key={area._id} className="p-4 border border-white/20 rounded-lg bg-white/5">
-                    <h4 className="font-medium text-white">{area.name}</h4>
-                    <p className="text-sm text-white/70 mt-1">{area.location}</p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm text-white/60">
-                        Capacity: {area.capacity}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        area.isActive 
-                          ? 'bg-green-500/20 text-green-300' 
-                          : 'bg-red-500/20 text-red-300'
-                      }`}>
-                        {area.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
+    <br></br>
+    <br></br>
     </div>
   );
 };

@@ -27,21 +27,36 @@ class authController {
     // POST /api/auth/register
     async register(req, res) {
         try {
+            // First, handle registration without sending response
             const registrationResult = await handleRegister(req, res);
-            // Check if registration was successful by checking if response was already sent
-            if (res.headersSent) {
-                return; // Registration was successful, response already sent
+            
+            // If registration failed, return the error
+            if (registrationResult.status !== 201) {
+                return res.status(registrationResult.status).json({ 
+                    message: registrationResult.message 
+                });
             }
             
             // After successful registration, log the user in
-            const result = await handleLogin(req, res);
-            if (result.status === 200) {
+            const loginResult = await handleLogin(req, res);
+            if (loginResult.status === 200) {
+                // Set refresh token in HTTP-only cookie
+                res.cookie('refreshToken', loginResult.refreshToken, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'Strict',
+                    maxAge: 90 * 24 * 60 * 60 * 1000 // 3 months
+                });
+                
                 res.json({
                     message: 'Registration and login successful',
-                    accessToken: result.accessToken
+                    accessToken: loginResult.accessToken,
+                    role: loginResult.role
                 });
             } else {
-                return res.status(result.status).json({ message: result.message });
+                return res.status(loginResult.status).json({ 
+                    message: loginResult.message 
+                });
             }
         } catch (err) {
             return res.status(500).json({ 

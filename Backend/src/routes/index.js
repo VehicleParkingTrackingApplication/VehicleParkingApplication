@@ -8,6 +8,7 @@ import reportsRouter from './reports.js';
 import notificationRouter from './notification.js';
 import schedulerRouter from './scheduler.js';
 import blacklistRouter from './blacklist.js';
+import qaRouter from './qa.js';
 
 function route(app) {
     // API routes
@@ -38,6 +39,9 @@ function route(app) {
     app.use('/api/home', homeRouter);
 
     app.use('/api/reports', reportsRouter);
+    
+    // QA routes
+    app.use('/api/qa', qaRouter);
 }
 
 export default route;

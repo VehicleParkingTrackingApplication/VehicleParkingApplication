@@ -89,11 +89,20 @@ class parkingAreaController {
     async getAreaDetails(req, res) {
         try {
             const { areaId } = req.params;
-            const area = await Area.findById(areaId);
+            const businessId = req.user.businessId;
+            
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
+                });
+            }
+
+            const area = await Area.findOne({ _id: areaId, businessId: businessId });
             if (!area) {
                 return res.status(404).json({
                     success: false,
-                    message: "Area not found"
+                    message: "Area not found or you don't have access to this area"
                 });
             }
             return res.status(200).json({

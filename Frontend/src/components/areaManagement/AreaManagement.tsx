@@ -31,17 +31,6 @@ interface Area {
   currentVehicles?: number;
 }
 
-interface ParkingRecord {
-  _id: string;
-  plateNumber: string;
-  areaId: string;
-  entryTime: string;
-  exitTime?: string;
-  duration?: number;
-  fee?: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface AreaResponse {
   success: boolean;
@@ -58,7 +47,6 @@ export default function AreaManagement() {
   console.log('🔄 AreaManagement component rendering');
   
   const [areas, setAreas] = useState<Area[]>([]);
-  const [records, setRecords] = useState<ParkingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -226,18 +214,6 @@ export default function AreaManagement() {
         throw new Error(`Failed to fetch areas: ${areasResponse.status} ${errorText}`);
       }
 
-      // Fetch records (keeping existing functionality)
-      console.log('Fetching records...');
-      const recordsResponse = await fetchAuthApi('records');
-      console.log('Records response status:', recordsResponse.status);
-      
-      if (recordsResponse.ok) {
-        const recordsData: ParkingRecord[] = await recordsResponse.json();
-        console.log('Records data received:', recordsData);
-        setRecords(recordsData);
-      } else {
-        console.warn('Records API failed:', recordsResponse.status);
-      }
 
       console.log('=== fetchAreasData completed successfully ===');
 
@@ -309,16 +285,6 @@ export default function AreaManagement() {
     return 'bg-red-600';
   };
 
-  // Format duration in minutes as "Xh Ym"
-  const formatDuration = (totalMinutes?: number) => {
-    if (totalMinutes == null) return '-';
-    const minutes = Math.max(0, Math.round(totalMinutes));
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
-    if (hours > 0) return `${hours}h`;
-    return `${mins}m`;
-  };
 
   // Show loading while checking authentication
   if (isAuthenticated === null) {
@@ -379,8 +345,8 @@ export default function AreaManagement() {
         <div className="max-w-5xl mx-auto space-y-10">
                      {/* Header */}
            <header className="text-center">
-             <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 to-blue-400 bg-clip-text text-transparent">MoniPark</h1>
-             <p className="text-sm text-white/70 mt-2">"From Parked Cars to Smart Starts"</p>
+             {/* <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 to-blue-400 bg-clip-text text-transparent">MoniPark</h1>
+             <p className="text-sm text-white/70 mt-2">"From Parked Cars to Smart Starts"</p> */}
            </header>
 
           {error && (
@@ -389,39 +355,9 @@ export default function AreaManagement() {
             </div>
           )}
 
-          {/* Summary Statistics */}
-          {areas.length > 0 && (
-            <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
-              <h3 className="text-lg font-semibold mb-4 text-white">Summary</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="backdrop-blur-md bg-white/15 rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-2xl font-bold text-blue-300">{totalAreas}</div>
-                  <div className="text-sm text-white/70">Total Areas</div>
-                </div>
-                <div className="backdrop-blur-md bg-white/15 rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-2xl font-bold text-green-300">
-                    {areas.reduce((sum, area) => sum + area.capacity, 0)}
-                  </div>
-                  <div className="text-sm text-white/70">Total Capacity</div>
-                </div>
-                <div className="backdrop-blur-md bg-white/15 rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-2xl font-bold text-yellow-300">
-                    {Math.round(areas.reduce((sum, area) => sum + area.capacity, 0) / areas.length)}
-                  </div>
-                  <div className="text-sm text-white/70">Avg Capacity</div>
-                </div>
-                <div className="backdrop-blur-md bg-white/15 rounded-lg p-4 text-center border border-white/20">
-                  <div className="text-2xl font-bold text-purple-300">
-                    {new Set(areas.map(area => area.ftpServer)).size}
-                  </div>
-                  <div className="text-sm text-white/70">FTP Servers</div>
-                </div>
-              </div>
-            </section>
-          )}
 
           {/* Search and Pagination Controls */}
-          <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
+          <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xl">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                              <form onSubmit={handleSearch} className="flex gap-2 flex-1">
                  <Input
@@ -429,7 +365,7 @@ export default function AreaManagement() {
                    placeholder="Search areas..."
                    value={searchInput}
                    onChange={(e) => setSearchInput(e.target.value)}
-                   className="backdrop-blur-md bg-white/20 border-white/30 text-white"
+                   className="bg-white border-gray-300 text-gray-900"
                  />
                  <Button type="submit" variant="outline">
                    Search
@@ -464,10 +400,10 @@ export default function AreaManagement() {
                      }
                    }}
                  >
-                   <SelectTrigger className="w-[100px] backdrop-blur-md bg-white/20 border-white/30 text-white">
+                   <SelectTrigger className="w-[100px] bg-white border-gray-300 text-gray-900">
                      <SelectValue />
                    </SelectTrigger>
-                   <SelectContent className="backdrop-blur-md bg-white/20 text-white border-white/30">
+                   <SelectContent className="bg-white text-gray-900 border-gray-300">
                      <SelectItem value="3">3</SelectItem>
                      <SelectItem value="5">5</SelectItem>
                      <SelectItem value="10">10</SelectItem>
@@ -497,12 +433,12 @@ export default function AreaManagement() {
                   }}
                   disabled={currentPage <= 1 || loading}
                   size="sm"
-                  className="backdrop-blur-md bg-white/20 border-white/30 text-white hover:bg-white/30 disabled:opacity-50"
+                  className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Previous
                 </Button>
                 
-                <span className="flex items-center px-3 text-sm text-white/70 backdrop-blur-md bg-white/20 rounded border border-white/30">
+                <span className="flex items-center px-3 text-sm text-gray-600 bg-white rounded border border-gray-300">
                   Page {currentPage} of {totalPages}
                 </span>
                 
@@ -519,7 +455,7 @@ export default function AreaManagement() {
                   }}
                   disabled={currentPage >= totalPages || loading}
                   size="sm"
-                  className="backdrop-blur-md bg-white/20 border-white/30 text-white hover:bg-white/30 disabled:opacity-50"
+                  className="bg-white border-gray-300 text-gray-900 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Next
                 </Button>
@@ -528,9 +464,173 @@ export default function AreaManagement() {
           </section>
 
           {/* Areas Table */}
-          <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
+          <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Parking Areas</h2>
+              <div className="text-sm text-gray-600">
+                {totalAreas} total areas
+              </div>
+            </div>
+            
+            {areas.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <div className="text-gray-600 text-lg mb-2">
+                  {search ? 'No areas found matching your search.' : 'No parking areas available.'}
+                </div>
+                <div className="text-gray-500 text-sm">
+                  {search ? 'Try adjusting your search terms.' : 'Create your first parking area to get started.'}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {areas.map((area, index) => (
+                  <div key={area._id} className="bg-white rounded-xl border-2 border-blue-200 p-6 hover:shadow-lg transition-all duration-200">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                            {index + 1}
+                          </div>
+                          <h3 className="text-xl font-semibold text-gray-900">{area.name}</h3>
+                          <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            Active
+                          </div>
+                        </div>
+                        {area.policy && (
+                          <p className="text-gray-600 text-sm ml-11 mb-3">
+                            <span className="font-medium">Policy:</span> {area.policy}
+                          </p>
+                        )}
+                        <div className="ml-11 flex items-center gap-6 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{area.location}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span>{area.capacity} spots</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-900 mb-1">
+                          {area.currentVehicles || 0}/{area.capacity}
+                        </div>
+                        <div className="text-sm text-gray-600 mb-2">
+                          {Math.round(((area.currentVehicles || 0) / area.capacity) * 100)}% occupied
+                        </div>
+                        <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-300 ${
+                              ((area.currentVehicles || 0) / area.capacity) > 0.8 ? 'bg-red-500' : 
+                              ((area.currentVehicles || 0) / area.capacity) > 0.6 ? 'bg-yellow-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(((area.currentVehicles || 0) / area.capacity) * 100, 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                            {area.ftpServer}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span>Created {new Date(area.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/area/${area._id}/records`, { 
+                              state: { areaName: area.name } 
+                            });
+                          }}
+                          className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Records
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/area/${area._id}/vehicles`, { 
+                              state: { areaName: area.name } 
+                            });
+                          }}
+                          className="text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0M15 17a2 2 0 104 0" />
+                          </svg>
+                          Vehicles
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/area/${area._id}/details`, {
+                              state: { areaName: area.name }
+                            });
+                          }}
+                          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Details
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Connection Setup Section */}
+          <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Parking Areas ({totalAreas} total)</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Connection Setup</h2>
               <Button 
                 type="button"
                 onClick={(e) => {
@@ -543,196 +643,14 @@ export default function AreaManagement() {
                 Add New Area
               </Button>
             </div>
-            
-            <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 overflow-hidden">
-              {areas.length === 0 ? (
-                <div className="p-8 text-center">
-                  <div className="text-gray-400">
-                    {search ? 'No areas found matching your search.' : 'No parking areas available.'}
-                  </div>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gray-600">
-                      <TableHead className="text-white">Index</TableHead>
-                      <TableHead className="text-white">Area Name</TableHead>
-                      <TableHead className="text-white">Location</TableHead>
-                      <TableHead className="text-white">Capacity</TableHead>
-                      <TableHead className="text-white">Occupancy</TableHead>
-                      <TableHead className="text-white">FTP Server</TableHead>
-                      <TableHead className="text-white">Created</TableHead>
-                      <TableHead className="text-white">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {areas.map((area, index) => (
-                      <TableRow key={area._id} className="border-white/20 hover:bg-white/10">
-                        <TableCell className="text-white">{index + 1}</TableCell>
-                        <TableCell className="text-white">
-                          <div className="font-semibold" title={area.name}>
-                            {area.name}
-                          </div>
-                          {area.policy && (
-                            <div className="text-xs text-gray-400 mt-1" title={area.policy}>
-                              Policy: {area.policy}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-white" title={area.location}>
-                          {area.location}
-                        </TableCell>
-                        <TableCell className="text-white">
-                          {area.capacity} spots
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <div className="flex items-center space-x-2">
-                            <span className={`${getOccupancyColor(area.currentVehicles || 0, area.capacity)} text-white text-xs px-2 py-1 rounded`}>
-                              {area.currentVehicles || 0}/{area.capacity}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {Math.round(((area.currentVehicles || 0) / area.capacity) * 100)}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <span className="text-xs font-mono bg-neutral-600 px-2 py-1 rounded" title={area.ftpServer}>
-                            {area.ftpServer}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <div className="text-sm">
-                            {new Date(area.createdAt).toLocaleDateString()}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            Updated: {new Date(area.updatedAt).toLocaleDateString()}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <div className="flex space-x-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                navigate(`/area/${area._id}/records`, { 
-                                  state: { areaName: area.name } 
-                                });
-                              }}
-                              className="text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-white"
-                            >
-                              Records
-                            </Button>
-                            
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                navigate(`/area/${area._id}/vehicles`, { 
-                                  state: { areaName: area.name } 
-                                });
-                              }}
-                              className="text-green-400 border-green-400 hover:bg-green-400 hover:text-white"
-                            >
-                              
-                              Vehicles
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                navigate(`/area/${area._id}/details`, {
-                                  state: { areaName: area.name }
-                                });
-                              }}
-                              className="text-indigo-400 border-indigo-400 hover:bg-indigo-400 hover:text-white"
-                            >
-                              View Detail
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">Connection setup section will be implemented here</p>
+              <div className="text-sm text-gray-500">
+                This area is reserved for FTP server connections, camera integrations, and other system configurations.
+              </div>
             </div>
           </section>
 
-          {/* Records Table */}
-          <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Recent Parking Records</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Plate Number</TableHead>
-                  <TableHead>Area ID</TableHead>
-                  <TableHead>Entry Time</TableHead>
-                  <TableHead>Exit Time</TableHead>
-                  <TableHead>Duration</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {records.slice(0, 10).map((record) => (
-                  <TableRow key={record._id}>
-                    <TableCell>{record.plateNumber}</TableCell>
-                    <TableCell>{record.areaId}</TableCell>
-                    <TableCell>{new Date(record.entryTime).toLocaleString()}</TableCell>
-                    <TableCell>{record.exitTime ? new Date(record.exitTime).toLocaleString() : '-'}</TableCell>
-                    <TableCell>{formatDuration(record.duration)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </section>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <Button 
-              type="button"
-              className="w-full md:w-auto" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Export areas data');
-              }}
-              variant="outline"
-            >
-              Export Areas Data
-            </Button>
-            <Button 
-              type="button"
-              variant="outline" 
-              className="w-full md:w-auto" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('View area analytics');
-              }}
-            >
-              View Analytics
-            </Button>
-            <Button 
-              type="button"
-              className="w-full md:w-auto" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Manage FTP servers');
-              }}
-              variant="outline"
-            >
-              Manage FTP Servers
-            </Button>
-          </div>
         </div>
       </div>
       <AreaCreatePopup

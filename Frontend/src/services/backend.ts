@@ -9,6 +9,7 @@ export interface User {
   username: string;
   email: string;
   role: 'admin' | 'user' | 'moderator';
+  businessId: string;
   createdAt: string;
   updatedAt: string;
   firstName?: string;
@@ -119,6 +120,27 @@ export interface Statistics {
     vehicles: number;
     revenue: number;
   }>;
+}
+
+export interface BlacklistEntry {
+  _id: string;
+  businessId: string;
+  areaId?: string;
+  plateNumber: string;
+  reason: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlacklistResponse {
+  success: boolean;
+  data: BlacklistEntry[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 /**
@@ -513,7 +535,7 @@ export async function register(username: string, email: string, password: string
   if (role) payload.role = role;
   
   try {
-    const response = await postAuthApi("auth/register", {}, JSON.stringify(payload));
+    const response = await postApi("auth/register", {}, JSON.stringify(payload));
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Registration failed' }));
       throw new Error(errorData.message || `HTTP ${response.status}: Registration failed`);
@@ -610,6 +632,77 @@ export async function listStaff(params?: {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Failed to fetch staff list' }));
     throw new Error(errorData.message || 'Failed to fetch staff list');
+  }
+  return await response.json();
+}
+
+// Blacklist Management Functions
+
+/**
+ * @param {string} businessId
+ * @param {number=} page
+ * @param {number=} limit
+ * @returns {Promise<BlacklistResponse | null>}
+ */
+export async function getBlacklistByBusiness(businessId: string, page: number = 1, limit: number = 10): Promise<BlacklistResponse | null> {
+  const response = await fetchAuthApi(`blacklist/business/${businessId}`, { page: page.toString(), limit: limit.toString() });
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+/**
+ * @param {string} plateNumber
+ * @param {string=} businessId
+ * @returns {Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null>}
+ */
+export async function checkBlacklistStatus(plateNumber: string, businessId?: string): Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null> {
+  const params: Record<string, string> = { plateNumber };
+  if (businessId) params.businessId = businessId;
+  
+  const response = await fetchAuthApi("blacklist/check", params);
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+/**
+ * @param {string} plateNumber
+ * @param {string=} businessId
+ * @param {number=} page
+ * @param {number=} limit
+ * @returns {Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null>}
+ */
+export async function searchBlacklistByPlate(plateNumber: string, businessId?: string, page: number = 1, limit: number = 10): Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null> {
+  const params: Record<string, string> = { plateNumber, page: page.toString(), limit: limit.toString() };
+  if (businessId) params.businessId = businessId;
+  
+  const response = await fetchAuthApi("blacklist/search", params);
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+/**
+ * @param {Object} blacklistData
+ * @param {string} blacklistData.businessId
+ * @param {string} blacklistData.plateNumber
+ * @param {string} blacklistData.reason
+ * @param {string=} blacklistData.areaId
+ * @returns {Promise<{ success: boolean; message: string; data: BlacklistEntry } | null>}
+ */
+export async function createBlacklistEntry(blacklistData: {
+  businessId: string;
+  plateNumber: string;
+  reason: string;
+  areaId?: string;
+}): Promise<{ success: boolean; message: string; data: BlacklistEntry } | null> {
+  const response = await postAuthApi("blacklist", {}, JSON.stringify(blacklistData));
+  if (!response.ok) {
+    return null;
   }
   return await response.json();
 }
