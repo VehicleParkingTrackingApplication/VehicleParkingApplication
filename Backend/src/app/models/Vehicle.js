@@ -24,6 +24,10 @@ const Vehicle = new Schema({
         type: String,
         required: true,
         default: "image.jpg"
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     }
 });
 

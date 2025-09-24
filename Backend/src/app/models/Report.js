@@ -32,7 +32,21 @@ const Report = new Schema({
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    isShared: {
+        type: Boolean,
+        default: false
+    },
+    sharedWith: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users'
+        },
+        sharedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 });
 
 export default mongoose.model('reports', Report);

@@ -92,7 +92,7 @@ const Dashboard: React.FC = () => {
           totalAreas: areasResponse.data?.length || 0,
           totalRecords: allRecords.length,
           totalRevenue: 0, // Calculate based on your revenue logic
-          activeVehicles: allVehicles.length, // All vehicles are currently active
+          activeVehicles: allVehicles.filter(v => v.isActive !== false).length, // Count only active vehicles
           dailyStats: []
         };
         setStatistics(stats);
@@ -256,7 +256,7 @@ const Dashboard: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-600">Active Areas</p>
                         <p className="text-2xl font-bold text-gray-900">
-                          {areas.filter(area => area.isActive).length}
+                          {areas.filter(area => area.isActive !== false).length}
                         </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-yellow-600" />
@@ -281,11 +281,11 @@ const Dashboard: React.FC = () => {
                             <p className="text-sm text-gray-600 mt-1">{area.location}</p>
                           </div>
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            area.isActive 
+                            (area.isActive !== false) 
                               ? 'bg-green-100 text-green-700' 
                               : 'bg-red-100 text-red-700'
                           }`}>
-                            {area.isActive ? 'Active' : 'Inactive'}
+                            {(area.isActive !== false) ? 'Active' : 'Inactive'}
                           </span>
                         </div>
                         
@@ -347,21 +347,31 @@ const Dashboard: React.FC = () => {
                 <p className="text-gray-500 text-center py-4">No vehicles found</p>
               ) : (
                 <div className="space-y-4">
-                  {vehicles.slice(0, 5).map((vehicle) => (
-                    <div key={vehicle._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div>
-                        <p className="font-medium text-gray-900">{vehicle.plateNumber}</p>
-                        <p className="text-sm text-gray-600">{vehicle.ownerName}</p>
+                  {vehicles.slice(0, 5).map((vehicle) => {
+                    // Find the area name for this vehicle
+                    const vehicleArea = areas.find(area => area._id === vehicle.areaId);
+                    const areaName = vehicleArea ? vehicleArea.name : 'Unknown Area';
+                    
+                    return (
+                      <div key={vehicle._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{vehicle.plateNumber}</p>
+                          <p className="text-sm text-gray-600">{vehicle.ownerName}</p>
+                          <div className="flex items-center mt-1">
+                            <MapPin className="h-3 w-3 text-gray-400 mr-1" />
+                            <p className="text-xs text-gray-500">{areaName}</p>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          (vehicle.isActive !== false) 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {(vehicle.isActive !== false) ? 'Active' : 'Inactive'}
+                        </span>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        vehicle.isActive 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-red-100 text-red-700'
-                      }`}>
-                        {vehicle.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

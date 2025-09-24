@@ -5,6 +5,8 @@ import userRouter from './user.js';
 import authRouter from './auth.js';
 import staffRouter from './staff.js';
 import reportsRouter from './reports.js';
+import commentsRouter from './comments.js';
+import sharesRouter from './shares.js';
 import notificationRouter from './notification.js';
 import schedulerRouter from './scheduler.js';
 import blacklistRouter from './blacklist.js';
@@ -39,6 +41,12 @@ function route(app) {
     app.use('/api/home', homeRouter);
 
     app.use('/api/reports', reportsRouter);
+    
+    // Comments routes
+    app.use('/api/comments', commentsRouter);
+    
+    // Shares routes
+    app.use('/api/shares', sharesRouter);
     
     // QA routes
     app.use('/api/qa', qaRouter);

@@ -22,7 +22,7 @@ import {
 import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parkingApi';
 import { saveReport } from '@/services/reportsApi';
-import { Save } from 'lucide-react';
+import { Save, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 // WebSocket removed for this page – dashboard now fetches via API only
 
 // --- INTERFACES ---
@@ -630,32 +630,32 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                 }} className="bg-white border-gray-300 text-gray-900" />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                    <label htmlFor="start-date" className="block text-sm font-medium mb-2 text-gray-700">Start Date</label>
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+              <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                <div className="flex-1 min-w-0">
+                    <label htmlFor="start-date" className="block text-xs font-medium mb-1 text-gray-700">Start Date</label>
                     <Input type="date" id="start-date" value={startDate} onChange={(e) => { 
                       setStartDate(e.target.value); 
                       setActiveFilter('custom');
                       updateURLParams({ startDate: e.target.value || null, filter: 'custom' });
-                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500" />
+                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
-                <div className="flex-1">
-                    <label htmlFor="end-date" className="block text-sm font-medium mb-2 text-gray-700">End Date</label>
+                <div className="flex-1 min-w-0">
+                    <label htmlFor="end-date" className="block text-xs font-medium mb-1 text-gray-700">End Date</label>
                     <Input type="date" id="end-date" value={endDate} onChange={(e) => { 
                       setEndDate(e.target.value); 
                       setActiveFilter('custom');
                       updateURLParams({ endDate: e.target.value || null, filter: 'custom' });
-                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500" />
+                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
               </div>
-              <div className="flex flex-col space-y-2">
-                <label className="block text-sm font-medium mb-2 text-gray-700">Quick Filters</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 gap-2">
-                  <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')} className={activeFilter === 'today' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Today</Button>
-                  <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')} className={activeFilter === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Week</Button>
-                  <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')} className={activeFilter === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Month</Button>
-                  <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')} className={activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>All</Button>
+              <div className="flex flex-col space-y-2 min-w-0">
+                <label className="block text-xs font-medium text-gray-700">Quick Filters</label>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'today' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>Today</Button>
+                  <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>Week</Button>
+                  <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>Month</Button>
+                  <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>All</Button>
                 </div>
               </div>
             </div>
@@ -666,18 +666,42 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
               <div className="text-center py-10">Loading area data...</div>
             ) : (
               <div className="space-y-8">
-                <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <Card className="bg-white border-gray-200 shadow-lg">
-                    <CardHeader><CardTitle className="text-blue-600">Current Occupancy</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold text-gray-900">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
+                    <CardHeader>
+                      <CardTitle className="text-blue-600 flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Current Occupancy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-lg">
-                    <CardHeader><CardTitle className="text-green-600">Total Entries</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold text-gray-900">{filteredRecords.filter(r => r.entryDate).length}</CardContent>
+                    <CardHeader>
+                      <CardTitle className="text-green-600 flex items-center gap-2">
+                        <ArrowUpRight className="h-5 w-5" />
+                        Total Entries
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.entryDate).length}</CardContent>
                   </Card>
                   <Card className="bg-white border-gray-200 shadow-lg">
-                    <CardHeader><CardTitle className="text-yellow-600">Total Exits</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold text-gray-900">{filteredRecords.filter(r => r.exitDate).length}</CardContent>
+                    <CardHeader>
+                      <CardTitle className="text-yellow-600 flex items-center gap-2">
+                        <ArrowDownLeft className="h-5 w-5" />
+                        Total Exits
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.exitDate).length}</CardContent>
+                  </Card>
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-red-600 flex items-center gap-2">
+                        <ArrowUpRight className="h-5 w-5" />
+                        Total Overstays
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.durationMinutes && r.durationMinutes > overstayLimit).length}</CardContent>
                   </Card>
                 </section>
                 

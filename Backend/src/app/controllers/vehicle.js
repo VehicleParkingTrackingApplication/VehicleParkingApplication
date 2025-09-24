@@ -139,11 +139,19 @@ class parkingVehicleController {
                 
                 // Calculate current duration
                 const currentTime = convertToTimeZone(new Date(), 'Australia/Sydney');
-                const entryTime = convertToTimeZone(vehicle.entryTime, 'Australia/Sydney');
-                const durationMs = currentTime.getTime() - entryTime.getTime();
-                const durationMinutes = Math.floor(durationMs / (1000 * 60));
-                const durationHours = Math.floor(durationMinutes / 60);
-                const remainingMinutes = durationMinutes % 60;
+                
+                // Check if entryTime exists before converting
+                let entryTime = null;
+                let durationHours = 0;
+                let remainingMinutes = 0;
+                
+                if (vehicle.entryTime) {
+                    entryTime = convertToTimeZone(vehicle.entryTime, 'Australia/Sydney');
+                    const durationMs = currentTime.getTime() - entryTime.getTime();
+                    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+                    durationHours = Math.floor(durationMinutes / 60);
+                    remainingMinutes = durationMinutes % 60;
+                }
 
                 return {
                     ...vehicleObj,
@@ -540,17 +548,24 @@ class parkingVehicleController {
             
             // Get all vehicles in this specific area
             const vehicles = await Vehicle.find({ areaId })
-                .sort({ datetime: -1 })
+                .sort({ entryTime: -1 })
                 .lean();
 
             // Calculate current duration for each vehicle
             const vehiclesWithDuration = vehicles.map(vehicle => {
                 const currentTime = new Date();
-                const entryTime = vehicle.datetime;
-                const durationMs = currentTime.getTime() - entryTime.getTime();
-                const durationMinutes = Math.floor(durationMs / (1000 * 60));
-                const durationHours = Math.floor(durationMinutes / 60);
-                const remainingMinutes = durationMinutes % 60;
+                const entryTime = vehicle.entryTime;
+                
+                // Check if entryTime exists before calculating duration
+                let durationHours = 0;
+                let remainingMinutes = 0;
+                
+                if (entryTime) {
+                    const durationMs = currentTime.getTime() - entryTime.getTime();
+                    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+                    durationHours = Math.floor(durationMinutes / 60);
+                    remainingMinutes = durationMinutes % 60;
+                }
 
                 return {
                     _id: vehicle._id,
@@ -694,7 +709,7 @@ class parkingVehicleController {
                 };
 
                 // Calculate duration
-                const durationMs = currentTime.getTime() - vehicle.datetime.getTime();
+                const durationMs = currentTime.getTime() - vehicle.entryTime.getTime();
                 const durationMinutes = Math.floor(durationMs / (1000 * 60));
                 const durationHours = Math.floor(durationMinutes / 60);
                 const remainingMinutes = durationMinutes % 60;
@@ -704,7 +719,7 @@ class parkingVehicleController {
                     minutes: remainingMinutes,
                     milliseconds: durationMs / 1000
                 };
-                recordData.entryTime = vehicle.datetime;
+                recordData.entryTime = vehicle.entryTime;
 
                 // Create the leaving record
                 await Record.create(recordData);
@@ -721,7 +736,7 @@ class parkingVehicleController {
                     removedVehicle: {
                         plateNumber: vehicle.plateNumber,
                         duration: recordData.duration,
-                        entryTime: vehicle.datetime,
+                        entryTime: vehicle.entryTime,
                         exitTime: currentTime
                     }
                 });
@@ -796,7 +811,7 @@ class parkingVehicleController {
                     plateNumber, 
                     country: country || 'AUS', 
                     image, 
-                    datetime
+                    entryTime: datetime
                 };
                 await Vehicle.create(vehicleData);
             } else if (status === "LEAVING") {

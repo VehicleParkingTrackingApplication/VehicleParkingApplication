@@ -17,7 +17,9 @@ import { getAllReports, getReportById, deleteReport, queryReportAI } from '../se
 import { getQuestionSuggestions, getFollowUpQuestions } from '../services/qaService';
 import type { QAItem } from '../services/qaService';
 import QuestionSuggestions from './QuestionSuggestions';
-import FollowUpQuestions from './FollowUpQuestions'; 
+import FollowUpQuestions from './FollowUpQuestions';
+import CommentSection from './CommentSection';
+import ShareReport from './ShareReport'; 
 
 const ClientOnlyReportChart = lazy(() => import('./ClientReportChart'));
 
@@ -329,6 +331,15 @@ export default function ExistingReportsPage() {
                       >
                         <div className="font-semibold">{report.name}</div>
                         <div className="text-xs text-gray-500 mt-1">{report.type} &middot; {new Date(report.createdAt).toLocaleDateString()}</div>
+                        <div className="flex items-center gap-2 mt-2">
+                          {report.isOwner ? (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Your Report</span>
+                          ) : (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                              Shared by {report.ownerId?.firstName} {report.ownerId?.lastName}
+                            </span>
+                          )}
+                        </div>
                       </button>
                     )) : <p className="text-gray-500">No reports found.</p>}
                   </div>
@@ -417,6 +428,23 @@ export default function ExistingReportsPage() {
                     </form>
                   </div>
                 </CardContent>
+                
+                {/* Share and Comments Section */}
+                <div className="p-6 border-t border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
+                    {/* Share Section */}
+                    <ShareReport 
+                      reportId={currentReport._id} 
+                      isOwner={currentReport.isOwner !== false} 
+                    />
+                    
+                    {/* Comments Section */}
+                    <CommentSection 
+                      reportId={currentReport._id} 
+                      isOwner={currentReport.isOwner !== false} 
+                    />
+                  </div>
+                </div>
               </Card>
             )}
           </div>
