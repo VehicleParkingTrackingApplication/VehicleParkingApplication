@@ -236,7 +236,8 @@ export default function ExistingReportsPage() {
         type: currentReport.type,
         createdAt: currentReport.createdAt,
         filters: currentReport.filters,
-        chartDataSummary: `The chart contains ${currentReport.chartData.length} data points.`,
+        chartData: currentReport.chartData,
+        chartDataSummary: `The chart contains ${currentReport.chartData.length} data points with detailed values.`,
       });
       const result = await queryReportAI(userQuery, reportContext);
       const botResponse = result.response || result.error || "Sorry, an error occurred.";

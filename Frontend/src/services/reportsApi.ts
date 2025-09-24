@@ -63,15 +63,6 @@ export const deleteReport = async (reportId: string) => {
   return res.json();
 };
 
-/**
- * Ask AI to analyze a specific report with a question.
- * POST /api/reports/:id/analyze
- */
-export const analyzeReport = async (reportId: string, question: string) => {
-  const res = await postAuthApi(`reports/${reportId}/analyze`, undefined, JSON.stringify({ question }));
-  if (!res.ok) throw new Error('Failed to analyze report');
-  return res.json();
-};
 
 export const queryReportAI = async (query: string, context: string): Promise<{ response?: string; error?: string }> => {
   try {
