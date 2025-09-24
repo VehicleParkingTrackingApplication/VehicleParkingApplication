@@ -6,25 +6,32 @@ export const handleRegister = async (req, res) => {
     const data = { 
         username: req.body.username, 
         password: req.body.password,
-        role: 'admin'
+        email: req.body.email,
+        businessId: req.body.businessId,
+        role: req.body.role || 'user'
     };
-    if (!data.username || !data.password) {
-        return res.status(400).json({ 'message': 'Username & password & confirmed password are required.' });
+    if (!data.username || !data.password || !data.email || !data.businessId) {
+        return { status: 400, message: 'Username, email, password, and businessId are required.' };
     }
-    // Check whether the usernaem already exists in database
-    const existingUser = await User.findOne({username: data.username})
-    if (existingUser) {
-        return res.status(400).json({ 'message': 'User already exists. Please choose a different username.' });
+    // Check whether the username already exists in database
+    const existingUserByUsername = await User.findOne({username: data.username});
+    if (existingUserByUsername) {
+        return { status: 400, message: 'Username already exists. Please choose a different username.' };
+    }
+    // Check whether the email already exists in database
+    const existingUserByEmail = await User.findOne({email: data.email});
+    if (existingUserByEmail) {
+        return { status: 400, message: 'Email already exists. Please use a different email.' };
     }
     try {
-        // if username is not exist, then hash the password and save to the database
+        // Hash the password and save to the database
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(data.password, saltRounds);
         data.password = hashedPassword;
         await User.insertMany(data);
-        return res.status(201).json({ 'message': 'User created successfully.' });
+        return { status: 201, message: 'User created successfully.' };
     } catch (err) {
-        return res.status(500).json({ 'message': err.message });
+        return { status: 500, message: err.message };
     }
 }
 
@@ -47,11 +54,11 @@ export const handleLogin = async (req, res) => {
         };
     }
     // Check whether the password is correct
-    const checkPassword = bcrypt.compare(
+    const isPasswordCorrect = await bcrypt.compare(
         data.password,
         currentUser.password
     );
-    if (!checkPassword) {
+    if (!isPasswordCorrect) {
         return { 
             status: 400, 
             message: 'Password is incorrect. Please try again.' 
@@ -64,13 +71,12 @@ export const handleLogin = async (req, res) => {
         role: currentUser.role
     };
 
-    // Generate access token (15 minutes)
+    // Generate access token (1 day)
     const accessToken = jwt.sign(
         {
             ...payload,
             type: 'access',
-            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 1 day
-            // exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
         },
         process.env.ACCESS_TOKEN_SECRET
     );
@@ -80,7 +86,7 @@ export const handleLogin = async (req, res) => {
         {
             ...payload,
             type: 'refresh',
-            exp: Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60) // 3 months
+            exp: Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60)
         },
         process.env.REFRESH_TOKEN_SECRET
     );

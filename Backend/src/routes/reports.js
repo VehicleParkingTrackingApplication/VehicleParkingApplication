@@ -1,13 +1,14 @@
 import express from 'express';
 import Report from '../app/models/Report.js';
+import requireAuth from '../middleware/auth/require-auth.js';
 
 const router = express.Router();
 
 // --- GET /api/reports ---
-// Fetches a summary of all saved reports
-router.get('/', async (req, res) => {
+// Fetches a summary of all saved reports for the current user
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const reports = await Report.find({})
+    const reports = await Report.find({ ownerId: req.user.id })
       .sort({ createdAt: -1 })
       .select('_id name createdAt type'); // Only select the fields needed for the list
 
@@ -18,12 +19,10 @@ router.get('/', async (req, res) => {
     });
 
   } catch (error) {
-    // --- THIS IS THE CRITICAL PART ---
     console.error("---! BACKEND CRASH in GET /api/reports !---");
     console.error("Timestamp:", new Date().toISOString());
     console.error("The error object is:", error);
     console.error("---! END OF CRASH REPORT !---");
-    // --- END OF CRITICAL PART ---
 
     res.status(500).json({ 
       success: false,
@@ -33,11 +32,11 @@ router.get('/', async (req, res) => {
 });
 
 // --- GET /api/reports/:id ---
-// Fetches the full details of a single report
-router.get('/:id', async (req, res) => {
+// Fetches the full details of a single report (only if owned by user)
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const report = await Report.findById(id);
+    const report = await Report.findOne({ _id: id, ownerId: req.user.id });
 
     if (!report) {
       return res.status(404).json({ success: false, message: 'Report not found.' });
@@ -56,8 +55,8 @@ router.get('/:id', async (req, res) => {
 
 
 // --- POST /api/reports ---
-// Creates a new report
-router.post('/', async (req, res) => {
+// Creates a new report owned by the current user
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { name, areaId, type, chartData, filters, description } = req.body;
 
@@ -71,6 +70,7 @@ router.post('/', async (req, res) => {
 
     const newReport = new Report({
       name,
+      ownerId: req.user.id,
       areaId,
       type,
       chartData,
@@ -95,11 +95,11 @@ router.post('/', async (req, res) => {
 });
 
 // --- DELETE /api/reports/:id ---
-// Deletes a report by its ID
-router.delete('/:id', async (req, res) => {
+// Deletes a report by its ID if owned by the current user
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedReport = await Report.findByIdAndDelete(id);
+    const deletedReport = await Report.findOneAndDelete({ _id: id, ownerId: req.user.id });
 
     if (!deletedReport) {
       return res.status(404).json({ success: false, message: 'Report not found.' });

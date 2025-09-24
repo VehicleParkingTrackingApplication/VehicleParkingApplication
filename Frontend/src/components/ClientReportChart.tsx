@@ -33,41 +33,41 @@ const ClientReportChart = ({ report }: { report: ReportDetail }) => {
           case 'hourly-activity':
             return (
               <ComposedChart data={report.chartData}> 
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
-                <YAxis stroke="#888888" fontSize={12} />
-                <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                <XAxis dataKey="hour" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                 <Legend />
                 <Bar dataKey="Entries" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Exits" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                <Line type="monotone" dataKey="Predictor" stroke="#22c55e" />
+                <Bar dataKey="Exits" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
               </ComposedChart>
             );
           case 'entries-over-time':
             return (
               <LineChart data={report.chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis dataKey="period" stroke="#888888" fontSize={12} tick={{ angle: -20, textAnchor: 'end' }} height={60} />
-                <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
-                <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                <XAxis dataKey="period" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} tick={{ angle: -20, textAnchor: 'end' }} height={60} />
+                <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false} />
+                <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                 <Legend />
-                <Line type="monotone" dataKey="Entries" stroke="#22c55e" dot={false} connectNulls />
-                <Line type="monotone" dataKey="Predictor" stroke="#a78bfa" strokeDasharray="5 5" dot={false} connectNulls />
+                <Line type="monotone" dataKey="Entries" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
+                <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
               </LineChart>
             );
           case 'overstay-analysis':
             return (
               <BarChart data={report.chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis dataKey="date" stroke="#888888" fontSize={12} />
-                <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
-                <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                <XAxis dataKey="date" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false} />
+                <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                 <Legend />
                 <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             );
           default:
-            return <p className="text-center text-yellow-400">Unknown report type.</p>;
+            return <p className="text-center text-gray-600">Unknown report type.</p>;
         }
       })()}
     </ResponsiveContainer>

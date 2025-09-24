@@ -7,36 +7,63 @@ const router = express.Router();
 
 
 // GET /api/parking/area
-router.get('/area', requireAuth, area.getAreaByBusiness);
+router.get('/area', requireAuth, area.getAllAreasByBusinessId);
 
 // POST /api/parking/area/input-area
 router.post('/area/input-area', requireAuth, area.inputParkingArea);
 
+// GET /api/parking/area/:areaId/ftpserver
+// router.get('/area/:areaId/input-ftpserver', requireAuth, area.getFtpServerByAreaId);
+
 // POST /api/parking/area/input-ftpserver
-router.post('/area/input-ftpserver', requireAuth, area.inputFtpServer);
+router.post('/area/:areaId/input-ftpserver', requireAuth, area.saveFtpServer);
 
-// PUT /api/parking/area/update-ftpserver
-router.put('/area/update-ftpserver', requireAuth, area.updateFtpServer);
+// POST /api/parking/area/:areaId/trigger-ftp
+router.post('/area/:areaId/trigger-ftp', requireAuth, area.triggerFtpServer);
 
-// POST /api/parking/area/input-vehicle
-router.post('/area/input-vehicle', requireAuth, vehicle.inputVehicleForm);
+/**
+ * Test FTP Server connection
+ * GET /api/parking/area/status-ftpserver
+ */
+router.post('/area/:areaId/status-ftpserver', requireAuth, area.testFtpServerConnection);
+
+
+/**
+ * Get area details
+ * GET /api/parking/area/:areaId/details
+ */
+router.get('/area/:areaId/details', requireAuth, area.getAreaDetails);
+
+/**
+ * Input vehicle manually
+ * POST /api/parking/area/:areaId/manual-input
+ */
+router.post('/vehicle/:areaId/manual-input', requireAuth, vehicle.manualInputVehicle);
 
 // GET /api/parking/vehicle/:areaId/existing-vehicles
-router.get('/vehicle/:areaId/existing-vehicles', requireAuth, vehicle.getExistingParkingVehicleByParkingArea);
+router.get('/vehicle/:areaId/existing-vehicles', requireAuth, vehicle.getParkingVehicleByAreaId);
 
 // GET /api/vehicle/:areaId/recent-records
-router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentRecords);
+router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentRecordsByAreaId);
 
 // GET /api/parking/vehicle/:areaId/all-records
-router.get('/vehicle/:areaId/all-records', requireAuth, vehicle.getAllRecordsByArea);
+router.get('/vehicle/:areaId/all-records', requireAuth, vehicle.getAllRecordsByAreaId);
 
+// GET /api/parking/records/:businessId/latest
+router.get('/records/:businessId/latest', requireAuth, vehicle.getAllRecordsByBusinessId);
+
+// New routes for manual input workflow with areaId
+// GET /api/parking/area/:areaId/details
+// router.get('/area/:areaId/details', requireAuth, vehicle.getAreaDetails);
+
+// GET /api/parking/area/:areaId/vehicles-for-removal
+router.get('/vehicle/:areaId/vehicles-for-removal', requireAuth, vehicle.getVehiclesForRemoval);
 
 // POST /api/parking/simulate
 router.post('/simulate', vehicle.handleSimulation);
 
-
 // API for data analysis without authentication
 // create new function controller to fetch the API
-router.get('/analysis/area', area.getAreaByBusiness);
+// router.get('/analysis/area', area.getAreaByBusiness);
 
 export default router;

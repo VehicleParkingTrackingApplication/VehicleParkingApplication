@@ -34,14 +34,14 @@ class accountController {
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
+                    phoneNumber: user.phoneNumber,
+                    address: user.address,
                     role: user.role,
                     businessId: user.businessId,
-                    createAt: user.createAt,
-                    updateAt: user.updateAt
+                    profileCompleted: user.profileCompleted
                 }
             });
         } catch (error) {
-            console.error('Error fetching account data:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
@@ -53,16 +53,7 @@ class accountController {
     
     async inputBusiness(req, res) {
         try {
-            console.log(req.body);
             const {email, phoneNumber, businessName, location} = req.body;
-
-            // add conditions to validate the requirement
-            // if (!conpanyName || !email || !phoneNumber) {
-            //     return res.status(400).json({
-            //         success: false,
-            //         message: 'Business name and parking area are required'
-            //     });
-            // }
 
             // check if the email already exist with another business
             const existingBusiness = await Business.findOne({ email: email.trim() });
@@ -92,7 +83,6 @@ class accountController {
                 }
             })
         } catch (error) {
-            console.log('Error in input business:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
@@ -109,13 +99,15 @@ class accountController {
             // retrieve data from request
             const firstName = req.body.firstName;
             const lastName = req.body.lastName;
+            const phoneNumber = req.body.phoneNumber;
+            const address = req.body.address;
 
             if (!firstName || !lastName) return res.status(400).json({ message:"Names cannot be empty" });
 
             const updatedUser = await User.findByIdAndUpdate(
                 userID,
                 {
-                    $set: {firstName, lastName, updateAt: Date.now()}
+                    $set: {firstName, lastName, phoneNumber, address, profileCompleted: true, updateAt: Date.now()}
                 },
                 {new: true}
             );
@@ -131,26 +123,33 @@ class accountController {
             });
 
         } catch(err) {
-            console.log('Error in accountController.updateName: ', err);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
-                error: error.message
+                error: err.message
             });
         }
     }
 
-    // async getCurrentUser(req, res) {
-    //     try {
-    //         const user = await User.findById(req.user.id).select('-password');
-    //         if (!user) {
-    //             return res.status(404).json({ message: 'User not found' });
-    //         }
-    //         res.json({ user });
-    //     } catch (error) {
-    //         res.status(500).json({ message: 'Error fetching user data' });
-    //     }
-    // }
+    async listUsersInBusiness(req, res) {
+        try {
+            const requesterRole = req.user.role;
+            const businessId = req.user.businessId;
+
+            if (!businessId) {
+                return res.status(400).json({ success: false, message: 'Business ID missing' });
+            }
+            if (String(requesterRole).toLowerCase() !== 'admin') {
+                return res.status(403).json({ success: false, message: 'Access denied' });
+            }
+
+            const users = await User.find({ businessId })
+                .select('_id username email firstName lastName role businessId createdAt updatedAt phoneNumber address');
+            return res.status(200).json({ success: true, data: users });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+        }
+    }
 }
 
 export default new accountController();

@@ -7,6 +7,11 @@ const Report = new Schema({
         required: true,
         trim: true
     },
+    ownerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users',
+        required: true
+    },
     areaId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ParkingArea', // Ensure you have a 'ParkingArea' model

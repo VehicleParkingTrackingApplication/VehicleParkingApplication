@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'; // Add useRef
+// @ts-ignore - dom-to-image-more doesn't have TypeScript definitions
 import domtoimage from 'dom-to-image-more';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +20,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { authInterceptor } from '../services/authInterceptor';
-import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parking';
-import { saveReport } from '@/services/reports';
+import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parkingApi';
+import { saveReport } from '@/services/reportsApi';
 import { Save } from 'lucide-react';
+// WebSocket removed for this page – dashboard now fetches via API only
 
 // --- INTERFACES ---
 interface VehicleRecord {
@@ -30,15 +33,31 @@ interface VehicleRecord {
   areaId: string;
 }
 
+// Represents the raw record data from the backend API
+interface RawRecord {
+  _id: string;
+  plateNumber: string;
+  entryTime: string;
+  leavingTime: string;
+  hours: number;
+  minutes: number;
+  image?: string;
+  country?: string;
+  angle?: number;
+  confidence?: number;
+}
+
+// Represents the enriched record object after client-side processing
 interface ProcessedRecord {
   _id: string;
   plate: string;
-  action: 'ENTRY' | 'EXIT';
-  date: string;
-  time: string;
   entryDate: Date | null;
   exitDate: Date | null;
   durationMinutes: number | null;
+  angle: number;
+  image?: string;
+  country?: string;
+  confidence?: number;
 }
 
 interface Area {
@@ -50,25 +69,43 @@ interface Area {
 
 // --- HELPER FUNCTIONS ---
 const processHourlyChartData = (records: ProcessedRecord[]) => {
+  console.log('Processing records for hourly chart:', records.length, 'records');
   const hourlyData: { [key: number]: { entries: number; exits: number } } = {};
   for (let i = 0; i < 24; i++) hourlyData[i] = { entries: 0, exits: 0 };
-  records.forEach(record => {
-    const dateToUse = record.action === 'ENTRY' ? record.entryDate : record.exitDate;
-    if (dateToUse) {
-      const hour = dateToUse.getHours();
-      if (record.action === 'ENTRY') hourlyData[hour].entries++;
-      else hourlyData[hour].exits++;
+  
+  records.forEach((record, index) => {
+    console.log(`Processing record ${index}:`, {
+      entryDate: record.entryDate,
+      exitDate: record.exitDate,
+      entryDateType: typeof record.entryDate,
+      exitDateType: typeof record.exitDate
+    });
+    // Count entry time
+    if (record.entryDate && record.entryDate instanceof Date && !isNaN(record.entryDate.getTime())) {
+      const entryHour = record.entryDate.getHours();
+      if (entryHour >= 0 && entryHour <= 23 && hourlyData[entryHour]) {
+        hourlyData[entryHour].entries++;
+      }
+    }
+    
+    // Count exit time
+    if (record.exitDate && record.exitDate instanceof Date && !isNaN(record.exitDate.getTime())) {
+      const exitHour = record.exitDate.getHours();
+      if (exitHour >= 0 && exitHour <= 23 && hourlyData[exitHour]) {
+        hourlyData[exitHour].exits++;
+      }
     }
   });
+  
   return Object.keys(hourlyData).map(hour => ({
     hour: `${hour}:00`,
-    Entries: hourlyData[parseInt(hour)].entries,
-    Exits: hourlyData[parseInt(hour)].exits,
+    Entries: hourlyData[parseInt(hour)]?.entries || 0,
+    Exits: hourlyData[parseInt(hour)]?.exits || 0,
   }));
 };
 
 const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'weekly' | 'monthly') => {
-  const entries = records.filter(r => r.action === 'ENTRY' && r.entryDate);
+  const entries = records.filter(r => r.entryDate);
   const aggregation: { [key: string]: number } = {};
   entries.forEach(record => {
     const date = new Date(record.entryDate!);
@@ -134,6 +171,18 @@ const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: numbe
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function ParkingDashboard() {
+  // Custom rotated tick for XAxis labels
+  const AngleTick = (props: any) => {
+    const { x, y, payload } = props;
+    return (
+      <text x={x} y={y} dy={16} textAnchor="end" transform={`rotate(-20, ${x}, ${y})`} fill="rgba(0, 0, 0, 0.6)" fontSize={12}>
+        {payload?.value}
+      </text>
+    );
+  };
+  // --- URL PARAMETER MANAGEMENT ---
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // --- STATE MANAGEMENT ---
   const hourlyChartRef = useRef(null);
   const entriesChartRef = useRef(null);
@@ -142,7 +191,6 @@ export default function ParkingDashboard() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [allRecords, setAllRecords] = useState<ProcessedRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<ProcessedRecord[]>([]);
   const [existingVehicles, setExistingVehicles] = useState<VehicleRecord[]>([]);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [startDate, setStartDate] = useState('');
@@ -152,16 +200,31 @@ export default function ParkingDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [overstayLimit, setOverstayLimit] = useState(60);
-
+    
   // --- ML Predictor State ---
-  const [predictLoading, setPredictLoading] = useState(false);
   const [rawHourlyPredictions, setRawHourlyPredictions] = useState<{ [key: string]: number }>({});
 
   // --- State for handling save report feedback ---
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  // --- URL PARAMETER FUNCTIONS ---
+  const updateURLParams = (updates: Record<string, string | null>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '') {
+        newSearchParams.delete(key);
+      } else {
+        newSearchParams.set(key, value);
+      }
+    });
+    
+    setSearchParams(newSearchParams, { replace: true });
+  };
 
 
   // --- DATA FETCHING AND PROCESSING ---
@@ -175,73 +238,136 @@ export default function ParkingDashboard() {
     verifyAuth();
   }, []);
 
+  // Effect to read URL parameters on component mount
+  useEffect(() => {
+    const areaId = searchParams.get('area');
+    const search = searchParams.get('search');
+    const start = searchParams.get('startDate');
+    const end = searchParams.get('endDate');
+    const filter = searchParams.get('filter');
+
+    if (areaId) setSelectedAreaId(areaId);
+    if (search) setSearchTerm(search);
+    if (start) setStartDate(start);
+    if (end) setEndDate(end);
+    if (filter) setActiveFilter(filter);
+  }, [searchParams]);
+
+  // WebSocket event handlers removed
+
+  // WebSocket connection management removed
+
+  // WebSocket cleanup removed
+
+  // Memoized function to fetch areas
+  const fetchAreas = useCallback(async () => {
+    try {
+      const response = await getAllParkingAreas();
+      if (response.success) setAreas(response.data || []);
+    } catch (err) { 
+      setError(err instanceof Error ? err.message : 'An unknown error occurred.'); 
+    } finally { 
+      setLoading(false); 
+    }
+  }, []);
+
+  // Effect to fetch list of parking areas
   useEffect(() => {
     if (isAuthenticated) {
-      const fetchAreas = async () => {
-        try {
-          const response = await getAllParkingAreas();
-          if (response.success) setAreas(response.data || []);
-        } catch (err) { setError(err instanceof Error ? err.message : 'An unknown error occurred.'); }
-        finally { setLoading(false); }
-      };
       fetchAreas();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchAreas]);
+
+  // Memoized function to fetch dashboard data
+  const fetchDashboardData = useCallback(async (areaId: string) => {
+    setDashboardLoading(true);
+    setError('');
+    try {
+      const areaDetails = areas.find(a => a._id === areaId);
+      setSelectedArea(areaDetails || null);
+      const [recordsResponse, vehiclesResponse] = await Promise.all([
+        getAllRecords(areaId, 1, 2000),
+        getExistingVehicles(areaId, 1, 1000)
+      ]);
+      
+      const rawRecords: RawRecord[] = (recordsResponse && (recordsResponse.data || recordsResponse.records)) || [];
+      
+      // Process raw records into a more useful format with Date objects and duration
+      const processedRecords: ProcessedRecord[] = [];
+
+      // Process records that already have entryTime and leavingTime
+      console.log('Raw records from backend:', rawRecords);
+      rawRecords.forEach((rec: RawRecord, index) => {
+          console.log(`Processing raw record ${index}:`, rec);
+          
+          // Handle entryTime - it should be a string from the backend
+          let entryDate = null;
+          if (rec.entryTime && rec.entryTime !== 'N/A') {
+              entryDate = new Date(rec.entryTime);
+              if (isNaN(entryDate.getTime())) {
+                  console.warn('Invalid entryTime date:', rec.entryTime);
+                  entryDate = null;
+              }
+          }
+          
+          // Handle leavingTime - it should be a string from the backend
+          let exitDate = null;
+          if (rec.leavingTime && rec.leavingTime !== 'N/A' && rec.leavingTime !== 'Still Parking') {
+              exitDate = new Date(rec.leavingTime);
+              if (isNaN(exitDate.getTime())) {
+                  console.warn('Invalid leavingTime date:', rec.leavingTime);
+                  exitDate = null;
+              }
+          }
+          
+          console.log('Parsed dates:', {
+            entryTime: rec.entryTime,
+            entryDate: entryDate,
+            entryDateValid: entryDate ? !isNaN(entryDate.getTime()) : false,
+            leavingTime: rec.leavingTime,
+            exitDate: exitDate,
+            exitDateValid: exitDate ? !isNaN(exitDate.getTime()) : false
+          });
+          
+          // Calculate duration if both entry and exit times are available
+          let durationMinutes = null;
+          if (entryDate && exitDate) {
+              const durationMs = exitDate.getTime() - entryDate.getTime();
+              durationMinutes = Math.floor(durationMs / 60000);
+          } else if (rec.hours !== undefined && rec.minutes !== undefined) {
+              // Use the duration from the backend if available
+              durationMinutes = (rec.hours * 60) + rec.minutes;
+          }
+          
+          processedRecords.push({
+              _id: rec._id,
+              plate: rec.plateNumber,
+              entryDate: entryDate,
+              exitDate: exitDate,
+              durationMinutes: durationMinutes,
+              angle: rec.angle || 0,
+              image: rec.image,
+              country: rec.country,
+              confidence: rec.confidence
+          });
+      });
+      setAllRecords(processedRecords);
+      setExistingVehicles((vehiclesResponse && (vehiclesResponse.data || vehiclesResponse.vehicles)) || []);
+    } catch (err) { 
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); 
+    } finally { 
+      setDashboardLoading(false); 
+    }
+  }, [areas]);
 
   useEffect(() => {
     if (selectedAreaId) {
-      const fetchDashboardData = async () => {
-        setDashboardLoading(true);
-        setError('');
-        try {
-          const areaDetails = areas.find(a => a._id === selectedAreaId);
-          setSelectedArea(areaDetails || null);
-          const [recordsResponse, vehiclesResponse] = await Promise.all([
-            getAllRecords(selectedAreaId, 1, 2000),
-            getExistingVehicles(selectedAreaId, 1, 1000)
-          ]);
-          const rawRecords = recordsResponse.records || [];
-          const entryMap = new Map<string, any>();
-          const processedRecords: ProcessedRecord[] = [];
-          rawRecords.filter(r => r.action === 'ENTRY').forEach(rec => {
-            entryMap.set(rec.plate, rec);
-          });
-          rawRecords.forEach(rec => {
-            const [month, day, year] = rec.date.split('/');
-            const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
-            if (rec.action === 'EXIT') {
-              const matchingEntry = entryMap.get(rec.plate);
-              if (matchingEntry) {
-                const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
-                const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
-                const durationMs = dateObj.getTime() - entryDateObj.getTime();
-                processedRecords.push({
-                  ...rec,
-                  entryDate: entryDateObj,
-                  exitDate: dateObj,
-                  durationMinutes: Math.floor(durationMs / 60000)
-                });
-                entryMap.delete(rec.plate);
-              }
-            } else {
-              processedRecords.push({
-                ...rec,
-                entryDate: dateObj,
-                exitDate: null,
-                durationMinutes: null
-              });
-            }
-          });
-          setAllRecords(processedRecords);
-          setExistingVehicles(vehiclesResponse.vehicles || []);
-        } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); }
-        finally { setDashboardLoading(false); }
-      };
-      fetchDashboardData();
+      fetchDashboardData(selectedAreaId);
     }
-  }, [selectedAreaId, areas]);
+  }, [selectedAreaId, fetchDashboardData]);
 
-  useEffect(() => {
+  // Memoized filtered records to prevent unnecessary re-renders
+  const filteredRecords = useMemo(() => {
     let records = allRecords;
     if (startDate) {
       const start = new Date(startDate);
@@ -258,7 +384,7 @@ export default function ParkingDashboard() {
         record.plate?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    setFilteredRecords(records);
+    return records;
   }, [startDate, endDate, searchTerm, allRecords]);
 
   useEffect(() => {
@@ -268,7 +394,7 @@ export default function ParkingDashboard() {
     }
 
     const fetchPredictions = async () => {
-      setPredictLoading(true);
+      // prediction loading state removed
       const lastRecordDate = new Date(Math.max(
           Date.now(),
           ...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)
@@ -294,7 +420,7 @@ export default function ParkingDashboard() {
         console.error("Prediction API call failed:", err);
         setRawHourlyPredictions({});
       } finally {
-        setPredictLoading(false);
+        // prediction loading state removed
       }
     };
     fetchPredictions();
@@ -309,26 +435,33 @@ export default function ParkingDashboard() {
     if (period === 'all') {
       setStartDate('');
       setEndDate('');
+      updateURLParams({ filter: 'all', startDate: null, endDate: null });
       return;
     }
+    
     setEndDate(toYYYYMMDD(today));
+    let startDateValue = '';
+    
     if (period === 'today') {
-      setStartDate(toYYYYMMDD(today));
+      startDateValue = toYYYYMMDD(today);
+      setStartDate(startDateValue);
     } else if (period === 'week') {
       const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-      setStartDate(toYYYYMMDD(firstDayOfWeek));
+      startDateValue = toYYYYMMDD(firstDayOfWeek);
+      setStartDate(startDateValue);
     } else if (period === 'month') {
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      setStartDate(toYYYYMMDD(firstDayOfMonth));
+      startDateValue = toYYYYMMDD(firstDayOfMonth);
+      setStartDate(startDateValue);
     }
+    
+    updateURLParams({ 
+      filter: period, 
+      startDate: startDateValue, 
+      endDate: toYYYYMMDD(today) 
+    });
   };
 
-  const handleClearFilters = () => {
-    setStartDate('');
-    setEndDate('');
-    setSearchTerm('');
-    setActiveFilter('all');
-  };
 // Located inside the ParkingDashboard component
 
 // ParkingDashboard.tsx
@@ -441,67 +574,91 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
   // --- RENDER LOGIC ---
   if (loading || isAuthenticated === null) {
     return (
-      <div className="relative min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="z-10">Loading Dashboard...</div>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+        <div 
+          className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+          style={{ transform: 'translate(50%, -50%)' }}
+        ></div>
+        <div 
+          className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
+          style={{ transform: 'translate(-50%, 50%)' }}
+        ></div>
+        <div className="backdrop-blur-md bg-white/5 rounded-2xl px-6 py-3 border border-white/10 shadow-2xl text-center relative z-10">
+          Loading Dashboard...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
       {/* Background decorative elements */}
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
       <div className="relative z-10 px-4 py-10">
         <div className="max-w-6xl mx-auto space-y-8">
           <header className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
-            <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
+             {/* <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
+             <p className="text-sm text-muted mt-2">Live view of parking area activity</p> */}
           </header>
-          {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}
-          
+          {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}  
           {saveMessage && (
             <div className={`p-4 rounded-md text-center ${saveMessage.includes('Error') ? 'bg-red-800' : 'bg-green-800'}`}>
                 {saveMessage}
             </div>
           )}
-          
-          <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6">
+        
+          {/* --- CONTROLS SECTION --- */}
+{/* <!--           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6"> --> */}
+          <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="area-select" className="block text-lg font-semibold mb-2">Select a Parking Area</label>
-                <select id="area-select" value={selectedAreaId || ''} onChange={(e) => setSelectedAreaId(e.target.value)} className="w-full bg-neutral-700 border-neutral-600 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
-                  <option value="" disabled>Choose an area...</option>
-                  {areas.map((area) => (<option key={area._id} value={area._id}>{area.name}</option>))}
+                <label htmlFor="area-select" className="block text-lg font-semibold mb-2 text-gray-900">Select a Parking Area</label>
+                <select id="area-select" value={selectedAreaId || ''} onChange={(e) => {
+                  setSelectedAreaId(e.target.value);
+                  updateURLParams({ area: e.target.value || null });
+                }} className="w-full bg-white border-2 border-gray-300 p-2.5 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                    <option value="" disabled className="text-gray-500 bg-white">Choose an area...</option>
+                    {areas.map((area) => ( <option key={area._id} value={area._id} className="text-gray-900 bg-white"> {area.name} </option> ))}
                 </select>
               </div>
               <div>
-                <label htmlFor="search-bar" className="block text-lg font-semibold mb-2">Search by License Plate</label>
-                <Input id="search-bar" type="text" placeholder="e.g., ABC-123" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-neutral-700 border-neutral-600 text-white" />
+                <label htmlFor="search-bar" className="block text-lg font-semibold mb-2 text-gray-900">Search by License Plate</label>
+                <Input id="search-bar" type="text" placeholder="e.g., ABC-123" value={searchTerm} onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  updateURLParams({ search: e.target.value || null });
+                }} className="bg-white border-gray-300 text-gray-900" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
-                  <label htmlFor="start-date" className="block text-sm font-medium mb-2">Start Date</label>
-                  <Input type="date" id="start-date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    <label htmlFor="start-date" className="block text-sm font-medium mb-2 text-gray-700">Start Date</label>
+                    <Input type="date" id="start-date" value={startDate} onChange={(e) => { 
+                      setStartDate(e.target.value); 
+                      setActiveFilter('custom');
+                      updateURLParams({ startDate: e.target.value || null, filter: 'custom' });
+                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="flex-1">
-                  <label htmlFor="end-date" className="block text-sm font-medium mb-2">End Date</label>
-                  <Input type="date" id="end-date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveFilter('custom'); }} className="w-full bg-neutral-700 border-neutral-600 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    <label htmlFor="end-date" className="block text-sm font-medium mb-2 text-gray-700">End Date</label>
+                    <Input type="date" id="end-date" value={endDate} onChange={(e) => { 
+                      setEndDate(e.target.value); 
+                      setActiveFilter('custom');
+                      updateURLParams({ endDate: e.target.value || null, filter: 'custom' });
+                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div className="flex flex-col space-y-2">
-                <label className="block text-sm font-medium mb-2">Quick Filters</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Quick Filters</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 gap-2">
-                  <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')}>Today</Button>
-                  <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')}>Week</Button>
-                  <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')}>Month</Button>
-                  <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')}>All</Button>
+                  <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')} className={activeFilter === 'today' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Today</Button>
+                  <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')} className={activeFilter === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Week</Button>
+                  <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')} className={activeFilter === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Month</Button>
+                  <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')} className={activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>All</Button>
                 </div>
               </div>
             </div>
-            <div><Button variant="ghost" onClick={handleClearFilters} className="text-sm text-gray-400 hover:text-white">Clear All Filters</Button></div>
           </section>
           
           {selectedAreaId && (
@@ -510,89 +667,93 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
             ) : (
               <div className="space-y-8">
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="bg-neutral-800 border-neutral-700">
-                    <CardHeader><CardTitle className="text-blue-400">Current Occupancy</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader><CardTitle className="text-blue-600">Current Occupancy</CardTitle></CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
                   </Card>
-                  <Card className="bg-neutral-800 border-neutral-700">
-                    <CardHeader><CardTitle className="text-green-400">Total Entries (Filtered)</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'ENTRY').length}</CardContent>
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader><CardTitle className="text-green-600">Total Entries</CardTitle></CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900">{filteredRecords.filter(r => r.entryDate).length}</CardContent>
                   </Card>
-                  <Card className="bg-neutral-800 border-neutral-700">
-                    <CardHeader><CardTitle className="text-yellow-400">Total Exits (Filtered)</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'EXIT').length}</CardContent>
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader><CardTitle className="text-yellow-600">Total Exits</CardTitle></CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900">{filteredRecords.filter(r => r.exitDate).length}</CardContent>
                   </Card>
                 </section>
                 
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div ref={hourlyChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md lg:col-span-2">
+                  <div ref={hourlyChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg lg:col-span-2">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Hourly Activity (Historical & Predicted)</h3>
-                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('hourly-activity', combinedHourlyData, 'Hourly entries, exits, and next-day predictions.')}>
+                        <h3 className="text-lg font-semibold text-gray-900">Hourly Activity (Historical & Predicted)</h3>
+                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('hourly-activity', combinedHourlyData, 'Hourly entries, exits, and next-day predictions.')} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={combinedHourlyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
-                        <YAxis stroke="#888888" fontSize={12} />
-                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                        <XAxis dataKey="hour" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                        <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                        <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                         <Legend />
                         <Bar dataKey="Entries" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Exits" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                         <Line type="monotone" dataKey="Predictor" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                        <Bar dataKey="Exits" fill="#10b981" radius={[4, 4, 0, 0]} />
+                         <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                   
-                  <div ref={entriesChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                  <div ref={entriesChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
+                  {/* Chart 2: Historical Vehicle Entries */}
+{/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Vehicle Entries</h3>
-                       <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)}>
+                      <h3 className="text-lg font-semibold text-gray-900">Vehicle Entries</h3>
+                       <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
                      <div className="flex justify-between items-center mb-4">
-                      <p className="text-sm text-muted-foreground">Historical & Predicted</p>
+                      <p className="text-sm text-gray-600">Historical & Predicted</p>
                       <div className="flex items-center gap-2">
-                        <Button size="sm" variant={entriesPeriod === 'daily' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('daily')}>Daily</Button>
-                        <Button size="sm" variant={entriesPeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('weekly')}>Weekly</Button>
-                        <Button size="sm" variant={entriesPeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('monthly')}>Monthly</Button>
+                        <Button size="sm" variant={entriesPeriod === 'daily' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('daily')} className={entriesPeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Daily</Button>
+                        <Button size="sm" variant={entriesPeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('weekly')} className={entriesPeriod === 'weekly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Weekly</Button>
+                        <Button size="sm" variant={entriesPeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('monthly')} className={entriesPeriod === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Monthly</Button>
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={combinedEntriesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="period" stroke="#888888" fontSize={12} tick={{ angle: -20, textAnchor: 'end' }} height={60} />
-                        <YAxis stroke="#888888" fontSize={12} allowDecimals={false}/>
-                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                        <XAxis dataKey="period" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} tick={<AngleTick />} height={60} />
+                        <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false}/>
+                        <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                         <Legend />
-                        <Line type="monotone" dataKey="Entries" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
-                        <Line type="monotone" dataKey="Predictor" stroke="#a78bfa" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+                        <Line type="monotone" dataKey="Entries" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  
-                  <div ref={overstayChartRef} className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+                 
+                  <div ref={overstayChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
-                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, `Vehicles staying longer than ${overstayLimit} minutes.`)}>
+                        <h3 className="text-lg font-semibold text-gray-900">Vehicles Overstay Analysis</h3>
+                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, `Vehicles staying longer than ${overstayLimit} minutes.`)} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
+                  {/* Chart 3: Vehicles Overstay Analysis */}
+{/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <div className="flex items-center gap-2">
-                        <label htmlFor="overstay-limit" className="text-sm">Time Limit (mins):</label>
-                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-neutral-700 border-neutral-600 w-24" />
+                        <label htmlFor="overstay-limit" className="text-sm text-gray-700">Time Limit (mins):</label>
+                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-white border-2 border-gray-300 text-gray-900 w-24 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" />
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={overstayChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                        <XAxis dataKey="date" stroke="#888888" fontSize={12} />
-                        <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
-                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                        <XAxis dataKey="date" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                        <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false} />
+                        <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                         <Legend />
                         <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -600,30 +761,34 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                   </div>
                 </section>
                 
-                <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
-                  <h3 className="text-lg font-semibold mb-4">Filtered Records ({filteredRecords.length} found)</h3>
+                <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
+                {/* Records Table */}
+{/* <!--                 <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Records ({filteredRecords.length} found)</h3>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>License Plate</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Date & Time</TableHead>
-                        <TableHead>Duration (mins)</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">License Plate</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Entry Time</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Leaving Time</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Duration (mins)</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Angle (°)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredRecords.length > 0 ? (
                         filteredRecords.slice(0, 10).map((record) => (
                           <TableRow key={record._id}>
-                            <TableCell>{record.plate || 'N/A'}</TableCell>
-                            <TableCell>{record.action}</TableCell>
-                            <TableCell>{record.date} {record.time}</TableCell>
-                            <TableCell>{record.durationMinutes !== null ? record.durationMinutes : 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{record.plate || 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{record.entryDate ? record.entryDate.toLocaleString() : 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{record.exitDate ? record.exitDate.toLocaleString() : 'Still Parking'}</TableCell>
+                            <TableCell className="text-gray-900">{record.durationMinutes !== null ? record.durationMinutes : 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{typeof record.angle === 'number' ? record.angle.toFixed(1) : 'N/A'}</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center">No records found matching your filters.</TableCell>
+                          <TableCell colSpan={5} className="text-center text-gray-900">No records found matching your filters.</TableCell>
                         </TableRow>
                       )}
                     </TableBody>

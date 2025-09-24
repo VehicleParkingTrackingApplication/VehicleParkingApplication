@@ -9,12 +9,12 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { getAllRecords } from '@/services/parking';
+import { getAllRecords } from '@/services/parkingApi';
 
 interface ParkingRecord {
   _id: string;
-  plate: string;
-  action: 'ENTRY' | 'EXIT';
+  plateNumber: string;
+  status: 'ENTRY' | 'EXIT';
   time: string;
   date: string;
   image?: string;
@@ -23,7 +23,7 @@ interface ParkingRecord {
 
 interface ApiResponse {
   success: boolean;
-  records: ParkingRecord[];
+  data: ParkingRecord[];
   pagination?: {
     total: number;
     page: number;
@@ -51,8 +51,8 @@ export default function ViewAllRecords() {
         const res: ApiResponse = await getAllRecords(areaId, page, RECORDS_PER_PAGE);
         console.log('✅ API Response:', res);
         
-        if (res.success && res.records) {
-          setRecords(res.records);
+        if (res.success && res.data) {
+          setRecords(res.data);
           
           // Calculate total pages based on pagination info or array length
           if (res.pagination) {
@@ -62,12 +62,12 @@ export default function ViewAllRecords() {
           } else {
             // Fallback: calculate from current page data
             // This assumes if we get a full page, there might be more
-            if (res.records.length === RECORDS_PER_PAGE) {
+            if (res.data.length === RECORDS_PER_PAGE) {
               setTotalPages(page + 1); // At least one more page
             } else {
               setTotalPages(page); // This is the last page
             }
-            setTotalRecords(res.records.length);
+            setTotalRecords(res.data.length);
           }
         }
         
@@ -85,14 +85,22 @@ export default function ViewAllRecords() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white px-6 py-10">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden px-6 py-10">
+      <div 
+        className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
+        style={{ transform: 'translate(50%, -50%)' }}
+      ></div>
+      <div 
+        className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
+        style={{ transform: 'translate(-50%, 50%)' }}
+      ></div>
+      <div className="max-w-6xl mx-auto space-y-6 relative z-10">
         <h1 className="text-3xl font-bold text-center mb-6">
           All Parking Records - {areaName}
         </h1>
 
-        <div className="bg-neutral-800 rounded-lg p-4">
-          <p className="text-sm text-gray-400 mb-4">
+        <div className="backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl p-4">
+          <p className="text-sm text-white/70 mb-4">
             Showing {records.length} records (Page {page} of {totalPages})
           </p>
 
@@ -110,21 +118,21 @@ export default function ViewAllRecords() {
             <TableBody>
               {records.length > 0 ? (
                 records.map((record, index) => (
-                  <TableRow key={record._id || index}>
-                    <TableCell className="font-medium">{record.plate}</TableCell>
+                  <TableRow key={record._id || index} className="hover:bg-white/5">
+                    <TableCell className="font-medium text-white">{record.plateNumber}</TableCell>
                     <TableCell>
-                      <span className={`font-semibold ${getActionColor(record.action)}`}>
-                        {record.action}
+                      <span className={`font-semibold ${getActionColor(record.status)}`}>
+                        {record.status}
                       </span>
                     </TableCell>
-                    <TableCell>{record.date}</TableCell>
-                    <TableCell>{record.time}</TableCell>
-                    <TableCell>{record.country || 'N/A'}</TableCell>
+                    <TableCell className="text-white">{record.date}</TableCell>
+                    <TableCell className="text-white">{record.time}</TableCell>
+                    <TableCell className="text-white">{record.country || 'N/A'}</TableCell>
                     <TableCell>
                       {record.image && record.image !== 'image.jpg' ? (
                         <img 
                           src={record.image} 
-                          alt={`Vehicle ${record.plate}`}
+                          alt={`Vehicle ${record.plateNumber}`}
                           className="w-16 h-12 object-cover rounded"
                         />
                       ) : (
@@ -135,7 +143,7 @@ export default function ViewAllRecords() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                  <TableCell colSpan={6} className="text-center py-8 text-white/70">
                     No parking records found for this area
                   </TableCell>
                 </TableRow>

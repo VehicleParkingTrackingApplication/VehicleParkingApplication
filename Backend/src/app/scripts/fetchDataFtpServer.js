@@ -1,18 +1,15 @@
 import { Client } from "basic-ftp";
 import csvParser from "csv-parser";
 import { PassThrough } from "stream";
-import mongoose from "mongoose";
 import Area from "../models/Area.js";
 import Record from "../models/Record.js";
 import Vehicle from "../models/Vehicle.js";
-import { uploadImageToS3, imageExistsInS3 } from "../services/s3Service.js";
+import Blacklist from "../models/Blacklist.js";
 import dotenv from 'dotenv';
+import { toSydneyISO } from "../services/convertTimeZone/sydneyTimeZoneConvert.js";
 
 // load environment variables
 dotenv.config();
-
-const MONGO_URI_Sample = 'mongodb+srv://binh:123@cluster0.lcfx9nt.mongodb.net/car_parking?retryWrites=true&w=majority&appName=Cluster0';
-const MONGO_URI = process.env.CONNECTION_STRING || MONGO_URI_Sample;
 
 function mergeDateTime(date, time) {
     let datePart = date;
@@ -78,52 +75,40 @@ async function updateAreaCapacity(areaId, isEntering) {
     }
 }
 
-// Function to download image from FTP and upload to S3
-async function processImage(client, csvDate, imageFileName, areaId) {
-    let originalPath = null;
+// Helper function to update area's savedTimestamp
+async function updateAreaTimestamp(areaId, newTimestamp) {
     try {
-        // Check if image already exists in S3
-        const exists = await imageExistsInS3(imageFileName, areaId);
-        if (exists) {
-            console.log(`Image ${imageFileName} already exists in S3, skipping upload`);
-            return `https://${process.env.S3_BUCKET_NAME || 'parking-system-images'}.s3.${process.env.AWS_REGION || 'ap-southeast-2'}.amazonaws.com/areas/${areaId}/${imageFileName}`;
-        }
-
-        // Store current path to return to later
-        originalPath = await client.pwd();
-
-        // Navigate to the date folder (same name as CSV file)
-        const imageFolder = csvDate;
-        await client.cd(imageFolder);
-        
-        // Download the image file
-        const imageBuffer = await client.downloadToBuffer(imageFileName);
-        
-        // Upload to S3
-        const s3Url = await uploadImageToS3(imageBuffer, imageFileName, areaId);
-        
-        console.log(`Successfully processed image: ${imageFileName} -> ${s3Url}`);
-        return s3Url;
+        await Area.updateOne(
+            { _id: areaId }, 
+            { $set: { savedTimestamp: newTimestamp.toISOString() } }
+        );
+        console.log(`Updated area's savedTimestamp to ${newTimestamp.toISOString()} (${formatAustralianTime(newTimestamp)} AEST)`);
     } catch (error) {
-        console.error(`Error processing image ${imageFileName}:`, error);
-        // Return the original image filename as fallback
-        return imageFileName;
-    } finally {
-        // Always return to the original path
-        if (originalPath) {
-            try {
-                await client.cd(originalPath);
-            } catch (cdError) {
-                console.error('Error returning to original path:', cdError);
-            }
-        }
+        console.error('Error updating area timestamp:', error);
     }
 }
 
-export async function fetchDataFtpServer(areaId) {
-    if (mongoose.connection.readyState === 0) {
-        await mongoose.connect(MONGO_URI);
+// Function to check the similarity of platenumbers
+function calulateSimilarityPlatenumber(plateNumber1, plateNumber2) {
+    if (!plateNumber1 || !plateNumber2) {
+        return 0;
     }
+    // Normalize plate numbers (remove spaces, convert to uppercase)
+    // const normalized1 = plateNumber1.replace(/\s/g, '').toUpperCase();
+    // const normalized2 = plateNumber1.replace(/\s/g, '').toUpperCase();
+
+    let similarity = 0;
+    for (let i = 0; i < plateNumber1.length; i++) {
+        if (plateNumber1[i] === plateNumber2[i]) {
+            similarity += 1;
+        }
+    }
+    // number of match characters / total number of characters
+    return similarity / plateNumber1.length;
+}
+
+// input areaId and options to access that ftp server to fetch data
+export async function fetchDataFtpServer(areaId, options = {}) {
     // access the area collection from areaId to get the ftp-server info
     const area = await Area.findById(areaId).populate('ftpServer');
     if (!area) {
@@ -134,7 +119,13 @@ export async function fetchDataFtpServer(areaId) {
     const saveTimestamp = area.savedTimestamp && area.savedTimestamp.trim() !== '' ? area.savedTimestamp.trim() : null;
     let saveDateObj = null;
     if (saveTimestamp) {
-        saveDateObj = new Date(saveTimestamp);
+        // saveDateObj = new Date(toSydneyISO(saveTimestamp));
+        const parsed = new Date(saveTimestamp);
+        if (!isNaN(parsed.getTime())) {
+            saveDateObj = parsed;
+        } else {
+            console.error('Invalid savedTimestamp on area, ignoring:', saveTimestamp);
+        }
     }
     if (!ftpInfo) {
         console.error("FTP server info not found for this area");
@@ -143,6 +134,7 @@ export async function fetchDataFtpServer(areaId) {
     const client = new Client();
     client.ftp.verbose = true;
     let latestProcessedDate = saveDateObj;
+    
     try {
         await client.access({
             host: ftpInfo.host,
@@ -150,14 +142,15 @@ export async function fetchDataFtpServer(areaId) {
             user: ftpInfo.user,
             password: ftpInfo.password,
             secure: ftpInfo.secure,
-            secureOptions: ftpInfo.secureOptions
+            secureOptions: ftpInfo.secureOptions,
+            folder: ftpInfo.folder || "CF02200-200034BE004"
         });
-        const targetFolder = "CF02200-200034BE004";
+        const targetFolder = ftpInfo.folder || "CF02200-200034BE004";
         await client.cd(targetFolder);
         const contents = await client.list();
         const csvFiles = contents
-            .filter(item => item.type === 1 && item.name.toLowerCase().endsWith(".csv"))
-            .sort((a, b) => new Date(a.modifiedAt) - new Date(b.modifiedAt));
+            .filter(item => item.type === 1 && item.name.toLowerCase().endsWith(".csv"));
+            // .sort((a, b) => new Date(a.modifiedAt) - new Date(b.modifiedAt));
         for (const file of csvFiles) {
             const passThrough = new PassThrough();
             const downloadPromise = client.downloadTo(passThrough, file.name);
@@ -183,6 +176,10 @@ export async function fetchDataFtpServer(areaId) {
                     }))
                     .on('data', (row) => {
                         const rowDateTime = mergeDateTime(row.date, row.time);
+                        if (!(rowDateTime instanceof Date) || isNaN(rowDateTime.getTime())) {
+                            console.error('Skipping row due to invalid datetime:', row);
+                            return;
+                        }
                         let shouldProcess = false;
                         if (!saveDateObj) {
                             shouldProcess = true;
@@ -195,77 +192,111 @@ export async function fetchDataFtpServer(areaId) {
                             asyncOps.push((async () => {
                                 // Log datetime and plateNumber for tracking
                                 console.log(`Processing: datetime=${formatAustralianTime(rowDateTime)} (AEST), plateNumber=${row.plateNumber}`);
-                                                                
-                                // Process image first
-                                let imageUrl = row.image; // Default to original image name
-                                if (row.image && row.image.trim() !== '') {
-                                    try {
-                                        imageUrl = await processImage(client, row.date, row.image, areaId);
-                                    } catch (imageError) {
-                                        console.error(`Failed to process image ${row.image}:`, imageError);
-                                        // Continue with original image name
-                                    }
-                                }
-
-                                // Insert into Records collection
+                                
+                                // Create/Update Records using entryTime/leavingTime model
                                 if (!row.plateNumber || row.plateNumber.trim() === "") {
                                     console.error('Failed to import record: plateNumber is missing.', row);
                                     return;
                                 }
+
+                                // =========== ADD condition to check confidence and angle
+
                                 try {
-                                    await Record.create({
-                                        areaId,
-                                        datetime: rowDateTime,
-                                        plateNumber: row.plateNumber,
-                                        country: row.country || 'AUS',
-                                        confidence: Number(row.confidence) || 85,
-                                        angle: Number(row.angle) || 0,
-                                        image: imageUrl,
-                                        status: row.status
-                                    });
-                                    console.log('Success: Imported record for plateNumber', row.plateNumber);
-                                } catch (err) {
-                                    console.error('Failed to import record:', err.message, row);
-                                }
-                                // Maintain Vehicles collection
-                                if (row.status === 'APPROACHING') {
-                                    const exists = await Vehicle.findOne({ areaId, plateNumber: row.plateNumber });
-                                    if (exists) {
-                                        // Vehicle already exists - delete old record first (camera might have missed the LEAVING event)
-                                        try {
+                                    if (row.status === 'APPROACHING') {
+                                         // Find out if a vehicle still exist means camera missed the vehicle when it leave the parking area
+                                        const parkingVehicle = await Vehicle.findOne({ areaId, plateNumber: row.plateNumber }).sort({ entryTime: -1 });
+                                        if (parkingVehicle) {
                                             await Vehicle.deleteOne({ areaId, plateNumber: row.plateNumber });
-                                            console.log('Success: Removed existing vehicle for plateNumber', row.plateNumber, '(camera missed previous LEAVING event)');
-                                        } catch (err) {
-                                            console.error('Failed to remove existing vehicle:', err.message, row);
                                         }
-                                    } else {
-                                        // New vehicle entering - increment capacity
-                                        await updateAreaCapacity(areaId, true);
-                                    }
-                                    
-                                    // Create new vehicle record (whether it existed before or not)
-                                    try {
+                                        // check is that the Record have an vehicle that is still parking
+                                        const openRecord = await Record.findOne({ areaId, plateNumber: row.plateNumber, leavingTime: null });
+                                        if (openRecord) {
+                                            // Calculate duration and convert into minute unit
+                                            const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+                                            await Record.updateOne({ _id: openRecord._id }, { 
+                                                $set: { 
+                                                    leavingTime: rowDateTime,
+                                                    duration: duration
+                                                } 
+                                            });
+                                        }
+                                        
+                                        // Create new Vehicle object for approaching vehicle
                                         await Vehicle.create({
                                             areaId,
                                             plateNumber: row.plateNumber,
                                             country: row.country || 'AUS',
                                             image: row.image,
-                                            datetime: rowDateTime
+                                            entryTime: rowDateTime
                                         });
-                                        console.log('Success: Added vehicle for plateNumber', row.plateNumber);
-                                    } catch (err) {
-                                        console.error('Failed to add vehicle:', err.message, row);
+
+                                        // Create new Record object for approaching vehicle
+                                        await Record.create({
+                                            areaId,
+                                            plateNumber: row.plateNumber,
+                                            country: row.country || 'AUS',
+                                            confidence: Number(row.confidence) || 85,
+                                            angle: Number(row.angle) || 0,
+                                            image: row.image,
+                                            entryTime: rowDateTime,
+                                            leavingTime: null,
+                                            duration: 0
+                                        });
+                                        
+                                    } else if (row.status === 'LEAVING') {
+                                        // if the plate number is in the Vehicle collection
+                                        const parkingVehicle = await Vehicle.findOne({ areaId, plateNumber: row.plateNumber });
+                                        if (parkingVehicle) {
+                                            // Delete the vehicle parking in the area
+                                            await Vehicle.deleteOne({ areaId, plateNumber: row.plateNumber });
+                                            const openRecord = await Record.findOne({ areaId, plateNumber: row.plateNumber, leavingTime: null });
+                                            if (openRecord) {
+                                                const calculatedDuration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+                                                await Record.updateOne({ _id: openRecord._id }, { $set: { leavingTime: rowDateTime, duration: calculatedDuration } });
+                                            }
+                                        } else {
+                                            // Find the plate number has nearly same as the the current plate number
+                                            // Because the confidence of data
+                                            const parkingVehicles = await Vehicle.find({ areaId });
+                                            let similarPlateNumber = null;
+                                            for (const vehicle of parkingVehicles) {
+                                                if (calulateSimilarityPlatenumber(vehicle.plateNumber, row.plateNumber) > 0.8) {
+                                                    similarPlateNumber = vehicle.plateNumber;
+                                                    await Vehicle.deleteOne({ areaId, plateNumber: vehicle.plateNumber });
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            // find the open record
+                                            const openRecord = await Record.findOne({ areaId, plateNumber: similarPlateNumber, leavingTime: null });
+
+                                            // Found the similar plate number in the Vehicle collection, use it to update Record collection
+                                            if (openRecord) {
+                                                const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+                                                await Record.updateOne({ areaId, plateNumber: similarPlateNumber }, { $set: { leavingTime: rowDateTime, duration: duration } });
+                                            } 
+                                            // else {
+                                            //     // No matching vehicle found and no similar plate number found
+                                            //     await Blacklist.create({
+                                            //         businessId: area.businessId,
+                                            //         plateNumber: row.plateNumber,
+                                            //         areaId,
+                                            //         reason: `Unauthorized exit detected - vehicle left without proper entry record at ${formatAustralianTime(rowDateTime)}`
+                                            //     });
+                                            //     console.log(`Added to blacklist: ${row.plateNumber} - Unauthorized exit detected`);
+                                            // }
+                                        }
                                     }
-                                } else if (row.status === 'LEAVING') {
-                                    try {
-                                        await Vehicle.deleteOne({ areaId, plateNumber: row.plateNumber });
-                                        console.log('Success: Removed vehicle for plateNumber', row.plateNumber);
-                                        // Update area capacity when vehicle leaves
-                                        await updateAreaCapacity(areaId, false);
-                                    } catch (err) {
-                                        console.error('Failed to remove vehicle:', err.message, row);
-                                    }
+                                    
+                                    // Update area's savedTimestamp after successfully processing this record
+                                    // can improve the update capacity by just increase 1 or decrease 1 for faster, not need to count all again
+                                    await updateAreaTimestamp(areaId, rowDateTime);
+                                    await updateAreaCapacity(areaId, false);
+                                    
+                                } catch (err) {
+                                    console.error('Vehicle and Record updated failed:', err.message, row);
                                 }
+
                                 // Track the latest processed datetime
                                 if (!latestProcessedDate || rowDateTime > latestProcessedDate) {
                                     latestProcessedDate = rowDateTime;
@@ -280,12 +311,6 @@ export async function fetchDataFtpServer(areaId) {
                     .on('error', reject);
             });
             await downloadPromise;
-        }
-        // After processing all files, update area's savedTimestamp if we processed any new records
-        if (latestProcessedDate && (!saveDateObj || latestProcessedDate > saveDateObj)) {
-            area.savedTimestamp = latestProcessedDate.toISOString();
-            await area.save();
-            console.log(`Updated area's savedTimestamp to ${area.savedTimestamp} (${formatAustralianTime(latestProcessedDate)} AEST)`);
         }
     } catch (err) {
         console.error("FTP error:", err);

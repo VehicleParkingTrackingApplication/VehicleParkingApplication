@@ -10,10 +10,10 @@ const config: Config = {
     extend: {
       colors: {
         black: "#121212",
-        gold: "#E8D767",
-        blue: "#193ED8",
+        gold: "#6B63B5",
+        blue: "#c7c7c7ff",
         textLight: "#F5F5F7",
-        textMuted: "rgba(245, 245, 247, 0.6)",
+        textMuted: "rgba(23, 23, 29, 0.6)",
     },
   },
 },

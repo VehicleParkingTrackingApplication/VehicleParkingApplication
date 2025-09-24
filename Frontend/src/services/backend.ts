@@ -1,6 +1,7 @@
 // @ts-check
 
-import { deleteApi, fetchApi, postApi, putApi, fetchAuthApi, postAuthApi, putAuthApi, deleteAuthApi } from "./api";
+import { fetchAuthApi, postAuthApi, putAuthApi, deleteAuthApi } from "./api";
+import { postApi } from "./api";
 
 // Type definitions for your application
 export interface User {
@@ -8,6 +9,7 @@ export interface User {
   username: string;
   email: string;
   role: 'admin' | 'user' | 'moderator';
+  businessId: string;
   createdAt: string;
   updatedAt: string;
   firstName?: string;
@@ -120,6 +122,27 @@ export interface Statistics {
   }>;
 }
 
+export interface BlacklistEntry {
+  _id: string;
+  businessId: string;
+  areaId?: string;
+  plateNumber: string;
+  reason: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlacklistResponse {
+  success: boolean;
+  data: BlacklistEntry[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 /**
  * @typedef FindVehicleParams
  * @property {string=} plateNumber
@@ -138,7 +161,7 @@ export async function findVehicles(params?: {
   ownerName?: string;
   isActive?: boolean;
 }): Promise<Vehicle[]> {
-  const response = await fetchApi("vehicles", params);
+  const response = await fetchAuthApi("vehicles", params);
   if (!response.ok) {
     return [];
   } else {
@@ -151,7 +174,7 @@ export async function findVehicles(params?: {
  * @returns {Promise<Vehicle | null>}
  */
 export async function getVehicle(vehicleId: string): Promise<Vehicle | null> {
-  const response = await fetchApi("vehicles", { id: vehicleId });
+  const response = await fetchAuthApi("vehicles", { id: vehicleId });
   if (!response.ok) {
     return null;
   }
@@ -162,7 +185,7 @@ export async function getVehicle(vehicleId: string): Promise<Vehicle | null> {
  * @returns {Promise<Vehicle[]>}
  */
 export async function getVehicles(): Promise<Vehicle[]> {
-  const response = await fetchApi("vehicles");
+  const response = await fetchAuthApi("vehicles");
   if (!response.ok) {
     return [];
   }
@@ -174,7 +197,7 @@ export async function getVehicles(): Promise<Vehicle[]> {
  * @returns {Promise<Vehicle | null>}
  */
 export async function createVehicle(vehicleData: Partial<Vehicle>): Promise<Vehicle | null> {
-  const response = await postApi("vehicles", {}, JSON.stringify(vehicleData));
+  const response = await postAuthApi("vehicles", {}, JSON.stringify(vehicleData));
   if (!response.ok) {
     return null;
   } else {
@@ -188,7 +211,7 @@ export async function createVehicle(vehicleData: Partial<Vehicle>): Promise<Vehi
  * @returns {Promise<Vehicle | null>}
  */
 export async function updateVehicle(vehicleId: string, vehicleData: Partial<Vehicle>): Promise<Vehicle | null> {
-  const response = await putApi("vehicles", { id: vehicleId }, JSON.stringify(vehicleData));
+  const response = await putAuthApi("vehicles", { id: vehicleId }, JSON.stringify(vehicleData));
   if (!response.ok) {
     return null;
   } else {
@@ -201,7 +224,7 @@ export async function updateVehicle(vehicleId: string, vehicleData: Partial<Vehi
  * @returns {Promise<boolean>}
  */
 export async function deleteVehicle(vehicleId: string): Promise<boolean> {
-  const response = await deleteApi("vehicles", { id: vehicleId });
+  const response = await deleteAuthApi("vehicles", { id: vehicleId });
   return response.ok;
 }
 
@@ -209,7 +232,7 @@ export async function deleteVehicle(vehicleId: string): Promise<boolean> {
  * @returns {Promise<Area[]>}
  */
 export async function getAreas(): Promise<Area[]> {
-  const response = await fetchApi("areas");
+  const response = await fetchAuthApi("area");
   if (!response.ok) {
     return [];
   }
@@ -221,7 +244,7 @@ export async function getAreas(): Promise<Area[]> {
  * @returns {Promise<Area | null>}
  */
 export async function getArea(areaId: string): Promise<Area | null> {
-  const response = await fetchApi("areas", { id: areaId });
+  const response = await fetchAuthApi("areas", { id: areaId });
   if (!response.ok) {
     return null;
   }
@@ -233,7 +256,7 @@ export async function getArea(areaId: string): Promise<Area | null> {
  * @returns {Promise<Area | null>}
  */
 export async function createArea(areaData: Partial<Area>): Promise<Area | null> {
-  const response = await postApi("areas", {}, JSON.stringify(areaData));
+  const response = await postAuthApi("areas", {}, JSON.stringify(areaData));
   if (!response.ok) {
     return null;
   } else {
@@ -247,7 +270,7 @@ export async function createArea(areaData: Partial<Area>): Promise<Area | null> 
  * @returns {Promise<Area | null>}
  */
 export async function updateArea(areaId: string, areaData: Partial<Area>): Promise<Area | null> {
-  const response = await putApi("areas", { id: areaId }, JSON.stringify(areaData));
+  const response = await putAuthApi("areas", { id: areaId }, JSON.stringify(areaData));
   if (!response.ok) {
     return null;
   } else {
@@ -260,7 +283,7 @@ export async function updateArea(areaId: string, areaData: Partial<Area>): Promi
  * @returns {Promise<boolean>}
  */
 export async function deleteArea(areaId: string): Promise<boolean> {
-  const response = await deleteApi("areas", { id: areaId });
+  const response = await deleteAuthApi("areas", { id: areaId });
   return response.ok;
 }
 
@@ -268,7 +291,7 @@ export async function deleteArea(areaId: string): Promise<boolean> {
  * @returns {Promise<ParkingRecord[]>}
  */
 export async function getRecords(): Promise<ParkingRecord[]> {
-  const response = await fetchApi("records");
+  const response = await fetchAuthApi("records");
   if (!response.ok) {
     return [];
   }
@@ -280,7 +303,7 @@ export async function getRecords(): Promise<ParkingRecord[]> {
  * @returns {Promise<ParkingRecord | null>}
  */
 export async function getRecord(recordId: string): Promise<ParkingRecord | null> {
-  const response = await fetchApi("records", { id: recordId });
+  const response = await fetchAuthApi("records", { id: recordId });
   if (!response.ok) {
     return null;
   }
@@ -288,11 +311,12 @@ export async function getRecord(recordId: string): Promise<ParkingRecord | null>
 }
 
 /**
- * @param {string=} areaId
+ * @param {Date=} startDate
+ * @param {Date=} endDate
  * @returns {Promise<ParkingRecord[]>}
  */
 export async function getRecordsByArea(areaId?: string): Promise<ParkingRecord[]> {
-  const response = await fetchApi("records", areaId ? { areaId } : undefined);
+  const response = await fetchAuthApi("records", areaId ? { areaId } : undefined);
   if (!response.ok) {
     return [];
   } else {
@@ -305,7 +329,7 @@ export async function getRecordsByArea(areaId?: string): Promise<ParkingRecord[]
  * @returns {Promise<ParkingRecord | null>}
  */
 export async function createRecord(recordData: Partial<ParkingRecord>): Promise<ParkingRecord | null> {
-  const response = await postApi("records", {}, JSON.stringify(recordData));
+  const response = await postAuthApi("records", {}, JSON.stringify(recordData));
   if (!response.ok) {
     return null;
   } else {
@@ -319,7 +343,7 @@ export async function createRecord(recordData: Partial<ParkingRecord>): Promise<
  * @returns {Promise<ParkingRecord | null>}
  */
 export async function updateRecord(recordId: string, recordData: Partial<ParkingRecord>): Promise<ParkingRecord | null> {
-  const response = await putApi("records", { id: recordId }, JSON.stringify(recordData));
+  const response = await putAuthApi("records", { id: recordId }, JSON.stringify(recordData));
   if (!response.ok) {
     return null;
   } else {
@@ -331,7 +355,7 @@ export async function updateRecord(recordId: string, recordData: Partial<Parking
  * @returns {Promise<User[]>}
  */
 export async function getUsers(): Promise<User[]> {
-  const response = await fetchApi("users");
+  const response = await fetchAuthApi("users");
   if (!response.ok) {
     return [];
   }
@@ -343,7 +367,7 @@ export async function getUsers(): Promise<User[]> {
  * @returns {Promise<User | null>}
  */
 export async function getUser(userId: string): Promise<User | null> {
-  const response = await fetchApi("users", { id: userId });
+  const response = await fetchAuthApi("users", { id: userId });
   if (!response.ok) {
     return null;
   }
@@ -355,7 +379,7 @@ export async function getUser(userId: string): Promise<User | null> {
  * @returns {Promise<User | null>}
  */
 export async function createUser(userData: Partial<User>): Promise<User | null> {
-  const response = await postApi("users", {}, JSON.stringify(userData));
+  const response = await postAuthApi("users", {}, JSON.stringify(userData));
   if (!response.ok) {
     return null;
   } else {
@@ -369,7 +393,7 @@ export async function createUser(userData: Partial<User>): Promise<User | null> 
  * @returns {Promise<User | null>}
  */
 export async function updateUser(userId: string, userData: Partial<User>): Promise<User | null> {
-  const response = await putApi("users", { id: userId }, JSON.stringify(userData));
+  const response = await putAuthApi("users", { id: userId }, JSON.stringify(userData));
   if (!response.ok) {
     return null;
   } else {
@@ -382,7 +406,7 @@ export async function updateUser(userId: string, userData: Partial<User>): Promi
  * @returns {Promise<boolean>}
  */
 export async function deleteUser(userId: string): Promise<boolean> {
-  const response = await deleteApi("users", { id: userId });
+  const response = await deleteAuthApi("users", { id: userId });
   return response.ok;
 }
 
@@ -390,7 +414,7 @@ export async function deleteUser(userId: string): Promise<boolean> {
  * @returns {Promise<Business[]>}
  */
 export async function getBusinesses(): Promise<Business[]> {
-  const response = await fetchApi("businesses");
+  const response = await fetchAuthApi("businesses");
   if (!response.ok) {
     return [];
   }
@@ -402,7 +426,7 @@ export async function getBusinesses(): Promise<Business[]> {
  * @returns {Promise<Business | null>}
  */
 export async function getBusiness(businessId: string): Promise<Business | null> {
-  const response = await fetchApi("businesses", { id: businessId });
+  const response = await fetchAuthApi("businesses", { id: businessId });
   if (!response.ok) {
     return null;
   }
@@ -414,7 +438,7 @@ export async function getBusiness(businessId: string): Promise<Business | null> 
  * @returns {Promise<Business | null>}
  */
 export async function createBusiness(businessData: Partial<Business>): Promise<Business | null> {
-  const response = await postApi("businesses", {}, JSON.stringify(businessData));
+  const response = await postAuthApi("businesses", {}, JSON.stringify(businessData));
   if (!response.ok) {
     return null;
   } else {
@@ -428,7 +452,7 @@ export async function createBusiness(businessData: Partial<Business>): Promise<B
  * @returns {Promise<Business | null>}
  */
 export async function updateBusiness(businessId: string, businessData: Partial<Business>): Promise<Business | null> {
-  const response = await putApi("businesses", { id: businessId }, JSON.stringify(businessData));
+  const response = await putAuthApi("businesses", { id: businessId }, JSON.stringify(businessData));
   if (!response.ok) {
     return null;
   } else {
@@ -441,7 +465,7 @@ export async function updateBusiness(businessId: string, businessData: Partial<B
  * @returns {Promise<boolean>}
  */
 export async function deleteBusiness(businessId: string): Promise<boolean> {
-  const response = await deleteApi("businesses", { id: businessId });
+  const response = await deleteAuthApi("businesses", { id: businessId });
   return response.ok;
 }
 
@@ -459,7 +483,7 @@ export async function getStatistics(startDate?: Date, endDate?: Date): Promise<S
     params.endDate = endDate.toISOString();
   }
 
-  const response = await fetchApi("statistics", Object.keys(params).length > 0 ? params : undefined);
+  const response = await fetchAuthApi("statistics", Object.keys(params).length > 0 ? params : undefined);
   if (!response.ok) {
     return {
       totalVehicles: 0,
@@ -477,7 +501,7 @@ export async function getStatistics(startDate?: Date, endDate?: Date): Promise<S
  * @returns {Promise<{ message: string; accessToken: string } | null>}
  */
 export async function refreshToken(): Promise<{ message: string; accessToken: string } | null> {
-  const response = await postApi("auth/refresh");
+  const response = await postAuthApi("auth/refresh");
   if (!response.ok) {
     return null;
   }
@@ -491,6 +515,7 @@ export async function refreshToken(): Promise<{ message: string; accessToken: st
  */
 export async function login(username: string, password: string): Promise<{ message: string; accessToken: string } | null> {
   const response = await postApi("auth/login", {}, JSON.stringify({ username, password }));
+  console.log("response :", response)
   if (!response.ok) {
     return null;
   }
@@ -501,14 +526,25 @@ export async function login(username: string, password: string): Promise<{ messa
  * @param {string} username
  * @param {string} email
  * @param {string} password
+ * @param {string} businessId
+ * @param {('user'|'admin')=} role
  * @returns {Promise<{ message: string; accessToken: string } | null>}
  */
-export async function register(username: string, email: string, password: string): Promise<{ message: string; accessToken: string } | null> {
-  const response = await postApi("auth/register", {}, JSON.stringify({ username, email, password }));
-  if (!response.ok) {
-    return null;
+export async function register(username: string, email: string, password: string, businessId: string, role?: 'user'|'admin'): Promise<{ message: string; accessToken: string } | null> {
+  const payload: Record<string, any> = { username, email, password, businessId };
+  if (role) payload.role = role;
+  
+  try {
+    const response = await postApi("auth/register", {}, JSON.stringify(payload));
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Registration failed' }));
+      throw new Error(errorData.message || `HTTP ${response.status}: Registration failed`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Registration error:', error);
+    throw error;
   }
-  return await response.json();
 }
 
 /**
@@ -517,7 +553,7 @@ export async function register(username: string, email: string, password: string
 export async function logout(): Promise<boolean> {
   console.log('=== Backend logout function called ===');
   console.log('Making POST request to /api/auth/logout');
-  const response = await postApi("auth/logout");
+  const response = await postAuthApi("auth/logout");
   console.log('Logout response status:', response.status);
   console.log('Logout response ok:', response.ok);
   return response.ok;
@@ -596,6 +632,77 @@ export async function listStaff(params?: {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Failed to fetch staff list' }));
     throw new Error(errorData.message || 'Failed to fetch staff list');
+  }
+  return await response.json();
+}
+
+// Blacklist Management Functions
+
+/**
+ * @param {string} businessId
+ * @param {number=} page
+ * @param {number=} limit
+ * @returns {Promise<BlacklistResponse | null>}
+ */
+export async function getBlacklistByBusiness(businessId: string, page: number = 1, limit: number = 10): Promise<BlacklistResponse | null> {
+  const response = await fetchAuthApi(`blacklist/business/${businessId}`, { page: page.toString(), limit: limit.toString() });
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+/**
+ * @param {string} plateNumber
+ * @param {string=} businessId
+ * @returns {Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null>}
+ */
+export async function checkBlacklistStatus(plateNumber: string, businessId?: string): Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null> {
+  const params: Record<string, string> = { plateNumber };
+  if (businessId) params.businessId = businessId;
+  
+  const response = await fetchAuthApi("blacklist/check", params);
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+/**
+ * @param {string} plateNumber
+ * @param {string=} businessId
+ * @param {number=} page
+ * @param {number=} limit
+ * @returns {Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null>}
+ */
+export async function searchBlacklistByPlate(plateNumber: string, businessId?: string, page: number = 1, limit: number = 10): Promise<{ success: boolean; data: { plateNumber: string; isBlacklisted: boolean; entries: any[] } } | null> {
+  const params: Record<string, string> = { plateNumber, page: page.toString(), limit: limit.toString() };
+  if (businessId) params.businessId = businessId;
+  
+  const response = await fetchAuthApi("blacklist/search", params);
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+/**
+ * @param {Object} blacklistData
+ * @param {string} blacklistData.businessId
+ * @param {string} blacklistData.plateNumber
+ * @param {string} blacklistData.reason
+ * @param {string=} blacklistData.areaId
+ * @returns {Promise<{ success: boolean; message: string; data: BlacklistEntry } | null>}
+ */
+export async function createBlacklistEntry(blacklistData: {
+  businessId: string;
+  plateNumber: string;
+  reason: string;
+  areaId?: string;
+}): Promise<{ success: boolean; message: string; data: BlacklistEntry } | null> {
+  const response = await postAuthApi("blacklist", {}, JSON.stringify(blacklistData));
+  if (!response.ok) {
+    return null;
   }
   return await response.json();
 }
