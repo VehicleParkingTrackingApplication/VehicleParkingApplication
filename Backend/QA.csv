@@ -1,0 +1,34 @@
+Keyword,Question
+Occupancy,What is the average occupancy rate by hour of the day?
+Occupancy,What was the peak occupancy level last week and on what day and time did it occur?
+Occupancy,How does the occupancy on weekdays compare to weekends?
+Occupancy,Which days of the month consistently show the lowest occupancy rates?
+Occupancy,Is there a correlation between occupancy levels and specific local events or holidays?
+Revenue,What is the total revenue generated per day, week, and month?
+Revenue,How does revenue per hour correlate with the occupancy rate?
+Revenue,Which payment method (e.g. app, credit card, cash) generates the most revenue?
+Revenue,What is the average revenue generated per parking space?
+Revenue,How did the recent pricing change impact the daily revenue trend?
+Turnover Rate,What is the average vehicle turnover rate for the entire facility per day?
+Turnover Rate,Which parking zones or levels have the highest and lowest turnover rates?
+Turnover Rate,How does the turnover rate differ between short-term and long-term parking areas?
+Turnover Rate,Did the 'first hour free' promotion have a noticeable effect on the turnover rate?
+Parking Duration,What is the average length of stay for vehicles on a typical weekday?
+Parking Duration,What percentage of vehicles stay for less than one hour versus more than four hours?
+Parking Duration,How many vehicles exceeded the maximum allowed parking duration last month?
+Parking Duration,Is there a difference in average parking duration between different user types?
+Peak Hours,What are the peak entry and exit times for the facility?
+Peak Hours,How long does the morning or evening peak period typically last?
+Peak Hours,Are there secondary peak periods during the day, such as a lunchtime rush?
+Peak Hours,How do peak hours on a Saturday compare to those on a typical Tuesday?
+Violations & Enforcement,What is the most common type of parking violation recorded?
+Violations & Enforcement,How many citations were issued this quarter compared to the last quarter?
+Violations & Enforcement,Is there a specific area or zone where violations are more frequent?
+Violations & Enforcement,What is the trend of revenue generated from fines and penalties over the last year?
+Space Utilization,Which specific parking floors, zones, or aisles are most and least utilized?
+Space Utilization,Are the designated accessible or EV charging spots being used at an optimal rate?
+Space Utilization,How does the utilization of premium or reserved spots compare to standard spots?
+Space Utilization,What is the average time-to-find-a-spot during peak hours?
+Technology & Systems,What is the uptime percentage for our payment kiosks and entry/exit gates?
+Technology & Systems,What percentage of users are opting to use the mobile payment app versus traditional methods?
+Technology & Systems,How accurate is the automated vehicle count from our sensor system compared to ticket data?
