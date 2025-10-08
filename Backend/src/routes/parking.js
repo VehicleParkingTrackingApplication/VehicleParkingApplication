@@ -1,6 +1,7 @@
 import express from 'express';
 import area from '../app/controllers/area.js';
-import vehicle from '../app/controllers/vehicle.js'
+import vehicle from '../app/controllers/vehicle.js';
+import image from '../app/controllers/image.js';
 import requireAuth from '../middleware/auth/require-auth.js';
 
 const router = express.Router();
@@ -49,6 +50,9 @@ router.get('/vehicle/:areaId/recent-records', requireAuth, vehicle.getRecentReco
 // GET /api/parking/vehicle/:areaId/all-records
 router.get('/vehicle/:areaId/all-records', requireAuth, vehicle.getAllRecordsByAreaId);
 
+// GET /api/parking/vehicle/:areaId/filter-records
+router.get('/vehicle/:areaId/filter-records', requireAuth, vehicle.filterAllRecordsByAreaId);
+
 // GET /api/parking/records/:businessId/latest
 router.get('/records/:businessId/latest', requireAuth, vehicle.getAllRecordsByBusinessId);
 
@@ -61,6 +65,25 @@ router.get('/vehicle/:areaId/vehicles-for-removal', requireAuth, vehicle.getVehi
 
 // POST /api/parking/simulate
 router.post('/simulate', vehicle.handleSimulation);
+
+// Image endpoints
+// POST 
+router.post('/image/loadFtpServer/:areaId', requireAuth, image.fetchAndLocalSaveImageUrl);
+
+// GET /api/parking/image/:areaId/:plateNumber/:date
+router.get('/image/:areaId/:plateNumber/:date', requireAuth, image.getImageUrl);
+
+// GET /api/parking/image/:areaId/:plateNumber/:date/metadata
+router.get('/image/:areaId/:plateNumber/:date/metadata', requireAuth, image.getImageMetadata);
+
+// GET /api/parking/image/:areaId/cached
+router.get('/image/:areaId/cached', requireAuth, image.getCachedImages);
+
+// POST /api/parking/image/:areaId/:plateNumber/:date/fetch
+router.post('/image/:areaId/:plateNumber/:date/fetch', requireAuth, image.forceFetchImage);
+
+// DELETE /api/parking/image/cleanup
+router.delete('/image/cleanup', requireAuth, image.cleanupOldImages);
 
 // API for data analysis without authentication
 // create new function controller to fetch the API

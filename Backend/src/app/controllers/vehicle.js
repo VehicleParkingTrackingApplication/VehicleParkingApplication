@@ -104,10 +104,9 @@ class parkingVehicleController {
             
             // Get vehicles with pagination
             const vehicles = await Vehicle.find({ areaId: areaId })
-                .sort({ entryTime: 1 })
+                .sort({ entryTime: -1 })
                 .skip(page * limit)
                 .limit(limit);
-
 
             // Calculate current duration for each vehicle
             const vehiclesWithDuration = vehicles.map(vehicle => {
@@ -115,15 +114,16 @@ class parkingVehicleController {
                 
                 // Calculate current duration
                 const currentTime = convertToTimeZone(new Date(), 'Australia/Sydney');
-                const entryTime = convertToTimeZone(vehicle.entryTime, 'Australia/Sydney');
+                const entryTime = convertToTimeZone(vehicle.entryTime || new Date(), 'Australia/Sydney');
                 const durationMs = currentTime.getTime() - entryTime.getTime();
+
                 const durationMinutes = Math.floor(durationMs / (1000 * 60));
                 const durationHours = Math.floor(durationMinutes / 60);
                 const remainingMinutes = durationMinutes % 60;
 
                 return {
                     ...vehicleObj,
-                    currentDuration: {
+                    duration: {
                         hours: durationHours,
                         minutes: remainingMinutes
                     },
@@ -204,7 +204,7 @@ class parkingVehicleController {
 
             // Get the 5 most recent records for the specified area
             const recentRecords = await Record.find({ areaId })
-                .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
+                .sort({ entryTime: -1 }) // Sort by datetime descending (most recent first)
                 .limit(5) // Limit to 5 records
                 .select('plateNumber entryTime leavingTime duration') // Only select needed fields
                 .lean(); // Convert to plain JavaScript objects for better performance
@@ -214,8 +214,10 @@ class parkingVehicleController {
                 plate: record.plateNumber,
                 entryTime: record.entryTime ? convertToTimeZone(record.entryTime, 'Australia/Sydney') : 'N/A',
                 leavingTime: record.leavingTime ? convertToTimeZone(record.leavingTime, 'Australia/Sydney') : 'Still Parking',
-                hours:Math.floor(record.duration / 60), // Duration in minutes
-                minutes: record.duration % 60
+                duration: {
+                    hours: Math.floor(record.duration / 60), // Duration in minutes
+                    minutes: record.duration % 60
+                }
             }));
 
             return res.status(200).json({
@@ -256,17 +258,19 @@ class parkingVehicleController {
 
             // Const get all records in Record collection with pagination
             const records = await Record.find({ areaId })
-                .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
+                .sort({ "entryTime": -1 }) // Sort by datetime descending (most recent first)
                 .skip(page * limit)
                 .limit(limit)
                 .select('plateNumber status entryTime leavingTime duration image country') // Include angle and confidence
                 .lean(); // Convert to plain JavaScript objects for better performance
             const formattedRecords = records.map(record => ({
                 plateNumber: record.plateNumber,
-                entryTime: record.entryTime ? record.entryTime.toISOString() : 'N/A',
-                leavingTime: record.leavingTime ? record.leavingTime.toISOString() : 'Still Parking',
-                hours:Math.floor(record.duration / 60), // Duration in minutes
-                minutes: record.duration % 60,
+                entryTime: record.entryTime ? convertToTimeZone(record.entryTime, 'Australia/Sydney') : 'N/A',
+                leavingTime: record.leavingTime ? convertToTimeZone(record.leavingTime, 'Australia/Sydney') : 'Still Parking',
+                duration: {
+                    hours:Math.floor(record.duration / 60), // Duration in minutes
+                    minutes: record.duration % 60,
+                },
                 image: record.image,
                 country: record.country,
                 status: record.leavingTime ? 'Leaved' : 'Parking'
@@ -308,14 +312,23 @@ class parkingVehicleController {
             const limit = parseInt(req.query.limit) || 10;
             
             // Get filter parameters from URL query
-            const { startDate, endDate, startTime, endTime, status } = req.query;
+            const { startDate, endDate, startTime, endTime, status, search } = req.query;
             
             // Build filter object
             const filter = { areaId };
             
+            // Add keyword search filter if provided
+            if (search && search.trim()) {
+                const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive search
+                filter.$or = [
+                    { plateNumber: searchRegex },
+                    { country: searchRegex }
+                ];
+            }
+            
             // Add date range filter if provided
             if (startDate || endDate) {
-                filter.datetime = {};
+                filter.entryTime = {};
                 if (startDate) {
                     let startDateTime = new Date(startDate);
                     // If startTime is provided, add it to the start date
@@ -323,7 +336,7 @@ class parkingVehicleController {
                         const [hours, minutes, seconds = '00'] = startTime.split(':');
                         startDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
                     }
-                    filter.datetime.$gte = startDateTime;
+                    filter.entryTime.$gte = startDateTime;
                 }
                 if (endDate) {
                     let endDateTime = new Date(endDate);
@@ -334,91 +347,100 @@ class parkingVehicleController {
                     } else {
                         endDateTime.setHours(23, 59, 59, 999);
                     }
-                    filter.datetime.$lte = endDateTime;
+                    filter.entryTime.$lte = endDateTime;
                 }
             } else if (startTime || endTime) {
                 // If only time filters are provided (without date), apply to today
                 const today = new Date();
                 const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
                 
-                filter.datetime = {};
+                filter.entryTime = {};
                 if (startTime) {
                     let startDateTime = new Date(todayStr);
                     const [hours, minutes, seconds = '00'] = startTime.split(':');
                     startDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
-                    filter.datetime.$gte = startDateTime;
+                    filter.entryTime.$gte = startDateTime;
                 }
                 if (endTime) {
                     let endDateTime = new Date(todayStr);
                     const [hours, minutes, seconds = '59'] = endTime.split(':');
                     endDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 999);
-                    filter.datetime.$lte = endDateTime;
+                    filter.entryTime.$lte = endDateTime;
                 }
             }
             
             // Add status filter if provided
-            if (status) {
-                if (status === 'ENTRY') {
-                    filter.status = 'APPROACHING';
-                } else if (status === 'EXIT') {
-                    filter.status = 'LEAVING';
-                } else {
-                    // If status is not recognized, return error
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Invalid status filter. Use "ENTRY" or "EXIT"'
-                    });
-                }
-            }
-            
+            // if (status) {
+            //     if (status === 'ENTRY') {
+            //         filter.leavingTime = null; // Entry records have no leaving time
+            //     } else if (status === 'EXIT') {
+            //         filter.leavingTime = { $ne: null }; // Exit records have leaving time
+            //     } else {
+            //         // If status is not recognized, return error
+            //         return res.status(400).json({
+            //             success: false,
+            //             message: 'Invalid status filter. Use "ENTRY" or "EXIT"'
+            //         });
+            //     }
+            // }
+
             // Get total count for pagination with filters
             const total = await Record.countDocuments(filter);
 
             // Get records with pagination and filters
             const records = await Record.find(filter)
-                .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
+                .sort({ entryTime: -1 }) // Sort by entryTime descending (most recent first)
                 .skip(page * limit)
                 .limit(limit)
-                .select('plateNumber status datetime image country angle confidence') // Include angle and confidence
+                .select('plateNumber entryTime leavingTime image country angle confidence duration') // Include all relevant fields
                 .lean(); // Convert to plain JavaScript objects for better performance
                 
             
             // Format the response to match the frontend expectations
-            const formattedRecords = records.map(record => ({
-                _id: record._id,
-                plateNumber: record.plateNumber,
-                status: record.status === 'APPROACHING' ? 'ENTRY' : 'EXIT',
-                time: record.datetime.toLocaleTimeString('en-US', { 
-                    hour12: false,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                }),
-                date: record.datetime.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                }),
-                image: record.image,
-                duration: record.duration || 0,
-                country: record.country,
-            }));
+            const formattedRecords = records.map(record => {
+                // Determine status based on whether leavingTime exists
+                const status = record.leavingTime ? 'EXIT' : 'ENTRY';
+                // Use entryTime for display
+                const displayTime = record.entryTime;
+                
+                return {
+                    _id: record._id,
+                    plateNumber: record.plateNumber,
+                    status: status,
+                    time: displayTime.toLocaleTimeString('en-US', { 
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    }),
+                    date: displayTime.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    }),
+                    image: record.image,
+                    duration: record.duration || 0,
+                    entryTime: record.entryTime,
+                    leavingTime: record.leavingTime
+                };
+            });
             
             return res.status(200).json({
                 success: true,
+                filters: {
+                    startDate: startDate || null,
+                    endDate: endDate || null,
+                    startTime: startTime || null,
+                    endTime: endTime || null,
+                    status: status || null,
+                    search: search || null,
+                },
                 data: formattedRecords,
                 pagination: {
                     total,
                     page: page + 1,
                     limit,
                     totalPages: Math.ceil(total / limit)
-                },
-                filters: {
-                    startDate: startDate || null,
-                    endDate: endDate || null,
-                    startTime: startTime || null,
-                    endTime: endTime || null,
-                    status: status || null
                 }
             });
 

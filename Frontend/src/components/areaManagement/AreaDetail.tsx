@@ -14,6 +14,24 @@ import { fetchAuthApi } from '../../services/api';
 import { getExistingVehicles, getAllRecords, triggerFtpFetch } from '@/services/parkingApi';
 import { FtpServerEditPopup } from './FtpServerEditPopup';
 
+// Helper function to format duration
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  return `${mins}m`;
+};
+
+// Convert ISO date to YYYY-MM-DD HH:mm:ss format (keeping original time without timezone conversion)
+const formatDateTime = (isoString: string): string => {
+  // Extract date and time components directly from ISO string to avoid timezone conversion
+  const dateTimePart = isoString.split('T')[0]; // Get YYYY-MM-DD part
+  const timePart = isoString.split('T')[1].split('.')[0]; // Get HH:mm:ss part (remove milliseconds and Z)
+  return `${dateTimePart} ${timePart}`;
+};
+
 interface Area {
   _id: string;
   businessId: string;
@@ -30,23 +48,31 @@ interface Area {
 }
 
 interface ParkingRecord {
-  _id: string;
-  time: string;
+  _id?: string;
   plateNumber: string;
-  status: string;
-  image: number;
-  duration: number;
-  date: string;
+  entryTime: string;
+  leavingTime?: string;
+  duration: {
+    hours: number;
+    minutes: number;
+  };
+  image: string;
   country: string;
+  status: string;
+  durationFormatted?: string; // e.g., "8h 30m"
 }
 
 interface Vehicle {
   _id: string;
-  vehicleId: string;
   areaId: string;
   entryTime: string;
-  createdAt: string;
-  updatedAt: string;
+  plateNumber: string;
+  country: String;
+  image: string;
+  duration: {
+    hours: number;
+    minutes: number;
+  };
 }
 
 export default function AreaDetail() {
@@ -124,8 +150,23 @@ export default function AreaDetail() {
           console.log("record response :", recordsResponse, recordsResponse.ok)
           if (recordsResponse.success && recordsResponse.data) {
             console.log("CHECK CHECK CHECK", recordsResponse.data)
-            setRecentRecords(recordsResponse.data);
-            console.log("Setting recent records to:", recordsResponse.data)
+            // Process records to add formatted duration
+            const processedRecords = recordsResponse.data.map((record: ParkingRecord) => {
+              if (record.status === 'Leaved' && record.leavingTime !== 'Still Parking') {
+                const totalMinutes = (record.duration.hours * 60) + record.duration.minutes;
+                return {
+                  ...record,
+                  durationFormatted: formatDuration(totalMinutes)
+                };
+              } else {
+                return {
+                  ...record,
+                  durationFormatted: 'Still parking'
+                };
+              }
+            });
+            setRecentRecords(processedRecords);
+            console.log("Setting recent records to:", processedRecords)
           }
         } catch (error) {
           console.error('Error fetching recent records:', error);
@@ -414,7 +455,7 @@ export default function AreaDetail() {
           {/* Recent Vehicles Table */}
           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Recent Existing Vehicles (Last 10)</h3>
+              <h3 className="text-lg font-semibold">Recent Existing Vehicles</h3>
               <Button 
                 onClick={handleViewAllVehicles}
                 variant="outline"
@@ -429,7 +470,6 @@ export default function AreaDetail() {
                   <TableHead>Plate Number</TableHead>
                   <TableHead>Entry Time</TableHead>
                   <TableHead>Duration</TableHead>
-                  <TableHead>History</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -442,16 +482,9 @@ export default function AreaDetail() {
                 ) : (
                   recentVehicles.map((vehicle) => (
                     <TableRow key={vehicle._id}>
-                      <TableCell>{vehicle._id}</TableCell>
-                      <TableCell>{new Date(vehicle.entryTime).toLocaleString()}</TableCell>
-                      <TableCell>
-                        {Math.round((Date.now() - new Date(vehicle.entryTime).getTime()) / (1000 * 60))} min
-                      </TableCell>
-                      <TableCell>
-                        <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                          New
-                        </span>
-                      </TableCell>
+                      <TableCell>{vehicle.plateNumber}</TableCell>
+                      <TableCell>{formatDateTime(vehicle.entryTime)}</TableCell>
+                      <TableCell>{vehicle.duration.hours}h {vehicle.duration.minutes}m</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -462,7 +495,7 @@ export default function AreaDetail() {
           {/* Recent Records Table */}
           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Recent Parking Recordss</h3>
+              <h3 className="text-lg font-semibold">Recent Parking Records</h3>
               <Button 
                 onClick={handleViewAllRecords}
                 variant="outline"
@@ -477,7 +510,7 @@ export default function AreaDetail() {
                   <TableHead>Plate Number</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Entry Time</TableHead>
-                  <TableHead>Exit Time</TableHead>
+                  <TableHead>Leaving Time</TableHead>
                   <TableHead>Duration</TableHead>
                 </TableRow>
               </TableHeader>
@@ -489,13 +522,17 @@ export default function AreaDetail() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  recentRecords.map((record) => (
-                    <TableRow key={record._id}>
+                  recentRecords.map((record, index) => (
+                    <TableRow key={record._id || index}>
                       <TableCell>{record.plateNumber}</TableCell>
                       <TableCell>{record.status}</TableCell>
-                      <TableCell>{record.date} {record.time}</TableCell>
-                      <TableCell>{record.status === 'EXIT' ? `${record.date} ${record.time}` : '-'}</TableCell>
-                      <TableCell>{record.duration ? `${record.duration} min` : '-'}</TableCell>
+                      <TableCell>{formatDateTime(record.entryTime)}</TableCell>
+                      <TableCell>
+                        {record.status === 'Leaved' && record.leavingTime && record.leavingTime !== 'Still Parking' 
+                          ? formatDateTime(record.leavingTime) 
+                          : '-'}
+                      </TableCell>
+                      <TableCell>{record.durationFormatted || 'N/A'}</TableCell>
                     </TableRow>
                   ))
                 )}

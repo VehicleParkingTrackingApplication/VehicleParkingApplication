@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import {
   Table,
@@ -11,14 +11,36 @@ import {
 import { Button } from '@/components/ui/button';
 import { getAllRecords } from '@/services/parkingApi';
 
+// Helper function to format duration
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  return `${mins}m`;
+};
+
+// Convert ISO date to YYYY-MM-DD HH:mm:ss format (keeping original time without timezone conversion)
+const formatDateTime = (isoString: string): string => {
+  // Extract date and time components directly from ISO string to avoid timezone conversion
+  const dateTimePart = isoString.split('T')[0]; // Get YYYY-MM-DD part
+  const timePart = isoString.split('T')[1].split('.')[0]; // Get HH:mm:ss part (remove milliseconds and Z)
+  return `${dateTimePart} ${timePart}`;
+};
+
 interface ParkingRecord {
-  _id: string;
+  _id?: string;
   plateNumber: string;
-  status: 'ENTRY' | 'EXIT';
-  time: string;
-  date: string;
-  image?: string;
-  country?: string;
+  entryTime: string; // ISO format: "2025-08-26T13:37:54.572Z"
+  leavingTime: string; // Either ISO format or "Still Parking"
+  duration: {
+    hours: number;
+    minutes: number;
+  };
+  image: string;
+  country: string;
+  status: 'Parking' | 'Leaved';
 }
 
 interface ApiResponse {
@@ -80,9 +102,6 @@ export default function ViewAllRecords() {
     fetchRecords();
   }, [areaId, page]);
 
-  const getActionColor = (action: string) => {
-    return action === 'ENTRY' ? 'text-green-400' : 'text-red-400';
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden px-6 py-10">
@@ -108,9 +127,10 @@ export default function ViewAllRecords() {
             <TableHeader>
               <TableRow>
                 <TableHead>Plate Number</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Time</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Entry Time</TableHead>
+                <TableHead>Leaving Time</TableHead>
+                <TableHead>Duration</TableHead>
                 <TableHead>Country</TableHead>
                 <TableHead>Image</TableHead>
               </TableRow>
@@ -121,12 +141,21 @@ export default function ViewAllRecords() {
                   <TableRow key={record._id || index} className="hover:bg-white/5">
                     <TableCell className="font-medium text-white">{record.plateNumber}</TableCell>
                     <TableCell>
-                      <span className={`font-semibold ${getActionColor(record.status)}`}>
+                      <span className={`font-semibold ${record.status === 'Parking' ? 'text-green-400' : 'text-red-400'}`}>
                         {record.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-white">{record.date}</TableCell>
-                    <TableCell className="text-white">{record.time}</TableCell>
+                    <TableCell className="text-white">{formatDateTime(record.entryTime)}</TableCell>
+                    <TableCell className="text-white">
+                      {record.status === 'Leaved' && record.leavingTime !== 'Still Parking' 
+                        ? formatDateTime(record.leavingTime) 
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="text-white">
+                      {record.status === 'Leaved' && record.leavingTime !== 'Still Parking'
+                        ? formatDuration((record.duration.hours * 60) + record.duration.minutes)
+                        : 'Still parking'}
+                    </TableCell>
                     <TableCell className="text-white">{record.country || 'N/A'}</TableCell>
                     <TableCell>
                       {record.image && record.image !== 'image.jpg' ? (
@@ -143,7 +172,7 @@ export default function ViewAllRecords() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-white/70">
+                  <TableCell colSpan={7} className="text-center py-8 text-white/70">
                     No parking records found for this area
                   </TableCell>
                 </TableRow>

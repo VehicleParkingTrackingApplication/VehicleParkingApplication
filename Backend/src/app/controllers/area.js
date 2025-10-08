@@ -316,86 +316,88 @@ class parkingAreaController {
 
             // Step 3: Trigger FTP data fetching ASYNCHRONOUSLY 
             console.log(`Triggering FTP data fetch for area: ${areaId}`);
-            (async () => {
-                try {
-                    const ftpResult = await FtpService.processArea(areaId);
+            // (async () => {
+            //     try {
+            //         const ftpResult = await FtpService.processArea(areaId);
+            //         console.log(`Processing area ${areaId}`);
 
-                    if (!ftpResult.success) {
-                        console.error(`FTP data fetching failed for area ${areaId}:`, ftpResult.error);
-                        // Optionally create a failure notification
-                        try {
-                            const failNotification = new Notification({
-                                areaId: areaId,
-                                status: 'unread',
-                                message: `Data reload failed for ${area.name}: ${ftpResult.error || 'Unknown error'}`,
-                                type: 'system',
-                                currentCapacity: updatedArea.currentCapacity,
-                                totalCapacity: updatedArea.capacity
-                            });
-                            const savedFailNotification = await failNotification.save();
-                            webSocketService.sendToArea(areaId, 'ftp-data-reload-failed', {
-                                areaId: areaId,
-                                areaName: area.name,
-                                timestamp: new Date().toISOString(),
-                                message: 'FTP data reload failed',
-                                notificationId: savedFailNotification._id,
-                                currentCapacity: updatedArea.currentCapacity,
-                                totalCapacity: updatedArea.capacity
-                            });
-                        } catch (_) {}
-                        return;
-                    }
+            //         if (!ftpResult.success) {
+            //             console.error(`FTP data fetching failed for area ${areaId}:`, ftpResult.error);
+            //             // Optionally create a failure notification
+            //             try {
+            //                 const failNotification = new Notification({
+            //                     areaId: areaId,
+            //                     status: 'unread',
+            //                     message: `Data reload failed for ${area.name}: ${ftpResult.error || 'Unknown error'}`,
+            //                     type: 'over_24_hours_long_parking',
+            //                     currentCapacity: updatedArea.currentCapacity,
+            //                     totalCapacity: updatedArea.capacity
+            //                 });
+            //                 const savedFailNotification = await failNotification.save();
+            //                 webSocketService.sendToArea(areaId, 'ftp-data-reload-failed', {
+            //                     areaId: areaId,
+            //                     areaName: area.name,
+            //                     timestamp: new Date().toISOString(),
+            //                     message: 'FTP data reload failed',
+            //                     notificationId: savedFailNotification._id,
+            //                     currentCapacity: updatedArea.currentCapacity,
+            //                     totalCapacity: updatedArea.capacity
+            //                 });
+            //             } catch (_) {}
+            //             return;
+            //         }
 
-                    // Create notification for successful data reload
-                    const notification = new Notification({
-                        areaId: areaId,
-                        status: 'unread',
-                        message: `Data reload completed successfully for ${area.name}`,
-                        type: 'system',
-                        currentCapacity: updatedArea.currentCapacity,
-                        totalCapacity: updatedArea.capacity
-                    });
+            //         // Create notification for successful data reload
+            //         const notification = new Notification({
+            //             areaId: areaId,
+            //             status: 'unread',
+            //             message: `Data reload completed successfully for ${area.name}`,
+            //             type: 'system',
+            //             currentCapacity: updatedArea.currentCapacity,
+            //             totalCapacity: updatedArea.capacity
+            //         });
 
-                    const savedNotification = await notification.save();
+            //         const savedNotification = await notification.save();
 
-                    // Step 4: Send WebSocket notification to clients
-                    webSocketService.sendToArea(areaId, 'ftp-data-reloaded', {
-                        areaId: areaId,
-                        areaName: area.name,
-                        timestamp: new Date().toISOString(),
-                        message: 'FTP data reload completed successfully',
-                        notificationId: savedNotification._id,
-                        currentCapacity: updatedArea.currentCapacity,
-                        totalCapacity: updatedArea.capacity
-                    });
+            //         // Step 4: Send WebSocket notification to clients
+            //         webSocketService.sendToArea(areaId, 'ftp-data-reloaded', {
+            //             areaId: areaId,
+            //             areaName: area.name,
+            //             timestamp: new Date().toISOString(),
+            //             message: 'FTP data reload completed successfully',
+            //             notificationId: savedNotification._id,
+            //             currentCapacity: updatedArea.currentCapacity,
+            //             totalCapacity: updatedArea.capacity
+            //         });
 
-                    console.log(`✅ FTP trigger completed successfully for area: ${areaId}`);
-                    console.log(`📢 Notification created: ${savedNotification._id}`);
-                    console.log(`🔔 WebSocket notification sent to area: ${areaId}`);
-                } catch (err) {
-                    console.error(`❌ Error during async FTP processing for area ${areaId}:`, err);
-                    try {
-                        const failNotification = new Notification({
-                            areaId: areaId,
-                            status: 'unread',
-                            message: `Data reload failed for ${area.name}: ${err.message}`,
-                            type: 'system',
-                            currentCapacity: updatedArea.currentCapacity,
-                            totalCapacity: updatedArea.capacity
-                        });
-                        const savedFailNotification = await failNotification.save();
-                        webSocketService.sendToArea(areaId, 'ftp-data-reload-failed', {
-                            areaId: areaId,
-                            areaName: area.name,
-                            timestamp: new Date().toISOString(),
-                            message: 'FTP data reload failed',
-                            notificationId: savedFailNotification._id,
-                            currentCapacity: updatedArea.currentCapacity,
-                            totalCapacity: updatedArea.capacity
-                        });
-                    } catch (_) {}
-                }
-            })();
+            //         // console.log(`✅ FTP trigger completed successfully for area: ${areaId}`);
+            //         // console.log(`📢 Notification created: ${savedNotification._id}`);
+            //         // console.log(`🔔 WebSocket notification sent to area: ${areaId}`);
+            //     } catch (err) {
+            //         console.error(`❌ Error during async FTP processing for area ${areaId}:`, err);
+            //         try {
+            //             const failNotification = new Notification({
+            //                 areaId: areaId,
+            //                 status: 'unread',
+            //                 message: `Data reload failed for ${area.name}: ${err.message}`,
+            //                 type: 'system',
+            //                 currentCapacity: updatedArea.currentCapacity,
+            //                 totalCapacity: updatedArea.capacity
+            //             });
+            //             const savedFailNotification = await failNotification.save();
+            //             webSocketService.sendToArea(areaId, 'ftp-data-reload-failed', {
+            //                 areaId: areaId,
+            //                 areaName: area.name,
+            //                 timestamp: new Date().toISOString(),
+            //                 message: 'FTP data reload failed',
+            //                 notificationId: savedFailNotification._id,
+            //                 currentCapacity: updatedArea.currentCapacity,
+            //                 totalCapacity: updatedArea.capacity
+            //             });
+            //         } catch (_) {}
+            //     }
+            // })
+            // ();
 
             // Immediate response to the client
             return res.status(202).json({

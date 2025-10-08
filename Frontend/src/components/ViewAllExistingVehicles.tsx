@@ -11,20 +11,36 @@ import { Button } from '@/components/ui/button';
 import { getExistingVehicles } from '@/services/parkingApi';
 import { useState, useEffect } from 'react';
 
+// Helper function to format duration
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  return `${mins}m`;
+};
+
+// Convert ISO date to YYYY-MM-DD HH:mm:ss format (keeping original time without timezone conversion)
+const formatDateTime = (isoString: string): string => {
+  // Extract date and time components directly from ISO string to avoid timezone conversion
+  const dateTimePart = isoString.split('T')[0]; // Get YYYY-MM-DD part
+  const timePart = isoString.split('T')[1].split('.')[0]; // Get HH:mm:ss part (remove milliseconds and Z)
+  return `${dateTimePart} ${timePart}`;
+};
+
 interface VehicleRecord {
-  _id: string;
+  _id?: string;
   plateNumber: string;
-  country: string;
-  image: string;
-  datetime: string;
-  currentDuration?: {
-    totalMinutes: number;
+  entryTime: string; // ISO format: "2025-08-26T13:37:54.572Z"
+  leavingTime: string; // Either ISO format or "Still Parking"
+  duration: {
     hours: number;
     minutes: number;
-    milliseconds: number;
   };
-  entryTime: string;
-  currentTime: string;
+  image: string;
+  country: string;
+  status: 'Parking' | 'Leaved';
 }
 
 interface ApiResponse {
@@ -86,27 +102,6 @@ export default function ViewAllVehicles() {
     fetchVehicles();
   }, [areaId, page]);
 
-  const formatDuration = (duration?: VehicleRecord['currentDuration']) => {
-    if (!duration) return 'N/A';
-    return `${duration.hours}h ${duration.minutes}m`;
-  };
-
-  const formatDateTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return {
-      date: date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }),
-      time: date.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
-    };
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden px-6 py-10">
@@ -140,33 +135,30 @@ export default function ViewAllVehicles() {
             </TableHeader>
             <TableBody>
               {vehicles.length > 0 ? (
-                vehicles.map((vehicle, index) => {
-                  const entryDateTime = formatDateTime(vehicle.entryTime);
-                  return (
-                    <TableRow key={vehicle._id || index} className="hover:bg-white/5">
-                      <TableCell className="font-medium text-white">{vehicle.plateNumber}</TableCell>
-                      <TableCell className="text-white">{vehicle.country}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="text-white">{entryDateTime.date}</div>
-                          <div className="text-sm text-white/70">{entryDateTime.time}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-white">{formatDuration(vehicle.currentDuration)}</TableCell>
-                      <TableCell>
-                        {vehicle.image && vehicle.image !== 'image.jpg' ? (
-                          <img 
-                            src={vehicle.image} 
-                            alt={`Vehicle ${vehicle.plateNumber}`}
-                            className="w-16 h-12 object-cover rounded"
-                          />
-                        ) : (
-                          <span className="text-gray-400">No image</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                vehicles.map((vehicle, index) => (
+                  <TableRow key={vehicle._id || index} className="hover:bg-white/5">
+                    <TableCell className="font-medium text-white">{vehicle.plateNumber}</TableCell>
+                    <TableCell className="text-white">{vehicle.country}</TableCell>
+                    <TableCell className="text-white">{formatDateTime(vehicle.entryTime)}</TableCell>
+                    <TableCell className="text-white">
+                      {vehicle.status === 'Parking' 
+                        ? 'Still parking' 
+                        : formatDuration((vehicle.duration.hours * 60) + vehicle.duration.minutes)
+                      }
+                    </TableCell>
+                    <TableCell>
+                      {vehicle.image && vehicle.image !== 'image.jpg' ? (
+                        <img 
+                          src={vehicle.image} 
+                          alt={`Vehicle ${vehicle.plateNumber}`}
+                          className="w-16 h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <span className="text-gray-400">No image</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-white/70">

@@ -107,6 +107,100 @@ function calulateSimilarityPlatenumber(plateNumber1, plateNumber2) {
     return similarity / plateNumber1.length;
 }
 
+// // Buffer to collect plate numbers within 5 seconds
+// const plateBuffer = new Map(); // areaId -> { plateNumbers: [], lastUpdate: timestamp, status: 'APPROACHING'|'LEAVING' }
+
+// // Function to process buffered plate numbers
+// async function processBufferedPlate(areaId, plateNumber, status, rowDateTime, row) {
+//     try {
+//         if (status === 'APPROACHING') {
+//             // Process Vehicle collection first - delete existing vehicle
+//             const existingVehicle = await Vehicle.findOne({ areaId, plateNumber });
+//             if (existingVehicle) {
+//                 await Vehicle.deleteOne({ areaId, plateNumber });
+//             }
+            
+//             // Process Record collection - close the one open record (if exists)
+//             const openRecord = await Record.findOne({ areaId, plateNumber, leavingTime: null });
+//             if (openRecord) {
+//                 const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+//                 await Record.updateOne({ _id: openRecord._id }, { 
+//                     $set: { 
+//                         leavingTime: rowDateTime,
+//                         duration: duration
+//                     } 
+//                 });
+//             }
+            
+//             // Create new Vehicle object for approaching vehicle
+//             await Vehicle.create({
+//                 areaId: areaId,
+//                 plateNumber: plateNumber,
+//                 country: row.country || 'AUS',
+//                 image: row.image,
+//                 entryTime: rowDateTime
+//             });
+
+//             // Create new Record object for approaching vehicle
+//             await Record.create({
+//                 areaId: areaId,
+//                 plateNumber: plateNumber,
+//                 country: row.country || 'AUS',
+//                 confidence: Number(row.confidence) || 85,
+//                 angle: Number(row.angle) || 0,
+//                 image: row.image,
+//                 entryTime: rowDateTime,
+//                 leavingTime: null,
+//                 duration: 0
+//             });
+            
+//         } else if (status === 'LEAVING') {
+//             // Process Vehicle collection first - delete existing vehicle (if exists)
+//             const existingVehicle = await Vehicle.findOne({ areaId, plateNumber });
+//             if (existingVehicle) {
+//                 await Vehicle.deleteOne({ areaId, plateNumber });
+//             }
+            
+//             // Process Record collection - close the one open record (if exists)
+//             const openRecord = await Record.findOne({ areaId, plateNumber, leavingTime: null });
+//             if (openRecord) {
+//                 const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+//                 await Record.updateOne({ _id: openRecord._id }, { 
+//                     $set: { 
+//                         leavingTime: rowDateTime,
+//                         duration: duration
+//                     } 
+//                 });
+//             }
+//         }
+        
+//         // Update area's savedTimestamp and capacity
+//         await updateAreaTimestamp(areaId, rowDateTime);
+//         await updateAreaCapacity(areaId, false);
+        
+//     } catch (err) {
+//         console.error('Error processing buffered plate:', err.message, { areaId, plateNumber, status });
+//     }
+// }
+
+// // Function to check and process expired buffers
+// async function checkExpiredBuffers() {
+//     const now = Date.now();
+//     const fiveSeconds = 5 * 1000;
+    
+//     for (const [areaId, buffer] of plateBuffer.entries()) {
+//         if (now - buffer.lastUpdate > fiveSeconds) {
+//             // Buffer expired, process the last plate number
+//             if (buffer.plateNumbers.length > 0) {
+//                 const lastPlate = buffer.plateNumbers[buffer.plateNumbers.length - 1];
+//                 console.log(`Processing buffered plate ${lastPlate.plateNumber} (${buffer.status}) after 5-second buffer expired`);
+//                 await processBufferedPlate(areaId, lastPlate.plateNumber, buffer.status, lastPlate.rowDateTime, lastPlate.row);
+//             }
+//             plateBuffer.delete(areaId);
+//         }
+//     }
+// }
+
 // input areaId and options to access that ftp server to fetch data
 export async function fetchDataFtpServer(areaId, options = {}) {
     // access the area collection from areaId to get the ftp-server info
@@ -134,7 +228,7 @@ export async function fetchDataFtpServer(areaId, options = {}) {
     const client = new Client();
     client.ftp.verbose = true;
     let latestProcessedDate = saveDateObj;
-    
+    console.log(`Processing area ${areaId}, ftpInfo: ${ftpInfo}, saveDateObj: ${saveDateObj}`);
     try {
         await client.access({
             host: ftpInfo.host,
@@ -203,15 +297,15 @@ export async function fetchDataFtpServer(areaId, options = {}) {
 
                                 try {
                                     if (row.status === 'APPROACHING') {
-                                         // Find out if a vehicle still exist means camera missed the vehicle when it leave the parking area
-                                        const parkingVehicle = await Vehicle.findOne({ areaId, plateNumber: row.plateNumber }).sort({ entryTime: -1 });
-                                        if (parkingVehicle) {
+                                        // Process Vehicle collection first - delete existing vehicle
+                                        const existingVehicle = await Vehicle.findOne({ areaId, plateNumber: row.plateNumber });
+                                        if (existingVehicle) {
                                             await Vehicle.deleteOne({ areaId, plateNumber: row.plateNumber });
                                         }
-                                        // check is that the Record have an vehicle that is still parking
+                                        
+                                        // Process Record collection - close the one open record (if exists)
                                         const openRecord = await Record.findOne({ areaId, plateNumber: row.plateNumber, leavingTime: null });
                                         if (openRecord) {
-                                            // Calculate duration and convert into minute unit
                                             const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
                                             await Record.updateOne({ _id: openRecord._id }, { 
                                                 $set: { 
@@ -219,11 +313,11 @@ export async function fetchDataFtpServer(areaId, options = {}) {
                                                     duration: duration
                                                 } 
                                             });
-                                        }
+                                       }
                                         
                                         // Create new Vehicle object for approaching vehicle
                                         await Vehicle.create({
-                                            areaId,
+                                            areaId: areaId,
                                             plateNumber: row.plateNumber,
                                             country: row.country || 'AUS',
                                             image: row.image,
@@ -232,7 +326,7 @@ export async function fetchDataFtpServer(areaId, options = {}) {
 
                                         // Create new Record object for approaching vehicle
                                         await Record.create({
-                                            areaId,
+                                            areaId: areaId,
                                             plateNumber: row.plateNumber,
                                             country: row.country || 'AUS',
                                             confidence: Number(row.confidence) || 85,
@@ -244,48 +338,55 @@ export async function fetchDataFtpServer(areaId, options = {}) {
                                         });
                                         
                                     } else if (row.status === 'LEAVING') {
-                                        // if the plate number is in the Vehicle collection
-                                        const parkingVehicle = await Vehicle.findOne({ areaId, plateNumber: row.plateNumber });
-                                        if (parkingVehicle) {
-                                            // Delete the vehicle parking in the area
+                                        //  Process Vehicle collection first - delete existing vehicle (if exists)
+                                        const existingVehicle = await Vehicle.findOne({ areaId, plateNumber: row.plateNumber });
+                                        if (existingVehicle) {
                                             await Vehicle.deleteOne({ areaId, plateNumber: row.plateNumber });
-                                            const openRecord = await Record.findOne({ areaId, plateNumber: row.plateNumber, leavingTime: null });
-                                            if (openRecord) {
-                                                const calculatedDuration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
-                                                await Record.updateOne({ _id: openRecord._id }, { $set: { leavingTime: rowDateTime, duration: calculatedDuration } });
-                                            }
-                                        } else {
-                                            // Find the plate number has nearly same as the the current plate number
-                                            // Because the confidence of data
-                                            const parkingVehicles = await Vehicle.find({ areaId });
-                                            let similarPlateNumber = null;
-                                            for (const vehicle of parkingVehicles) {
-                                                if (calulateSimilarityPlatenumber(vehicle.plateNumber, row.plateNumber) > 0.8) {
-                                                    similarPlateNumber = vehicle.plateNumber;
-                                                    await Vehicle.deleteOne({ areaId, plateNumber: vehicle.plateNumber });
-                                                    break;
-                                                }
-                                            }
-                                            
-                                            // find the open record
-                                            const openRecord = await Record.findOne({ areaId, plateNumber: similarPlateNumber, leavingTime: null });
-
-                                            // Found the similar plate number in the Vehicle collection, use it to update Record collection
-                                            if (openRecord) {
-                                                const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
-                                                await Record.updateOne({ areaId, plateNumber: similarPlateNumber }, { $set: { leavingTime: rowDateTime, duration: duration } });
-                                            } 
-                                            // else {
-                                            //     // No matching vehicle found and no similar plate number found
-                                            //     await Blacklist.create({
-                                            //         businessId: area.businessId,
-                                            //         plateNumber: row.plateNumber,
-                                            //         areaId,
-                                            //         reason: `Unauthorized exit detected - vehicle left without proper entry record at ${formatAustralianTime(rowDateTime)}`
-                                            //     });
-                                            //     console.log(`Added to blacklist: ${row.plateNumber} - Unauthorized exit detected`);
-                                            // }
                                         }
+                                        
+                                        // Process Record collection - close the one open record (if exists)
+                                        const openRecord = await Record.findOne({ areaId, plateNumber: row.plateNumber, leavingTime: null });
+                                        if (openRecord) {
+                                            const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+                                            await Record.updateOne({ _id: openRecord._id }, { 
+                                                $set: { 
+                                                    leavingTime: rowDateTime,
+                                                    duration: duration
+                                                } 
+                                            });
+                                        }
+                                        // else {
+                                        //     // Find the plate number has nearly same as the the current plate number
+                                        //     // Because the confidence of data
+                                        //     const parkingVehicles = await Vehicle.find({ areaId: areaId });
+                                        //     let similarPlateNumber = null;
+                                        //     for (const vehicle of parkingVehicles) {
+                                        //         if (calulateSimilarityPlatenumber(vehicle.plateNumber, row.plateNumber) > 0.8) {
+                                        //             similarPlateNumber = vehicle.plateNumber;
+                                        //             await Vehicle.deleteOne({ areaId, plateNumber: vehicle.plateNumber });
+                                        //             break;
+                                        //         }
+                                        //     }
+                                            
+                                        //     // find the open record
+                                        //     const openRecord = await Record.findOne({ areaId, plateNumber: similarPlateNumber, leavingTime: null });
+
+                                        //     // Found the similar plate number in the Vehicle collection, use it to update Record collection
+                                        //     if (openRecord) {
+                                        //         const duration = Math.max(0, Math.round((rowDateTime - openRecord.entryTime) / (1000 * 60)));
+                                        //         await Record.updateOne({ areaId, plateNumber: similarPlateNumber, entryTime }, { $set: { leavingTime: rowDateTime, duration: duration } });
+                                        //     } 
+                                        //     // else {
+                                        //     //     // No matching vehicle found and no similar plate number found
+                                        //     //     await Blacklist.create({
+                                        //     //         businessId: area.businessId,
+                                        //     //         plateNumber: row.plateNumber,
+                                        //     //         areaId,
+                                        //     //         reason: `Unauthorized exit detected - vehicle left without proper entry record at ${formatAustralianTime(rowDateTime)}`
+                                        //     //     });
+                                        //     //     console.log(`Added to blacklist: ${row.plateNumber} - Unauthorized exit detected`);
+                                        //     // }
+                                        // }
                                     }
                                     
                                     // Update area's savedTimestamp after successfully processing this record
@@ -306,6 +407,10 @@ export async function fetchDataFtpServer(areaId, options = {}) {
                     })
                     .on('end', async () => {
                         await Promise.all(asyncOps);
+                        
+                        // Process any remaining buffers before finishing
+                        // await checkExpiredBuffers();
+                        
                         resolve();
                     })
                     .on('error', reject);

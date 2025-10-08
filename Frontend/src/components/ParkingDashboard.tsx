@@ -34,29 +34,21 @@ interface VehicleRecord {
 
 // Represents the raw record data from the backend API
 interface RawRecord {
-  _id: string;
-  plate: string;
-  action: 'ENTRY' | 'EXIT';
-  time: string;
-  date: string;
+  _id?: string;
+  plateNumber: string;
+  entryTime: string; // ISO format: "2025-09-24T08:56:18.028Z"
+  leavingTime: string; // Either ISO format or "Still Parking"
+  duration: {
+    hours: number;
+    minutes: number;
+  };
   image: string;
   country: string;
-  angle: number;
-  confidence: number;
+  status: 'Parking' | 'Leaved';
+  angle?: number;
+  durationFormatted?: string; // e.g., "8h 30m"
 }
 
-// Represents the enriched record object after client-side processing
-interface ProcessedRecord {
-  _id: string;
-  plate: string;
-  action: 'ENTRY' | 'EXIT';
-  date: string;
-  time: string;
-  entryDate: Date | null;
-  exitDate: Date | null;
-  durationMinutes: number | null;
-  angle: number;
-}
 
 interface Area {
   _id: string;
@@ -65,18 +57,47 @@ interface Area {
 }
 
 
-// --- HELPER FUNCTIONS ---
-const processHourlyChartData = (records: ProcessedRecord[]) => {
+// Convert into duration string
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  return `${mins}m`;
+};
+
+// Convert ISO date to YYYY-MM-DD HH:mm:ss format (keeping original time without timezone conversion)
+const formatDateTime = (isoString: string): string => {
+  // Extract date and time components directly from ISO string to avoid timezone conversion
+  const dateTimePart = isoString.split('T')[0]; // Get YYYY-MM-DD part
+  const timePart = isoString.split('T')[1].split('.')[0]; // Get HH:mm:ss part (remove milliseconds and Z)
+  return `${dateTimePart} ${timePart}`;
+};
+
+const processHourlyChartData = (records: RawRecord[]) => {
   const hourlyData: { [key: number]: { entries: number; exits: number } } = {};
   for (let i = 0; i < 24; i++) hourlyData[i] = { entries: 0, exits: 0 };
+  
   records.forEach(record => {
-    const dateToUse = record.action === 'ENTRY' ? record.entryDate : record.exitDate;
-    if (dateToUse) {
-      const hour = dateToUse.getHours();
-      if (record.action === 'ENTRY') hourlyData[hour].entries++;
-      else hourlyData[hour].exits++;
+    try {
+      // Parse ISO date format
+      const entryDate = new Date(record.entryTime);
+      const hour = entryDate.getHours();
+      
+      // Ensure hour is within valid range (0-23)
+      if (hour >= 0 && hour <= 23 && hourlyData[hour]) {
+        if (record.status === 'Parking') {
+          hourlyData[hour].entries++;
+        } else if (record.status === 'Leaved') {
+          hourlyData[hour].exits++;
+        }
+      }
+    } catch (error) {
+      console.warn('Error processing record for hourly chart:', record, error);
     }
   });
+  
   return Object.keys(hourlyData).map(hour => ({
     hour: `${hour}:00`,
     Entries: hourlyData[parseInt(hour)].entries,
@@ -84,23 +105,35 @@ const processHourlyChartData = (records: ProcessedRecord[]) => {
   }));
 };
 
-const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'weekly' | 'monthly') => {
-  const entries = records.filter(r => r.action === 'ENTRY' && r.entryDate);
+const processEntriesByPeriod = (records: RawRecord[], period: 'daily' | 'weekly' | 'monthly') => {
+  const entries = records.filter(r => r.status === 'Parking');
   const aggregation: { [key: string]: number } = {};
+  
   entries.forEach(record => {
-    const date = new Date(record.entryDate!);
-    let key = '';
-    if (period === 'daily') {
-      key = date.toLocaleDateString('en-CA');
-    } else if (period === 'weekly') {
-      const dayOfWeek = date.getDay();
-      const firstDay = new Date(date.setDate(date.getDate() - dayOfWeek));
-      key = `Week of ${firstDay.toLocaleDateString('en-CA')}`;
-    } else if (period === 'monthly') {
-      key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    try {
+      const date = new Date(record.entryTime);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date in record:', record);
+        return;
+      }
+      
+      let key = '';
+      if (period === 'daily') {
+        key = date.toLocaleDateString('en-CA');
+      } else if (period === 'weekly') {
+        const dayOfWeek = date.getDay();
+        const firstDay = new Date(date.setDate(date.getDate() - dayOfWeek));
+        key = `Week of ${firstDay.toLocaleDateString('en-CA')}`;
+      } else if (period === 'monthly') {
+        key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      }
+      if (key) aggregation[key] = (aggregation[key] || 0) + 1;
+    } catch (error) {
+      console.warn('Error processing record for entries chart:', record, error);
     }
-    if (key) aggregation[key] = (aggregation[key] || 0) + 1;
   });
+  
   return Object.keys(aggregation).sort().map(key => ({
     period: key,
     Entries: aggregation[key]
@@ -135,14 +168,37 @@ const processPredictionsByPeriod = (
 };
 
 
-const processOverstayData = (records: ProcessedRecord[], timeLimitMinutes: number) => {
-  const overstays = records.filter(r => r.durationMinutes && r.durationMinutes > timeLimitMinutes);
+const processOverstayData = (records: RawRecord[], timeLimitMinutes: number) => {
+  const overstays = records.filter(r => {
+    try {
+      if (r.status === 'Leaved' && r.leavingTime !== 'Still Parking') {
+        // Use the hours and minutes from the duration object
+        const totalMinutes = (r.duration.hours * 60) + r.duration.minutes;
+        return totalMinutes > timeLimitMinutes;
+      }
+      return false;
+    } catch (error) {
+      console.warn('Error filtering overstay record:', r, error);
+      return false;
+    }
+  });
+  
   const aggregation: { [key: string]: number } = {};
   overstays.forEach(record => {
-    const date = record.entryDate!;
-    const key = date.toLocaleDateString('en-CA');
-    aggregation[key] = (aggregation[key] || 0) + 1;
+    try {
+      const date = new Date(record.entryTime);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date in overstay record:', record);
+        return;
+      }
+      const key = date.toLocaleDateString('en-CA');
+      aggregation[key] = (aggregation[key] || 0) + 1;
+    } catch (error) {
+      console.warn('Error processing overstay record:', record, error);
+    }
   });
+  
   return Object.keys(aggregation).sort().map(key => ({
     date: key,
     'Overstaying Vehicles': aggregation[key]
@@ -170,7 +226,7 @@ export default function ParkingDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
-  const [allRecords, setAllRecords] = useState<ProcessedRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<RawRecord[]>([]);
   const [existingVehicles, setExistingVehicles] = useState<VehicleRecord[]>([]);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [startDate, setStartDate] = useState('');
@@ -233,12 +289,6 @@ export default function ParkingDashboard() {
     if (filter) setActiveFilter(filter);
   }, [searchParams]);
 
-  // WebSocket event handlers removed
-
-  // WebSocket connection management removed
-
-  // WebSocket cleanup removed
-
   // Memoized function to fetch areas
   const fetchAreas = useCallback(async () => {
     try {
@@ -270,51 +320,29 @@ export default function ParkingDashboard() {
         getExistingVehicles(areaId, 1, 1000)
       ]);
       
-      const rawRecords: RawRecord[] = recordsResponse.records || [];
+      const rawRecords: RawRecord[] = recordsResponse.data || [];
       
-      // Process raw records into a more useful format with Date objects and duration
-      const entryMap = new Map<string, RawRecord>();
-      const processedRecords: ProcessedRecord[] = [];
-
-      // First pass: create a map of the most recent entry for each license plate
-      rawRecords.filter((r: RawRecord) => r.action === 'ENTRY').forEach((rec: RawRecord) => {
-          entryMap.set(rec.plate, rec);
+      // Process raw records to add duration formatting
+      const processedRecords: RawRecord[] = rawRecords.map((rec: RawRecord) => {
+        if (rec.status === 'Leaved' && rec.leavingTime !== 'Still Parking') {
+          // Use the hours and minutes from the duration object
+          const totalMinutes = (rec.duration.hours * 60) + rec.duration.minutes;
+          return {
+            ...rec,
+            durationFormatted: formatDuration(totalMinutes)
+          };
+        } else {
+          // For parking records, no duration yet
+          return {
+            ...rec,
+            durationFormatted: 'Still parking'
+          };
+        }
       });
-
-      // Second pass: process all records, calculating duration for exits
-      rawRecords.forEach((rec: RawRecord) => {
-          const [month, day, year] = rec.date.split('/');
-          const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
-          
-          if (rec.action === 'EXIT') {
-              const matchingEntry = entryMap.get(rec.plate);
-              if (matchingEntry) {
-                  const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
-                  const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
-                  const durationMs = dateObj.getTime() - entryDateObj.getTime();
-                  
-                  processedRecords.push({
-                      ...rec,
-                      entryDate: entryDateObj,
-                      exitDate: dateObj,
-                      durationMinutes: Math.floor(durationMs / 60000),
-                      angle: rec.angle
-                  });
-                  // Once matched, remove the entry to handle re-entries correctly
-                  entryMap.delete(rec.plate);
-              }
-          } else { // Entry record
-              processedRecords.push({
-                  ...rec,
-                  entryDate: dateObj,
-                  exitDate: null,
-                  durationMinutes: null,
-                  angle: rec.angle
-              });
-          }
-      });
+      
       setAllRecords(processedRecords);
-      setExistingVehicles(vehiclesResponse.vehicles || []);
+      console.log("vehiclesResponse :", vehiclesResponse)
+      setExistingVehicles(vehiclesResponse.data || []);
     } catch (err) { 
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data.'); 
     } finally { 
@@ -334,17 +362,38 @@ export default function ParkingDashboard() {
     if (startDate) {
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
-      records = records.filter(record => record.entryDate && record.entryDate >= start);
+      records = records.filter(record => {
+        try {
+          const entryDate = new Date(record.entryTime);
+          return !isNaN(entryDate.getTime()) && entryDate >= start;
+        } catch (error) {
+          console.warn('Error filtering by start date:', record, error);
+          return false;
+        }
+      });
     }
     if (endDate) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      records = records.filter(record => record.entryDate && record.entryDate <= end);
+      records = records.filter(record => {
+        try {
+          const entryDate = new Date(record.entryTime);
+          return !isNaN(entryDate.getTime()) && entryDate <= end;
+        } catch (error) {
+          console.warn('Error filtering by end date:', record, error);
+          return false;
+        }
+      });
     }
     if (searchTerm) {
-      records = records.filter(record =>
-        record.plate?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      records = records.filter(record => {
+        try {
+          return record.plateNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+        } catch (error) {
+          console.warn('Error filtering by search term:', record, error);
+          return false;
+        }
+      });
     }
     return records;
   }, [startDate, endDate, searchTerm, allRecords]);
@@ -359,7 +408,15 @@ export default function ParkingDashboard() {
       // prediction loading state removed
       const lastRecordDate = new Date(Math.max(
           Date.now(),
-          ...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)
+          ...filteredRecords.map(r => {
+            try {
+              const date = new Date(r.entryTime);
+              return isNaN(date.getTime()) ? 0 : date.getTime();
+            } catch (error) {
+              console.warn('Error processing record for predictions:', r, error);
+              return 0;
+            }
+          })
       ));
       const timestamps: string[] = [];
       const startDate = new Date(lastRecordDate);
@@ -507,7 +564,15 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
     const historical = processHourlyChartData(filteredRecords);
     const lastRecordDate = new Date(Math.max(
         Date.now(),
-        ...filteredRecords.map(r => r.entryDate ? r.entryDate.getTime() : 0)
+        ...filteredRecords.map(r => {
+          try {
+            const date = new Date(r.entryTime);
+            return isNaN(date.getTime()) ? 0 : date.getTime();
+          } catch (error) {
+            console.warn('Error processing record for combined chart:', r, error);
+            return 0;
+          }
+        })
     ));
     const nextDayStr = new Date(lastRecordDate.setDate(lastRecordDate.getDate() + 1)).toISOString().split('T')[0];
 
@@ -651,12 +716,12 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                     <CardContent className="text-3xl font-bold">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
                   </Card>
                   <Card className="backdrop-blur-md bg-white/20 border-white/30">
-                    <CardHeader><CardTitle className="text-green-400">Total Entries (Filtered)</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'ENTRY').length}</CardContent>
+                    <CardHeader><CardTitle className="text-green-400">Total Entries</CardTitle></CardHeader>
+                    <CardContent className="text-3xl font-bold">{filteredRecords.length}</CardContent>
                   </Card>
                   <Card className="backdrop-blur-md bg-white/20 border-white/30">
-                    <CardHeader><CardTitle className="text-yellow-400">Total Exits (Filtered)</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'EXIT').length}</CardContent>
+                    <CardHeader><CardTitle className="text-yellow-400">Total Exits</CardTitle></CardHeader>
+                    <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.status === 'Leaved').length}</CardContent>
                   </Card>
                 </section>
                 
@@ -748,26 +813,24 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                     <TableHeader>
                       <TableRow>
                         <TableHead>License Plate</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Date & Time</TableHead>
-                        <TableHead>Duration (mins)</TableHead>
-                        <TableHead>Angle (°)</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Entry Time</TableHead>
+                        <TableHead>Duration</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredRecords.length > 0 ? (
-                        filteredRecords.slice(0, 10).map((record) => (
-                          <TableRow key={record._id}>
-                            <TableCell>{record.plate || 'N/A'}</TableCell>
-                            <TableCell>{record.action}</TableCell>
-                            <TableCell>{record.date} {record.time}</TableCell>
-                            <TableCell>{record.durationMinutes !== null ? record.durationMinutes : 'N/A'}</TableCell>
-                            <TableCell>{typeof record.angle === 'number' ? record.angle.toFixed(1) : 'N/A'}</TableCell>
+                        filteredRecords.slice(0, 10).map((record, index) => (
+                          <TableRow key={record._id || index}>
+                            <TableCell>{record.plateNumber || 'N/A'}</TableCell>
+                            <TableCell>{record.status}</TableCell>
+                            <TableCell>{formatDateTime(record.entryTime)}</TableCell>
+                            <TableCell>{record.durationFormatted || 'N/A'}</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center">No records found matching your filters.</TableCell>
+                          <TableCell colSpan={5} className="text-center">No records found matching your filters.</TableCell>
                         </TableRow>
                       )}
                     </TableBody>

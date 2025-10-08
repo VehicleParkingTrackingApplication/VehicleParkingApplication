@@ -21,8 +21,8 @@ const Notification = new Schema(
     },
     type: {
       type: String,
-      enum: ['over_24_hours_long_parking', "over_4_hours_long_parking"],
-      default: 'capacity_warning',
+      enum: ['over_24_hours_long_parking', "over_4_hours_long_parking", 'system'],
+      default: 'over_24_hours_long_parking',
     }
   },
   { timestamps: true },

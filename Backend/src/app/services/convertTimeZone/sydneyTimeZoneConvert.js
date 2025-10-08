@@ -57,5 +57,6 @@ function getOffsetMinutes(date, timeZone) {
 // Returns a new Date whose ISO ends with Z but shows Sydney wall-clock (changes the instant)
 export function convertToTimeZone(date, timeZone) {
     const offsetMin = getOffsetMinutes(date, timeZone); // +600 or +660 with DST
+    // console.log("CHECK ", date, timeZone, offsetMin, new Date(date.getTime() + offsetMin * 60000));
     return new Date(date.getTime() + offsetMin * 60000);
 }
