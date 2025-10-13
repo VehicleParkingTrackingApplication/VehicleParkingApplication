@@ -22,6 +22,7 @@ import {
 import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parkingApi';
 import { saveReport } from '@/services/reportsApi';
+import { getEmployeeVehiclesByBusiness, getBlacklistByBusiness, getCurrentUser } from '@/services/backend';
 import { Save, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 // WebSocket removed for this page – dashboard now fetches via API only
 
@@ -200,6 +201,11 @@ export default function ParkingDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Employee and Blacklist data
+  const [employeeVehicles, setEmployeeVehicles] = useState<string[]>([]);
+  const [blacklistVehicles, setBlacklistVehicles] = useState<string[]>([]);
+  const [businessId, setBusinessId] = useState<string | null>(null);
 
   // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -271,12 +277,61 @@ export default function ParkingDashboard() {
     }
   }, []);
 
+  // Function to fetch employee and blacklist data
+  const fetchEmployeeAndBlacklistData = useCallback(async () => {
+    if (!businessId) return;
+    
+    try {
+      const [employeeResponse, blacklistResponse] = await Promise.all([
+        getEmployeeVehiclesByBusiness(businessId, 1, 1000),
+        getBlacklistByBusiness(businessId, 1, 1000)
+      ]);
+
+      if (employeeResponse?.success && employeeResponse.data) {
+        const employeePlates = employeeResponse.data.map((vehicle: any) => vehicle.plateNumber);
+        setEmployeeVehicles(employeePlates);
+      }
+
+      if (blacklistResponse?.success && blacklistResponse.data) {
+        const blacklistPlates = blacklistResponse.data.map((entry: any) => entry.plateNumber);
+        setBlacklistVehicles(blacklistPlates);
+      }
+    } catch (err) {
+      console.error('Error fetching employee and blacklist data:', err);
+    }
+  }, [businessId]);
+
   // Effect to fetch list of parking areas
   useEffect(() => {
     if (isAuthenticated) {
       fetchAreas();
     }
   }, [isAuthenticated, fetchAreas]);
+
+  // Effect to get business ID and fetch employee/blacklist data
+  useEffect(() => {
+    const getBusinessId = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.businessId) {
+          setBusinessId(user.businessId);
+        }
+      } catch (err) {
+        console.error('Error getting business ID:', err);
+      }
+    };
+    
+    if (isAuthenticated) {
+      getBusinessId();
+    }
+  }, [isAuthenticated]);
+
+  // Effect to fetch employee and blacklist data when business ID is available
+  useEffect(() => {
+    if (businessId) {
+      fetchEmployeeAndBlacklistData();
+    }
+  }, [businessId, fetchEmployeeAndBlacklistData]);
 
   // Memoized function to fetch dashboard data
   const fetchDashboardData = useCallback(async (areaId: string) => {
@@ -384,8 +439,20 @@ export default function ParkingDashboard() {
         record.plate?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
+    
+    // Apply employee and blacklist filters
+    if (activeFilter === 'employee') {
+      records = records.filter(record => 
+        record.plate && employeeVehicles.includes(record.plate.toUpperCase())
+      );
+    } else if (activeFilter === 'blacklist') {
+      records = records.filter(record => 
+        record.plate && blacklistVehicles.includes(record.plate.toUpperCase())
+      );
+    }
+    
     return records;
-  }, [startDate, endDate, searchTerm, allRecords]);
+  }, [startDate, endDate, searchTerm, allRecords, activeFilter, employeeVehicles, blacklistVehicles]);
 
   useEffect(() => {
     if (filteredRecords.length === 0) {
@@ -631,8 +698,8 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
               </div>
             </div>
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
-              <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="w-40">
                     <label htmlFor="start-date" className="block text-xs font-medium mb-1 text-gray-700">Start Date</label>
                     <Input type="date" id="start-date" value={startDate} onChange={(e) => { 
                       setStartDate(e.target.value); 
@@ -640,13 +707,35 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                       updateURLParams({ startDate: e.target.value || null, filter: 'custom' });
                     }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="w-40">
                     <label htmlFor="end-date" className="block text-xs font-medium mb-1 text-gray-700">End Date</label>
                     <Input type="date" id="end-date" value={endDate} onChange={(e) => { 
                       setEndDate(e.target.value); 
                       setActiveFilter('custom');
                       updateURLParams({ endDate: e.target.value || null, filter: 'custom' });
                     }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div className="flex gap-2 items-end">
+                  <Button 
+                    variant={activeFilter === 'employee' ? 'default' : 'outline'} 
+                    onClick={() => {
+                      setActiveFilter('employee');
+                      updateURLParams({ filter: 'employee' });
+                    }} 
+                    className={`text-xs px-3 py-1 h-8 ${activeFilter === 'employee' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  >
+                    Employee
+                  </Button>
+                  <Button 
+                    variant={activeFilter === 'blacklist' ? 'default' : 'outline'} 
+                    onClick={() => {
+                      setActiveFilter('blacklist');
+                      updateURLParams({ filter: 'blacklist' });
+                    }} 
+                    className={`text-xs px-3 py-1 h-8 ${activeFilter === 'blacklist' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  >
+                    Blacklist
+                  </Button>
                 </div>
               </div>
               <div className="flex flex-col space-y-2 min-w-0">

@@ -45,21 +45,26 @@ class BlacklistController {
 
     async getAllBlacklistByBusinessId(req, res) {
         try {
-            const { businessId, page = 1, limit = 10 } = req.query;
+            console.log('Blacklist API called with params:', req.params);
+            console.log('Blacklist API called with query:', req.query);
+            const businessId = req.params.businessId;
+            const { page = 1, limit = 10 } = req.query;
+            console.log('Extracted businessId from params:', businessId);
             if (!businessId) {
+                console.log('Business ID is missing');
                 return res.status(400).json({
                     success: false,
                     message: 'Business ID is required'
                 });
             }
-            const pageNum = parseInt(req.query.page) - 1 || 0;
-            const limitNum = parseInt(req.query.limit) || 10;
-            const skip = (page - 1) * limit;
+            const pageNum = parseInt(page) || 1;
+            const limitNum = parseInt(limit) || 10;
+            const skip = (pageNum - 1) * limitNum;
             
             const total = await Blacklist.countDocuments({ businessId });
             const blacklist = await Blacklist.find({ businessId })
                 .skip(skip)
-                .limit(limit)
+                .limit(limitNum)
                 .sort({ createdAt: -1 });
 
             return res.status(200).json({
@@ -67,7 +72,7 @@ class BlacklistController {
                 data: blacklist,
                 pagination: {
                     total,
-                    page: pageNum + 1,
+                    page: pageNum,
                     limit: limitNum,
                     totalPages: Math.ceil(total / limitNum)
                 }

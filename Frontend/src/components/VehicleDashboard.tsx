@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { MoreHorizontal, X, Ban, UserPlus } from 'lucide-react';
+import { MoreHorizontal, X, Ban, UserPlus, Shield, Users, Clock } from 'lucide-react';
 import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles } from '@/services/parkingApi';
-import { getCurrentUser, getBlacklistByBusiness } from '@/services/backend';
+import { getCurrentUser, getBlacklistByBusiness, getEmployeeVehiclesByBusiness } from '@/services/backend';
 import { postAuthApi } from '@/services/api';
 
 // --- INTERFACES ---
@@ -82,10 +82,11 @@ export default function VehicleDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [currentVehiclesPage, setCurrentVehiclesPage] = useState(1);
   const [currentBlacklistPage, setCurrentBlacklistPage] = useState(1);
+  const [currentEmployeePage, setCurrentEmployeePage] = useState(1);
   const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
+  const [employeeVehicles, setEmployeeVehicles] = useState<any[]>([]);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleRecord | null>(null);
   const [vehicleHistory, setVehicleHistory] = useState<ProcessedRecord[]>([]);
@@ -94,8 +95,6 @@ export default function VehicleDashboard() {
   const [showBlacklistForm, setShowBlacklistForm] = useState(false);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [employeeName, setEmployeeName] = useState('');
-  const [employeeEmail, setEmployeeEmail] = useState('');
-  const [employeeRole, setEmployeeRole] = useState('');
   const itemsPerPage = 12;
 
   // --- URL PARAMETER FUNCTIONS ---
@@ -133,17 +132,42 @@ export default function VehicleDashboard() {
     try {
       // Get current user first to get businessId
       const user = await getCurrentUser();
+      console.log('Current user data:', user);
       if (user?.businessId) {
         setBusinessId(user.businessId);
+        console.log('Business ID set:', user.businessId);
         
         // Fetch blacklist data
+        console.log('About to fetch blacklist for businessId:', user.businessId);
         try {
           const blacklistResponse = await getBlacklistByBusiness(user.businessId, 1, 1000);
+          console.log('Blacklist response:', blacklistResponse);
+          console.log('Blacklist response type:', typeof blacklistResponse);
+          console.log('Blacklist response success:', blacklistResponse?.success);
+          console.log('Blacklist response data:', blacklistResponse?.data);
           if (blacklistResponse?.success && blacklistResponse.data) {
             setBlacklist(blacklistResponse.data);
+            console.log('Blacklist data set:', blacklistResponse.data);
+          } else {
+            console.log('Blacklist response failed or no data:', blacklistResponse);
           }
         } catch (blacklistError) {
           console.error('Error fetching blacklist:', blacklistError);
+        }
+
+        // Fetch employee vehicles data
+        console.log('About to fetch employee vehicles for businessId:', user.businessId);
+        try {
+          const employeeVehiclesResponse = await getEmployeeVehiclesByBusiness(user.businessId, 1, 1000);
+          console.log('Employee vehicles response:', employeeVehiclesResponse);
+          if (employeeVehiclesResponse?.success && employeeVehiclesResponse.data) {
+            setEmployeeVehicles(employeeVehiclesResponse.data);
+            console.log('Employee vehicles data set:', employeeVehiclesResponse.data);
+          } else {
+            console.log('Employee vehicles response failed or no data:', employeeVehiclesResponse);
+          }
+        } catch (employeeVehiclesError) {
+          console.error('Error fetching employee vehicles:', employeeVehiclesError);
         }
       }
 
@@ -228,15 +252,6 @@ export default function VehicleDashboard() {
   }, [selectedAreaId, fetchDashboardData]);
 
   // Memoized filtered records to prevent unnecessary re-renders
-  const filteredRecords = useMemo(() => {
-    let records = allRecords;
-    if (searchTerm) {
-      records = records.filter(record =>
-        record.plate?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    return records;
-  }, [searchTerm, allRecords]);
 
   // Memoized filtered current vehicles
   const filteredCurrentVehicles = useMemo(() => {
@@ -251,22 +266,35 @@ export default function VehicleDashboard() {
 
   // Memoized filtered blacklist
   const filteredBlacklist = useMemo(() => {
+    console.log('Filtering blacklist, current blacklist:', blacklist);
     let blacklistItems = blacklist;
     if (searchTerm) {
       blacklistItems = blacklistItems.filter(item =>
         item.plateNumber.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
+    console.log('Filtered blacklist items:', blacklistItems);
     return blacklistItems;
   }, [searchTerm, blacklist]);
 
+  // Memoized filtered employee vehicles
+  const filteredEmployeeVehicles = useMemo(() => {
+    console.log('Filtering employee vehicles, current employeeVehicles:', employeeVehicles);
+    let employeeItems = employeeVehicles;
+    if (searchTerm) {
+      employeeItems = employeeItems.filter(item =>
+        item.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.owner.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    console.log('Filtered employee vehicles items:', employeeItems);
+    return employeeItems;
+  }, [searchTerm, employeeVehicles]);
+
   // Pagination logic
-  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
   const totalVehiclePages = Math.ceil(filteredCurrentVehicles.length / itemsPerPage);
   const totalBlacklistPages = Math.ceil(filteredBlacklist.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+  const totalEmployeePages = Math.ceil(filteredEmployeeVehicles.length / itemsPerPage);
   
   const vehicleStartIndex = (currentVehiclesPage - 1) * itemsPerPage;
   const vehicleEndIndex = vehicleStartIndex + itemsPerPage;
@@ -275,12 +303,16 @@ export default function VehicleDashboard() {
   const blacklistStartIndex = (currentBlacklistPage - 1) * itemsPerPage;
   const blacklistEndIndex = blacklistStartIndex + itemsPerPage;
   const paginatedBlacklist = filteredBlacklist.slice(blacklistStartIndex, blacklistEndIndex);
+  
+  const employeeStartIndex = (currentEmployeePage - 1) * itemsPerPage;
+  const employeeEndIndex = employeeStartIndex + itemsPerPage;
+  const paginatedEmployeeVehicles = filteredEmployeeVehicles.slice(employeeStartIndex, employeeEndIndex);
 
   // Reset pagination when search term changes
   useEffect(() => {
-    setCurrentPage(1);
     setCurrentVehiclesPage(1);
     setCurrentBlacklistPage(1);
+    setCurrentEmployeePage(1);
   }, [searchTerm]);
 
   // --- VEHICLE POPUP FUNCTIONS ---
@@ -350,42 +382,39 @@ export default function VehicleDashboard() {
     } catch (error) {
       console.error('Error adding to blacklist:', error);
       console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
       });
-      alert(`Error adding vehicle to blacklist: ${error.message}`);
+      alert(`Error adding vehicle to blacklist: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
   const handleAddToEmployee = async () => {
-    if (!selectedVehicle || !employeeName.trim() || !employeeEmail.trim() || !employeeRole.trim()) {
-      alert('Please fill in all employee details');
+    if (!selectedVehicle || !employeeName.trim()) {
+      alert('Please fill in the employee name');
       return;
     }
 
     try {
       const requestBody = {
-        name: employeeName.trim(),
-        email: employeeEmail.trim(),
-        role: employeeRole.trim(),
-        businessId: businessId,
-        vehiclePlate: selectedVehicle.plateNumber
+        plateNumber: selectedVehicle.plateNumber,
+        owner: employeeName.trim(),
+        areaId: selectedAreaId
       };
       
-      const response = await postAuthApi('staff', undefined, JSON.stringify(requestBody));
+      const response = await postAuthApi('employee-vehicle/add', undefined, JSON.stringify(requestBody));
 
       if (response.ok) {
         setShowEmployeeForm(false);
         setEmployeeName('');
-        setEmployeeEmail('');
-        setEmployeeRole('');
-        alert('Employee added successfully');
+        alert('Vehicle added to employee vehicles successfully');
       } else {
-        alert('Failed to add employee');
+        const errorData = await response.json();
+        alert(`Failed to add vehicle to employee vehicles: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error adding employee:', error);
-      alert('Error adding employee');
+      console.error('Error adding vehicle to employee vehicles:', error);
+      alert(`Error adding vehicle to employee vehicles: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -397,8 +426,6 @@ export default function VehicleDashboard() {
     setBlacklistReason('');
     setShowEmployeeForm(false);
     setEmployeeName('');
-    setEmployeeEmail('');
-    setEmployeeRole('');
   };
 
   // Initialize URL parameters
@@ -517,7 +544,8 @@ export default function VehicleDashboard() {
                 {/* Current Vehicles */}
                 <Card className="bg-white border-gray-200 shadow-lg">
                   <CardHeader>
-                    <CardTitle className="text-xl font-semibold text-gray-900">
+                    <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-green-600" />
                       Current Vehicles in {selectedArea?.name}
                     </CardTitle>
                   </CardHeader>
@@ -584,126 +612,141 @@ export default function VehicleDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Blacklist Vehicles */}
-                <Card className="bg-white border-gray-200 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-semibold text-gray-900">
-                      Blacklisted Vehicles
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {filteredBlacklist.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <Table className="border-collapse">
-                          <TableHeader>
-                            <TableRow className="border-b border-gray-200">
-                              <TableHead className="text-gray-900 border-r border-gray-200">License Plate</TableHead>
-                              <TableHead className="text-gray-900 border-r border-gray-200">Reason</TableHead>
-                              <TableHead className="text-gray-900">Date Added</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {paginatedBlacklist.map((item) => (
-                              <TableRow key={item._id} className="border-b border-gray-200">
-                                <TableCell className="font-medium text-gray-900 border-r border-gray-200">{item.plateNumber}</TableCell>
-                                <TableCell className="text-gray-900 border-r border-gray-200">{item.reason}</TableCell>
-                                <TableCell className="text-gray-900">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                {/* Blacklist and Employee Vehicles - Stacked */}
+                <div className="space-y-6">
+                  {/* Blacklist Vehicles */}
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-red-600" />
+                        Blacklisted Vehicles
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {(() => {
+                        console.log('Rendering blacklist section, filteredBlacklist:', filteredBlacklist, 'length:', filteredBlacklist.length);
+                        return null;
+                      })()}
+                      {filteredBlacklist.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <Table className="border-collapse">
+                            <TableHeader>
+                              <TableRow className="border-b border-gray-200">
+                                <TableHead className="text-gray-900 border-r border-gray-200">License Plate</TableHead>
+                                <TableHead className="text-gray-900 border-r border-gray-200">Reason</TableHead>
+                                <TableHead className="text-gray-900">Date Added</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                        {totalBlacklistPages > 1 && (
-                          <div className="flex justify-center items-center space-x-2 mt-4">
-                            <button
-                              onClick={() => setCurrentBlacklistPage(Math.max(1, currentBlacklistPage - 1))}
-                              disabled={currentBlacklistPage === 1}
-                              className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
-                            >
-                              Previous
-                            </button>
-                            <span className="text-gray-700">
-                              Page {currentBlacklistPage} of {totalBlacklistPages}
-                            </span>
-                            <button
-                              onClick={() => setCurrentBlacklistPage(Math.min(totalBlacklistPages, currentBlacklistPage + 1))}
-                              disabled={currentBlacklistPage === totalBlacklistPages}
-                              className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
-                            >
-                              Next
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">No blacklisted vehicles found</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Recent Records */}
-              <Card className="bg-white border-gray-200 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-gray-900">
-                    Recent Vehicle Records
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {filteredRecords.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <Table className="border-collapse">
-                          <TableHeader>
-                            <TableRow className="border-b border-gray-200">
-                              <TableHead className="text-gray-900 border-r border-gray-200">License Plate</TableHead>
-                              <TableHead className="text-gray-900 border-r border-gray-200">Entry Time</TableHead>
-                              <TableHead className="text-gray-900 border-r border-gray-200">Exit Time</TableHead>
-                              <TableHead className="text-gray-900">Duration</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {paginatedRecords.map((record) => (
-                              <TableRow key={record._id} className="border-b border-gray-200">
-                                <TableCell className="font-medium text-gray-900 border-r border-gray-200">{record.plate}</TableCell>
-                                <TableCell className="text-gray-900 border-r border-gray-200">{record.entryDate.toLocaleString()}</TableCell>
-                                <TableCell className="text-gray-900 border-r border-gray-200">
-                                  {record.leavingDate ? record.leavingDate.toLocaleString() : 'Still parked'}
-                                </TableCell>
-                                <TableCell className="text-gray-900">
-                                  {record.duration ? `${record.duration} minutes` : 'N/A'}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      {totalPages > 1 && (
-                        <div className="flex justify-center items-center space-x-2 mt-4">
-                          <button
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                            className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
-                          >
-                            Previous
-                          </button>
-                          <span className="text-gray-700">
-                            Page {currentPage} of {totalPages}
-                          </span>
-                          <button
-                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages}
-                            className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
-                          >
-                            Next
-                          </button>
+                            </TableHeader>
+                            <TableBody>
+                              {paginatedBlacklist.map((item) => (
+                                <TableRow key={item._id} className="border-b border-gray-200">
+                                  <TableCell className="font-medium text-gray-900 border-r border-gray-200">{item.plateNumber}</TableCell>
+                                  <TableCell className="text-gray-900 border-r border-gray-200">{item.reason}</TableCell>
+                                  <TableCell className="text-gray-900">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                          {totalBlacklistPages > 1 && (
+                            <div className="flex justify-center items-center space-x-2 mt-4">
+                              <button
+                                onClick={() => setCurrentBlacklistPage(Math.max(1, currentBlacklistPage - 1))}
+                                disabled={currentBlacklistPage === 1}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
+                              >
+                                Previous
+                              </button>
+                              <span className="text-gray-700">
+                                Page {currentBlacklistPage} of {totalBlacklistPages}
+                              </span>
+                              <button
+                                onClick={() => setCurrentBlacklistPage(Math.min(totalBlacklistPages, currentBlacklistPage + 1))}
+                                disabled={currentBlacklistPage === totalBlacklistPages}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-gray-500 text-center py-4">No blacklisted vehicles found</p>
+                          <p className="text-xs text-gray-400 text-center">Debug: Total blacklist items: {blacklist.length}, Filtered: {filteredBlacklist.length}</p>
                         </div>
                       )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-4">
-                      {searchTerm ? 'No records found matching your search' : 'No records available for this area'}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+
+                  {/* Employee Vehicles */}
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <Users className="h-5 w-5 text-blue-600" />
+                        Employee Vehicles
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {(() => {
+                        console.log('Rendering employee vehicles section, filteredEmployeeVehicles:', filteredEmployeeVehicles, 'length:', filteredEmployeeVehicles.length);
+                        if (filteredEmployeeVehicles.length > 0) {
+                          console.log('First employee vehicle data:', filteredEmployeeVehicles[0]);
+                        }
+                        return null;
+                      })()}
+                      {filteredEmployeeVehicles.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <Table className="border-collapse">
+                            <TableHeader>
+                              <TableRow className="border-b border-gray-200">
+                                <TableHead className="text-gray-900 border-r border-gray-200">License Plate</TableHead>
+                                <TableHead className="text-gray-900 border-r border-gray-200">Owner</TableHead>
+                                <TableHead className="text-gray-900">Date Added</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {paginatedEmployeeVehicles.map((item) => (
+                                <TableRow key={item._id} className="border-b border-gray-200">
+                                  <TableCell className="font-medium text-gray-900 border-r border-gray-200">{item.plateNumber}</TableCell>
+                                  <TableCell className="text-gray-900 border-r border-gray-200">{item.owner}</TableCell>
+                                  <TableCell className="text-gray-900">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                          {totalEmployeePages > 1 && (
+                            <div className="flex justify-center items-center space-x-2 mt-4">
+                              <button
+                                onClick={() => setCurrentEmployeePage(Math.max(1, currentEmployeePage - 1))}
+                                disabled={currentEmployeePage === 1}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
+                              >
+                                Previous
+                              </button>
+                              <span className="text-gray-700">
+                                Page {currentEmployeePage} of {totalEmployeePages}
+                              </span>
+                              <button
+                                onClick={() => setCurrentEmployeePage(Math.min(totalEmployeePages, currentEmployeePage + 1))}
+                                disabled={currentEmployeePage === totalEmployeePages}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-gray-500 text-center py-4">No employee vehicles found</p>
+                          <p className="text-xs text-gray-400 text-center">Debug: Total employee vehicles: {employeeVehicles.length}, Filtered: {filteredEmployeeVehicles.length}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
             </div>
           )
         )}
@@ -769,7 +812,7 @@ export default function VehicleDashboard() {
                               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                             >
                               <UserPlus className="h-4 w-4 mr-2" />
-                              Add to Employee
+                              Add to Employee Vehicles
                             </Button>
                           </div>
                         ) : showBlacklistForm ? (
@@ -809,56 +852,27 @@ export default function VehicleDashboard() {
                           <div className="space-y-3">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Employee Name
+                                Employee/Owner Name
                               </label>
                               <input
                                 type="text"
                                 value={employeeName}
                                 onChange={(e) => setEmployeeName(e.target.value)}
-                                placeholder="Enter employee name..."
+                                placeholder="Enter employee/owner name..."
                                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Employee Email
-                              </label>
-                              <input
-                                type="email"
-                                value={employeeEmail}
-                                onChange={(e) => setEmployeeEmail(e.target.value)}
-                                placeholder="Enter employee email..."
-                                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Employee Role
-                              </label>
-                              <select
-                                value={employeeRole}
-                                onChange={(e) => setEmployeeRole(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              >
-                                <option value="">Select role...</option>
-                                <option value="Staff">Staff</option>
-                                <option value="Manager">Manager</option>
-                                <option value="Admin">Admin</option>
-                              </select>
                             </div>
                             <div className="flex space-x-2">
                               <Button
                                 onClick={handleAddToEmployee}
                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                               >
-                                Add Employee
+                                Add to Employee Vehicles
                               </Button>
                               <Button
                                 onClick={() => {
                                   setShowEmployeeForm(false);
                                   setEmployeeName('');
-                                  setEmployeeEmail('');
-                                  setEmployeeRole('');
                                 }}
                                 variant="outline"
                                 className="flex-1"

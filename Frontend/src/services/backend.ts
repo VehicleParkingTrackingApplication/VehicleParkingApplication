@@ -645,11 +645,19 @@ export async function listStaff(params?: {
  * @returns {Promise<BlacklistResponse | null>}
  */
 export async function getBlacklistByBusiness(businessId: string, page: number = 1, limit: number = 10): Promise<BlacklistResponse | null> {
-  const response = await fetchAuthApi(`blacklist/business/${businessId}`, { page: page.toString(), limit: limit.toString() });
-  if (!response.ok) {
+  try {
+    const response = await fetchAuthApi(`blacklist/business/${businessId}`, { page: page.toString(), limit: limit.toString() });
+    if (!response.ok) {
+      console.error('Blacklist API response not ok:', response.status, response.statusText);
+      return null;
+    }
+    const data = await response.json();
+    console.log('Blacklist API response data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in getBlacklistByBusiness:', error);
     return null;
   }
-  return await response.json();
 }
 
 /**
@@ -701,6 +709,70 @@ export async function createBlacklistEntry(blacklistData: {
   areaId?: string;
 }): Promise<{ success: boolean; message: string; data: BlacklistEntry } | null> {
   const response = await postAuthApi("blacklist", {}, JSON.stringify(blacklistData));
+  if (!response.ok) {
+    return null;
+  }
+  return await response.json();
+}
+
+// Employee Vehicle Management Functions
+
+export interface EmployeeVehicleEntry {
+  _id: string;
+  businessId: string;
+  areaId?: string;
+  plateNumber: string;
+  owner: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeVehicleResponse {
+  success: boolean;
+  data: EmployeeVehicleEntry[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+/**
+ * @param {string} businessId
+ * @param {number=} page
+ * @param {number=} limit
+ * @returns {Promise<EmployeeVehicleResponse | null>}
+ */
+export async function getEmployeeVehiclesByBusiness(businessId: string, page: number = 1, limit: number = 10): Promise<EmployeeVehicleResponse | null> {
+  try {
+    const response = await fetchAuthApi(`employee-vehicle/list`, { page: page.toString(), limit: limit.toString() });
+    if (!response.ok) {
+      console.error('Employee vehicles API response not ok:', response.status, response.statusText);
+      return null;
+    }
+    const data = await response.json();
+    console.log('Employee vehicles API response data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in getEmployeeVehiclesByBusiness:', error);
+    return null;
+  }
+}
+
+/**
+ * @param {Object} employeeVehicleData
+ * @param {string} employeeVehicleData.plateNumber
+ * @param {string} employeeVehicleData.owner
+ * @param {string=} employeeVehicleData.areaId
+ * @returns {Promise<{ success: boolean; message: string; data: EmployeeVehicleEntry } | null>}
+ */
+export async function createEmployeeVehicleEntry(employeeVehicleData: {
+  plateNumber: string;
+  owner: string;
+  areaId?: string;
+}): Promise<{ success: boolean; message: string; data: EmployeeVehicleEntry } | null> {
+  const response = await postAuthApi("employee-vehicle/add", {}, JSON.stringify(employeeVehicleData));
   if (!response.ok) {
     return null;
   }

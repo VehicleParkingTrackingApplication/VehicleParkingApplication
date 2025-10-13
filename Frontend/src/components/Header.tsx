@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, LayoutDashboard, BarChart2, FileText, Car, Plug, Users, User, Settings } from 'lucide-react';
+import { Bell, LogOut, LayoutDashboard, BarChart2, FileText, Car, Plug, Users, User, Settings, Brain } from 'lucide-react';
 import { Button } from './ui/button';
 
 import { NotificationPopup } from './notification/NotificationPopup';
@@ -78,6 +78,9 @@ export const Header: React.FC = () => {
                   <Link to="/reports" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
                     <FileText className="mr-3 h-5 w-5" /> ReportAI
                   </Link>
+                  <Link to="/investigate-ai" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <Brain className="mr-3 h-5 w-5" /> InvestigateAI
+                  </Link>
                   <Link to="/vehicle" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
                     <Car className="mr-3 h-5 w-5" /> Vehicle
                   </Link>
@@ -101,6 +104,9 @@ export const Header: React.FC = () => {
                   </Link>
                   <Link to="/reports" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
                     <FileText className="mr-3 h-5 w-5" /> ReportAI
+                  </Link>
+                  <Link to="/investigate-ai" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                    <Brain className="mr-3 h-5 w-5" /> InvestigateAI
                   </Link>
                   <Link to="/vehicle" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
                     <Car className="mr-3 h-5 w-5" /> Vehicle

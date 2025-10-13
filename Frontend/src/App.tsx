@@ -16,6 +16,7 @@ import ViewAllExistingVehicles from './components/ViewAllExistingVehicles';
 import ViewAllRecords from './components/ViewAllRecords';
 import AreaDetail from './components/areaManagement/AreaDetail';
 import CompleteProfile from './components/CompleteProfile';
+import InvestigateAI from './components/InvestigateAI';
 
 // The Layout Component
 const MainLayout = () => {
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/parking-dashboard" element={<ParkingDashboard />} />
           <Route path="/vehicle" element={<VehicleDashboard />} />
           <Route path="/reports" element={<ExistingReportsPage />} />
+          <Route path="/investigate-ai" element={<InvestigateAI />} />
           <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
           <Route path="/area/:areaId/records" element={<ViewAllRecords />} />
           
