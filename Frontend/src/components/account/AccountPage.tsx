@@ -155,7 +155,7 @@ export default function AccountPage() {
 
     if (isLoading && !user.email) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)' }}>
+            <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
                 <div className="text-white text-xl">Loading...</div>
             </div>
         );
@@ -186,7 +186,7 @@ export default function AccountPage() {
     };
 
     return (
-        <div className="min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)' }}>
+        <div className="min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
             {/* Background decorative elements */}
             <div 
                 className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"

@@ -416,7 +416,7 @@ export default function VehicleDashboard() {
 
   if (loading || isAuthenticated === null) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -435,7 +435,7 @@ export default function VehicleDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -458,7 +458,7 @@ export default function VehicleDashboard() {
   }
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden" style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden" style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
       {/* Background decorative elements */}
       <br></br>
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>

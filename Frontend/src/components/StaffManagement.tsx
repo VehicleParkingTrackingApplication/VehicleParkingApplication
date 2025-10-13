@@ -165,7 +165,7 @@ export default function StaffManagement() {
   };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden p-6 md:p-8"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden p-6 md:p-8"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
       <br></br>
       <br></br>
       <div 

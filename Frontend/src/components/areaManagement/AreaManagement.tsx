@@ -289,7 +289,7 @@ export default function AreaManagement() {
   // Show loading while checking authentication
   if (isAuthenticated === null) {
     return (
-      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -311,7 +311,7 @@ export default function AreaManagement() {
 
   if (loading) {
     return (
-      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -331,7 +331,7 @@ export default function AreaManagement() {
 // #1a5bcc,
 // #8е3794) '}}>
   return (
-    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}

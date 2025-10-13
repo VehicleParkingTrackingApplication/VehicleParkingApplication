@@ -284,7 +284,7 @@ export default function ExistingReportsPage() {
   };
 
   return (
-    <div className="relative min-h-screen text-white overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)' }}>
+    <div className="relative min-h-screen text-white overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
       {/* NEW: Embedded CSS for hiding the scrollbar */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
