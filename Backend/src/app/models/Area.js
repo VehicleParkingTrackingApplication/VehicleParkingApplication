@@ -16,6 +16,7 @@ const Area = new Schema(
     policy: { type: String, default: '', trim: true },
     savedTimestamp: { type: String, default: ''},
     currentCapacity: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

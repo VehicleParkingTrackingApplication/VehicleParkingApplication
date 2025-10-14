@@ -2,6 +2,7 @@ import Record from '../models/Record.js';
 import Vehicle from '../models/Vehicle.js';
 import Area from '../models/Area.js';
 import { convertToTimeZone } from '../services/convertTimeZone/sydneyTimeZoneConvert.js';
+import mongoose from 'mongoose';
 
 class parkingVehicleController {
     // Helper function to update area capacity
@@ -87,10 +88,33 @@ class parkingVehicleController {
     async getParkingVehicleByAreaId(req, res) {
         try {
             const { areaId } = req.params;
+            const businessId = req.user.businessId;
+            
+            
             if (!areaId) {
                 return res.status(400).json({
                     success: false,
                     message: 'Area ID is required'
+                });
+            }
+
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
+                });
+            }
+
+            // Verify that the area belongs to the current user's business
+            const area = await Area.findOne({ 
+                _id: areaId, 
+                businessId: businessId 
+            });
+            
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Area not found or you don't have access to this area"
                 });
             }
 
@@ -115,11 +139,19 @@ class parkingVehicleController {
                 
                 // Calculate current duration
                 const currentTime = convertToTimeZone(new Date(), 'Australia/Sydney');
-                const entryTime = convertToTimeZone(vehicle.entryTime, 'Australia/Sydney');
-                const durationMs = currentTime.getTime() - entryTime.getTime();
-                const durationMinutes = Math.floor(durationMs / (1000 * 60));
-                const durationHours = Math.floor(durationMinutes / 60);
-                const remainingMinutes = durationMinutes % 60;
+                
+                // Check if entryTime exists before converting
+                let entryTime = null;
+                let durationHours = 0;
+                let remainingMinutes = 0;
+                
+                if (vehicle.entryTime) {
+                    entryTime = convertToTimeZone(vehicle.entryTime, 'Australia/Sydney');
+                    const durationMs = currentTime.getTime() - entryTime.getTime();
+                    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+                    durationHours = Math.floor(durationMinutes / 60);
+                    remainingMinutes = durationMinutes % 60;
+                }
 
                 return {
                     ...vehicleObj,
@@ -144,6 +176,7 @@ class parkingVehicleController {
             });
 
         } catch (error) {
+            console.error('Error in getParkingVehicleByAreaId:', error);
             return res.status(500).json({
                 message: 'Error fetching parking vehicles',
                 error: error.message
@@ -194,11 +227,28 @@ class parkingVehicleController {
     async getRecentRecordsByAreaId(req, res) {
         try {
             const { areaId } = req.params;
+            const businessId = req.user.businessId;
             
             if (!areaId) {
                 return res.status(400).json({
                     success: false,
                     message: 'Area ID is required'
+                });
+            }
+
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
+                });
+            }
+
+            // Verify that the area belongs to the current user's business
+            const area = await Area.findOne({ _id: areaId, businessId: businessId });
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Area not found or you don't have access to this area"
                 });
             }
 
@@ -237,11 +287,28 @@ class parkingVehicleController {
     async getAllRecordsByAreaId(req, res) {
         try {
             const { areaId } = req.params;
+            const businessId = req.user.businessId;
             
             if (!areaId) {
                 return res.status(400).json({
                     success: false,
                     message: 'Area ID is required'
+                });
+            }
+
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
+                });
+            }
+
+            // Verify that the area belongs to the current user's business
+            const area = await Area.findOne({ _id: areaId, businessId: businessId });
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Area not found or you don't have access to this area"
                 });
             }
 
@@ -259,9 +326,10 @@ class parkingVehicleController {
                 .sort({ datetime: -1 }) // Sort by datetime descending (most recent first)
                 .skip(page * limit)
                 .limit(limit)
-                .select('plateNumber status entryTime leavingTime duration image country') // Include angle and confidence
+                .select('_id plateNumber status entryTime leavingTime duration image country angle confidence') // Include angle and confidence
                 .lean(); // Convert to plain JavaScript objects for better performance
             const formattedRecords = records.map(record => ({
+                _id: record._id,
                 plateNumber: record.plateNumber,
                 entryTime: record.entryTime ? record.entryTime.toISOString() : 'N/A',
                 leavingTime: record.leavingTime ? record.leavingTime.toISOString() : 'Still Parking',
@@ -269,6 +337,8 @@ class parkingVehicleController {
                 minutes: record.duration % 60,
                 image: record.image,
                 country: record.country,
+                angle: record.angle || 0,
+                confidence: record.confidence || 0,
                 status: record.leavingTime ? 'Leaved' : 'Parking'
             }));
 
@@ -295,11 +365,28 @@ class parkingVehicleController {
     async filterAllRecordsByAreaId(req, res) {
         try {
             const { areaId } = req.params;
+            const businessId = req.user.businessId;
             
             if (!areaId) {
                 return res.status(400).json({
                     success: false,
                     message: 'Area ID is required'
+                });
+            }
+
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
+                });
+            }
+
+            // Verify that the area belongs to the current user's business
+            const area = await Area.findOne({ _id: areaId, businessId: businessId });
+            if (!area) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Area not found or you don't have access to this area"
                 });
             }
 
@@ -319,7 +406,7 @@ class parkingVehicleController {
                 if (startDate) {
                     let startDateTime = new Date(startDate);
                     // If startTime is provided, add it to the start date
-                    if (startTime) {
+                    if (startTime && typeof startTime === 'string') {
                         const [hours, minutes, seconds = '00'] = startTime.split(':');
                         startDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
                     }
@@ -328,7 +415,7 @@ class parkingVehicleController {
                 if (endDate) {
                     let endDateTime = new Date(endDate);
                     // If endTime is provided, add it to the end date, otherwise set to end of day
-                    if (endTime) {
+                    if (endTime && typeof endTime === 'string') {
                         const [hours, minutes, seconds = '59'] = endTime.split(':');
                         endDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 999);
                     } else {
@@ -342,13 +429,13 @@ class parkingVehicleController {
                 const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
                 
                 filter.datetime = {};
-                if (startTime) {
+                if (startTime && typeof startTime === 'string') {
                     let startDateTime = new Date(todayStr);
                     const [hours, minutes, seconds = '00'] = startTime.split(':');
                     startDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 0);
                     filter.datetime.$gte = startDateTime;
                 }
-                if (endTime) {
+                if (endTime && typeof endTime === 'string') {
                     let endDateTime = new Date(todayStr);
                     const [hours, minutes, seconds = '59'] = endTime.split(':');
                     endDateTime.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds), 999);
@@ -434,6 +521,7 @@ class parkingVehicleController {
     async getVehiclesForRemoval(req, res) {
         try {
             const { areaId } = req.params;
+            const businessId = req.user.businessId;
             
             if (!areaId) {
                 return res.status(400).json({
@@ -442,28 +530,42 @@ class parkingVehicleController {
                 });
             }
 
-            // Verify area exists
-            const area = await Area.findById(areaId);
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
+                });
+            }
+
+            // Verify area exists and belongs to the current user's business
+            const area = await Area.findOne({ _id: areaId, businessId: businessId });
             if (!area) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Area not found'
+                    message: "Area not found or you don't have access to this area"
                 });
             }
             
             // Get all vehicles in this specific area
             const vehicles = await Vehicle.find({ areaId })
-                .sort({ datetime: -1 })
+                .sort({ entryTime: -1 })
                 .lean();
 
             // Calculate current duration for each vehicle
             const vehiclesWithDuration = vehicles.map(vehicle => {
                 const currentTime = new Date();
-                const entryTime = vehicle.datetime;
-                const durationMs = currentTime.getTime() - entryTime.getTime();
-                const durationMinutes = Math.floor(durationMs / (1000 * 60));
-                const durationHours = Math.floor(durationMinutes / 60);
-                const remainingMinutes = durationMinutes % 60;
+                const entryTime = vehicle.entryTime;
+                
+                // Check if entryTime exists before calculating duration
+                let durationHours = 0;
+                let remainingMinutes = 0;
+                
+                if (entryTime) {
+                    const durationMs = currentTime.getTime() - entryTime.getTime();
+                    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+                    durationHours = Math.floor(durationMinutes / 60);
+                    remainingMinutes = durationMinutes % 60;
+                }
 
                 return {
                     _id: vehicle._id,
@@ -500,11 +602,19 @@ class parkingVehicleController {
         try {
             const { areaId } = req.params;
             const { action, vehicleData } = req.body;
+            const businessId = req.user.businessId;
             
             if (!areaId) {
                 return res.status(400).json({
                     success: false,
                     message: 'Area ID is required'
+                });
+            }
+
+            if (!businessId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Business ID is required'
                 });
             }
 
@@ -515,12 +625,12 @@ class parkingVehicleController {
                 });
             }
 
-            // Verify area exists
-            const area = await Area.findById(areaId);
+            // Verify area exists and belongs to the current user's business
+            const area = await Area.findOne({ _id: areaId, businessId: businessId });
             if (!area) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Area not found'
+                    message: "Area not found or you don't have access to this area"
                 });
             }
 
@@ -599,7 +709,7 @@ class parkingVehicleController {
                 };
 
                 // Calculate duration
-                const durationMs = currentTime.getTime() - vehicle.datetime.getTime();
+                const durationMs = currentTime.getTime() - vehicle.entryTime.getTime();
                 const durationMinutes = Math.floor(durationMs / (1000 * 60));
                 const durationHours = Math.floor(durationMinutes / 60);
                 const remainingMinutes = durationMinutes % 60;
@@ -609,7 +719,7 @@ class parkingVehicleController {
                     minutes: remainingMinutes,
                     milliseconds: durationMs / 1000
                 };
-                recordData.entryTime = vehicle.datetime;
+                recordData.entryTime = vehicle.entryTime;
 
                 // Create the leaving record
                 await Record.create(recordData);
@@ -626,7 +736,7 @@ class parkingVehicleController {
                     removedVehicle: {
                         plateNumber: vehicle.plateNumber,
                         duration: recordData.duration,
-                        entryTime: vehicle.datetime,
+                        entryTime: vehicle.entryTime,
                         exitTime: currentTime
                     }
                 });
@@ -656,13 +766,15 @@ class parkingVehicleController {
             
             // convert date and time into datetime variable
             let datetime;
-            if (date.includes('/')) {
+            if (date && typeof date === 'string' && date.includes('/')) {
                 // DD/MM/YYYY
                 const [ day, month, year ] = date.split('/');
                 datetime = new Date(`${year}-${month}-${day}T${time}`);
-            } else {
+            } else if (date && typeof date === 'string') {
                 // assume date formate YYYY-MM-DD
                 datetime = new Date(`${date}T${time}`);
+            } else {
+                throw new Error('Invalid date format provided');
             }
 
             // insert log into collection Record 
@@ -699,7 +811,7 @@ class parkingVehicleController {
                     plateNumber, 
                     country: country || 'AUS', 
                     image, 
-                    datetime
+                    entryTime: datetime
                 };
                 await Vehicle.create(vehicleData);
             } else if (status === "LEAVING") {

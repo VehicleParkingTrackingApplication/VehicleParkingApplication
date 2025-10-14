@@ -50,7 +50,7 @@ export default function RegisterPage() {
       };
 
     return (
-        <div className="flex flex-col min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)' }}>
+        <div className="flex flex-col min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
           {/* Animated Background Glass Effects */}
           <div className="absolute inset-0 overflow-hidden z-0">
             <motion.div animate={{ x: [0, 50, 0], y: [0, -30, 0] }} transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }} className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl transform translate-x-32 -translate-y-32"></motion.div>

@@ -165,7 +165,9 @@ export default function StaffManagement() {
   };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden p-6 md:p-8"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden p-6 md:p-8"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <br></br>
+      <br></br>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -175,12 +177,12 @@ export default function StaffManagement() {
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
       <div className="mx-auto w-full max-w-6xl relative z-10">
-        <Card className="w-full backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
+        <Card className="w-full bg-white border-gray-200 shadow-2xl">
           <CardContent className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2">
               <div>
-                <h1 className="text-2xl font-semibold">Staff Management</h1>
-                <p className="text-sm text-gray-300">Streamlined, secure, and consistent with your workspace</p>
+                <h1 className="text-2xl font-semibold text-gray-800">Staff Management</h1>
+                <p className="text-sm text-gray-600">Streamlined, secure, and consistent with your workspace</p>
               </div>
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
@@ -207,7 +209,7 @@ export default function StaffManagement() {
               </div>
             )}
 
-            <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-4 md:p-6 shadow-2xl">
+            <section className="bg-gray-50 rounded-2xl border border-gray-200 p-4 md:p-6 shadow-lg">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <form onSubmit={handleSearch} className="flex gap-2 w-full">
                   <Input
@@ -215,9 +217,9 @@ export default function StaffManagement() {
                     placeholder="Search staff by username, name, email, or role..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="backdrop-blur-md bg-white/20 border-white/30 text-white flex-1"
+                    className="bg-white border-gray-300 text-gray-800 flex-1"
                   />
-                  <Button type="submit" variant="outline" className="border-white/30 text-white hover:bg-white/20">
+                  <Button type="submit" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100">
                     Search
                   </Button>
                   {search && (
@@ -225,49 +227,49 @@ export default function StaffManagement() {
                       type="button" 
                       variant="outline" 
                       onClick={handleClearSearch}
-                      className="border-white/30 text-white hover:bg-white/20"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
                     >
                       Clear
                     </Button>
                   )}
                 </form>
-                <div className="text-sm text-gray-200 w-full md:w-auto text-center md:text-right">
+                <div className="text-sm text-gray-600 w-full md:w-auto text-center md:text-right">
                   Showing {staffList.length} staff members
                 </div>
               </div>
             </section>
 
-            <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               {loading ? (
                 <div className="p-8 text-center">
-                  <div className="text-gray-400">Loading staff list...</div>
+                  <div className="text-gray-500">Loading staff list...</div>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-gray-600">
-                      <TableHead className="text-white">Index</TableHead>
-                      <TableHead className="text-white">Username</TableHead>
-                      <TableHead className="text-white">Full Name</TableHead>
-                      <TableHead className="text-white">Password</TableHead>
-                      <TableHead className="text-white">Role</TableHead>
-                      <TableHead className="text-white">Actions</TableHead>
+                    <TableRow className="border-gray-200">
+                      <TableHead className="text-gray-700">Index</TableHead>
+                      <TableHead className="text-gray-700">Username</TableHead>
+                      <TableHead className="text-gray-700">Full Name</TableHead>
+                      <TableHead className="text-gray-700">Password</TableHead>
+                      <TableHead className="text-gray-700">Role</TableHead>
+                      <TableHead className="text-gray-700">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {staffList.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                           No staff members found
                         </TableCell>
                       </TableRow>
                     ) : (
                       staffList.map((staff, index) => (
-                        <TableRow key={staff._id} className="border-white/20 hover:bg-white/10">
-                          <TableCell className="text-white">{index + 1}</TableCell>
-                          <TableCell className="text-white">{staff.username}</TableCell>
-                          <TableCell className="text-white">{`${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A'}</TableCell>
-                          <TableCell className="text-white">
+                        <TableRow key={staff._id} className="border-gray-200 hover:bg-gray-50">
+                          <TableCell className="text-gray-800">{index + 1}</TableCell>
+                          <TableCell className="text-gray-800">{staff.username}</TableCell>
+                          <TableCell className="text-gray-800">{`${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A'}</TableCell>
+                          <TableCell className="text-gray-800">
                             <div className="flex items-center space-x-2">
                               <span className="font-mono">
                                 {showPasswords[staff._id] ? 'password123' : '••••••••'}
@@ -276,7 +278,7 @@ export default function StaffManagement() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => togglePasswordVisibility(staff._id)}
-                                className="text-gray-300 hover:text-white"
+                                className="text-gray-500 hover:text-gray-700"
                               >
                                 {showPasswords[staff._id] ? (
                                   <EyeOff className="h-4 w-4" />
@@ -286,7 +288,7 @@ export default function StaffManagement() {
                               </Button>
                             </div>
                           </TableCell>
-                          <TableCell className="text-white">
+                          <TableCell className="text-gray-800">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               staff.role === 'admin' 
                                 ? 'bg-purple-600 text-white' 
@@ -295,13 +297,13 @@ export default function StaffManagement() {
                               {staff.role}
                             </span>
                           </TableCell>
-                          <TableCell className="text-white">
+                          <TableCell className="text-gray-800">
                             <div className="flex space-x-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleUpdateStaff(staff)}
-                                className="text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-white"
+                                className="text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white"
                               >
                                 <Edit className="h-4 w-4 mr-1" />
                                 Update
@@ -310,7 +312,7 @@ export default function StaffManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleDeleteStaff(staff._id, staff.username)}
-                                className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
+                                className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
                               >
                                 <Trash2 className="h-4 w-4 mr-1" />
                                 Remove

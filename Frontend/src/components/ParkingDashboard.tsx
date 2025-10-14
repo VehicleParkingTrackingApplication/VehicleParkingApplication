@@ -1,4 +1,5 @@
-// import domtoimage from 'dom-to-image-more'; // Temporarily commented out due to package issue
+// @ts-ignore - dom-to-image-more doesn't have TypeScript definitions
+import domtoimage from 'dom-to-image-more';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
@@ -21,7 +22,8 @@ import {
 import { authInterceptor } from '../services/authInterceptor';
 import { getAllParkingAreas, getAllRecords, getExistingVehicles, getVehicleEntryPredictions } from '@/services/parkingApi';
 import { saveReport } from '@/services/reportsApi';
-import { Save } from 'lucide-react';
+import { getEmployeeVehiclesByBusiness, getBlacklistByBusiness, getCurrentUser } from '@/services/backend';
+import { Save, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 // WebSocket removed for this page – dashboard now fetches via API only
 
 // --- INTERFACES ---
@@ -35,27 +37,28 @@ interface VehicleRecord {
 // Represents the raw record data from the backend API
 interface RawRecord {
   _id: string;
-  plate: string;
-  action: 'ENTRY' | 'EXIT';
-  time: string;
-  date: string;
-  image: string;
-  country: string;
-  angle: number;
-  confidence: number;
+  plateNumber: string;
+  entryTime: string;
+  leavingTime: string;
+  hours: number;
+  minutes: number;
+  image?: string;
+  country?: string;
+  angle?: number;
+  confidence?: number;
 }
 
 // Represents the enriched record object after client-side processing
 interface ProcessedRecord {
   _id: string;
   plate: string;
-  action: 'ENTRY' | 'EXIT';
-  date: string;
-  time: string;
   entryDate: Date | null;
   exitDate: Date | null;
   durationMinutes: number | null;
   angle: number;
+  image?: string;
+  country?: string;
+  confidence?: number;
 }
 
 interface Area {
@@ -67,25 +70,43 @@ interface Area {
 
 // --- HELPER FUNCTIONS ---
 const processHourlyChartData = (records: ProcessedRecord[]) => {
+  console.log('Processing records for hourly chart:', records.length, 'records');
   const hourlyData: { [key: number]: { entries: number; exits: number } } = {};
   for (let i = 0; i < 24; i++) hourlyData[i] = { entries: 0, exits: 0 };
-  records.forEach(record => {
-    const dateToUse = record.action === 'ENTRY' ? record.entryDate : record.exitDate;
-    if (dateToUse) {
-      const hour = dateToUse.getHours();
-      if (record.action === 'ENTRY') hourlyData[hour].entries++;
-      else hourlyData[hour].exits++;
+  
+  records.forEach((record, index) => {
+    console.log(`Processing record ${index}:`, {
+      entryDate: record.entryDate,
+      exitDate: record.exitDate,
+      entryDateType: typeof record.entryDate,
+      exitDateType: typeof record.exitDate
+    });
+    // Count entry time
+    if (record.entryDate && record.entryDate instanceof Date && !isNaN(record.entryDate.getTime())) {
+      const entryHour = record.entryDate.getHours();
+      if (entryHour >= 0 && entryHour <= 23 && hourlyData[entryHour]) {
+        hourlyData[entryHour].entries++;
+      }
+    }
+    
+    // Count exit time
+    if (record.exitDate && record.exitDate instanceof Date && !isNaN(record.exitDate.getTime())) {
+      const exitHour = record.exitDate.getHours();
+      if (exitHour >= 0 && exitHour <= 23 && hourlyData[exitHour]) {
+        hourlyData[exitHour].exits++;
+      }
     }
   });
+  
   return Object.keys(hourlyData).map(hour => ({
     hour: `${hour}:00`,
-    Entries: hourlyData[parseInt(hour)].entries,
-    Exits: hourlyData[parseInt(hour)].exits,
+    Entries: hourlyData[parseInt(hour)]?.entries || 0,
+    Exits: hourlyData[parseInt(hour)]?.exits || 0,
   }));
 };
 
 const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'weekly' | 'monthly') => {
-  const entries = records.filter(r => r.action === 'ENTRY' && r.entryDate);
+  const entries = records.filter(r => r.entryDate);
   const aggregation: { [key: string]: number } = {};
   entries.forEach(record => {
     const date = new Date(record.entryDate!);
@@ -155,7 +176,7 @@ export default function ParkingDashboard() {
   const AngleTick = (props: any) => {
     const { x, y, payload } = props;
     return (
-      <text x={x} y={y} dy={16} textAnchor="end" transform={`rotate(-20, ${x}, ${y})`} fill="rgba(255, 255, 255, 0.8)" fontSize={12}>
+      <text x={x} y={y} dy={16} textAnchor="end" transform={`rotate(-20, ${x}, ${y})`} fill="rgba(0, 0, 0, 0.6)" fontSize={12}>
         {payload?.value}
       </text>
     );
@@ -180,6 +201,11 @@ export default function ParkingDashboard() {
   const [loading, setLoading] = useState(true);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Employee and Blacklist data
+  const [employeeVehicles, setEmployeeVehicles] = useState<string[]>([]);
+  const [blacklistVehicles, setBlacklistVehicles] = useState<string[]>([]);
+  const [businessId, setBusinessId] = useState<string | null>(null);
 
   // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -251,12 +277,61 @@ export default function ParkingDashboard() {
     }
   }, []);
 
+  // Function to fetch employee and blacklist data
+  const fetchEmployeeAndBlacklistData = useCallback(async () => {
+    if (!businessId) return;
+    
+    try {
+      const [employeeResponse, blacklistResponse] = await Promise.all([
+        getEmployeeVehiclesByBusiness(businessId, 1, 1000),
+        getBlacklistByBusiness(businessId, 1, 1000)
+      ]);
+
+      if (employeeResponse?.success && employeeResponse.data) {
+        const employeePlates = employeeResponse.data.map((vehicle: any) => vehicle.plateNumber);
+        setEmployeeVehicles(employeePlates);
+      }
+
+      if (blacklistResponse?.success && blacklistResponse.data) {
+        const blacklistPlates = blacklistResponse.data.map((entry: any) => entry.plateNumber);
+        setBlacklistVehicles(blacklistPlates);
+      }
+    } catch (err) {
+      console.error('Error fetching employee and blacklist data:', err);
+    }
+  }, [businessId]);
+
   // Effect to fetch list of parking areas
   useEffect(() => {
     if (isAuthenticated) {
       fetchAreas();
     }
   }, [isAuthenticated, fetchAreas]);
+
+  // Effect to get business ID and fetch employee/blacklist data
+  useEffect(() => {
+    const getBusinessId = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.businessId) {
+          setBusinessId(user.businessId);
+        }
+      } catch (err) {
+        console.error('Error getting business ID:', err);
+      }
+    };
+    
+    if (isAuthenticated) {
+      getBusinessId();
+    }
+  }, [isAuthenticated]);
+
+  // Effect to fetch employee and blacklist data when business ID is available
+  useEffect(() => {
+    if (businessId) {
+      fetchEmployeeAndBlacklistData();
+    }
+  }, [businessId, fetchEmployeeAndBlacklistData]);
 
   // Memoized function to fetch dashboard data
   const fetchDashboardData = useCallback(async (areaId: string) => {
@@ -273,45 +348,63 @@ export default function ParkingDashboard() {
       const rawRecords: RawRecord[] = (recordsResponse && (recordsResponse.data || recordsResponse.records)) || [];
       
       // Process raw records into a more useful format with Date objects and duration
-      const entryMap = new Map<string, RawRecord>();
       const processedRecords: ProcessedRecord[] = [];
 
-      // First pass: create a map of the most recent entry for each license plate
-      rawRecords.filter((r: RawRecord) => r.action === 'ENTRY').forEach((rec: RawRecord) => {
-          entryMap.set(rec.plate, rec);
-      });
-
-      // Second pass: process all records, calculating duration for exits
-      rawRecords.forEach((rec: RawRecord) => {
-          const [month, day, year] = rec.date.split('/');
-          const dateObj = new Date(`${year}-${month}-${day}T${rec.time}`);
+      // Process records that already have entryTime and leavingTime
+      console.log('Raw records from backend:', rawRecords);
+      rawRecords.forEach((rec: RawRecord, index) => {
+          console.log(`Processing raw record ${index}:`, rec);
           
-          if (rec.action === 'EXIT') {
-              const matchingEntry = entryMap.get(rec.plate);
-              if (matchingEntry) {
-                  const [entryMonth, entryDay, entryYear] = matchingEntry.date.split('/');
-                  const entryDateObj = new Date(`${entryYear}-${entryMonth}-${entryDay}T${matchingEntry.time}`);
-                  const durationMs = dateObj.getTime() - entryDateObj.getTime();
-                  
-                  processedRecords.push({
-                      ...rec,
-                      entryDate: entryDateObj,
-                      exitDate: dateObj,
-                      durationMinutes: Math.floor(durationMs / 60000),
-                      angle: rec.angle
-                  });
-                  // Once matched, remove the entry to handle re-entries correctly
-                  entryMap.delete(rec.plate);
+          // Handle entryTime - it should be a string from the backend
+          let entryDate = null;
+          if (rec.entryTime && rec.entryTime !== 'N/A') {
+              entryDate = new Date(rec.entryTime);
+              if (isNaN(entryDate.getTime())) {
+                  console.warn('Invalid entryTime date:', rec.entryTime);
+                  entryDate = null;
               }
-          } else { // Entry record
-              processedRecords.push({
-                  ...rec,
-                  entryDate: dateObj,
-                  exitDate: null,
-                  durationMinutes: null,
-                  angle: rec.angle
-              });
           }
+          
+          // Handle leavingTime - it should be a string from the backend
+          let exitDate = null;
+          if (rec.leavingTime && rec.leavingTime !== 'N/A' && rec.leavingTime !== 'Still Parking') {
+              exitDate = new Date(rec.leavingTime);
+              if (isNaN(exitDate.getTime())) {
+                  console.warn('Invalid leavingTime date:', rec.leavingTime);
+                  exitDate = null;
+              }
+          }
+          
+          console.log('Parsed dates:', {
+            entryTime: rec.entryTime,
+            entryDate: entryDate,
+            entryDateValid: entryDate ? !isNaN(entryDate.getTime()) : false,
+            leavingTime: rec.leavingTime,
+            exitDate: exitDate,
+            exitDateValid: exitDate ? !isNaN(exitDate.getTime()) : false
+          });
+          
+          // Calculate duration if both entry and exit times are available
+          let durationMinutes = null;
+          if (entryDate && exitDate) {
+              const durationMs = exitDate.getTime() - entryDate.getTime();
+              durationMinutes = Math.floor(durationMs / 60000);
+          } else if (rec.hours !== undefined && rec.minutes !== undefined) {
+              // Use the duration from the backend if available
+              durationMinutes = (rec.hours * 60) + rec.minutes;
+          }
+          
+          processedRecords.push({
+              _id: rec._id,
+              plate: rec.plateNumber,
+              entryDate: entryDate,
+              exitDate: exitDate,
+              durationMinutes: durationMinutes,
+              angle: rec.angle || 0,
+              image: rec.image,
+              country: rec.country,
+              confidence: rec.confidence
+          });
       });
       setAllRecords(processedRecords);
       setExistingVehicles((vehiclesResponse && (vehiclesResponse.data || vehiclesResponse.vehicles)) || []);
@@ -346,8 +439,20 @@ export default function ParkingDashboard() {
         record.plate?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
+    
+    // Apply employee and blacklist filters
+    if (activeFilter === 'employee') {
+      records = records.filter(record => 
+        record.plate && employeeVehicles.includes(record.plate.toUpperCase())
+      );
+    } else if (activeFilter === 'blacklist') {
+      records = records.filter(record => 
+        record.plate && blacklistVehicles.includes(record.plate.toUpperCase())
+      );
+    }
+    
     return records;
-  }, [startDate, endDate, searchTerm, allRecords]);
+  }, [startDate, endDate, searchTerm, allRecords, activeFilter, employeeVehicles, blacklistVehicles]);
 
   useEffect(() => {
     if (filteredRecords.length === 0) {
@@ -424,18 +529,6 @@ export default function ParkingDashboard() {
     });
   };
 
-  const handleClearFilters = () => {
-    setStartDate('');
-    setEndDate('');
-    setSearchTerm('');
-    setActiveFilter('all');
-    updateURLParams({ 
-      startDate: null, 
-      endDate: null, 
-      search: null, 
-      filter: 'all' 
-    });
-  };
 // Located inside the ParkingDashboard component
 
 // ParkingDashboard.tsx
@@ -464,25 +557,21 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
         // --- NEW: Add a small delay to ensure the chart is fully rendered ---
         await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
 
-        // Temporarily disabled due to dom-to-image-more package issue
-        // const chartImage = await domtoimage.toPng(chartElement, {
-        //     bgcolor: '#18181b'
-        // });
+        const chartImage = await domtoimage.toPng(chartElement, {
+            bgcolor: '#18181b'
+        });
         
-        // // --- NEW: Explicitly check if the image capture was successful ---
-        // if (!chartImage || chartImage.length < 100) { // Check if the result is valid
-        //      throw new Error("Image capture failed, the resulting data is empty.");
-        // }
-        
-        // Temporary fallback - show alert instead of image export
-        alert('Chart export temporarily disabled - dom-to-image-more package needs to be installed');
+        // --- NEW: Explicitly check if the image capture was successful ---
+        if (!chartImage || chartImage.length < 100) { // Check if the result is valid
+             throw new Error("Image capture failed, the resulting data is empty.");
+        }
 
         const payload = {
             name: reportName,
             areaId: selectedAreaId,
             type: chartType,
             chartData: chartData,
-            chartImage: undefined, // Temporarily disabled until dom-to-image-more is properly installed
+            chartImage: chartImage,
             filters: { startDate, endDate, searchTerm, overstayLimit, entriesPeriod },
             description
         };
@@ -552,7 +641,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
   // --- RENDER LOGIC ---
   if (loading || isAuthenticated === null) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -569,15 +658,15 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
   }
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #677ae5, #6f60c0)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
       {/* Background decorative elements */}
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
       <div className="relative z-10 px-4 py-10">
         <div className="max-w-6xl mx-auto space-y-8">
           <header className="text-center">
-             <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
-             <p className="text-sm text-muted mt-2">Live view of parking area activity</p>
+             {/* <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
+             <p className="text-sm text-muted mt-2">Live view of parking area activity</p> */}
           </header>
           {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}  
           {saveMessage && (
@@ -588,56 +677,77 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
         
           {/* --- CONTROLS SECTION --- */}
 {/* <!--           <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md space-y-6"> --> */}
-          <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl space-y-6">
+          <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="area-select" className="block text-lg font-semibold mb-2">Select a Parking Area</label>
+                <label htmlFor="area-select" className="block text-lg font-semibold mb-2 text-gray-900">Select a Parking Area</label>
                 <select id="area-select" value={selectedAreaId || ''} onChange={(e) => {
                   setSelectedAreaId(e.target.value);
                   updateURLParams({ area: e.target.value || null });
-                }} className="w-full backdrop-blur-md bg-white/20 border-white/30 p-2.5 rounded-md text-white focus:ring-2 focus:ring-blue-500">
-                    <option value="" disabled className="text-black">Choose an area...</option>
-                    {areas.map((area) => ( <option key={area._id} value={area._id} className="text-black"> {area.name} </option> ))}
+                }} className="w-full bg-white border-2 border-gray-300 p-2.5 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                    <option value="" disabled className="text-gray-500 bg-white">Choose an area...</option>
+                    {areas.map((area) => ( <option key={area._id} value={area._id} className="text-gray-900 bg-white"> {area.name} </option> ))}
                 </select>
               </div>
               <div>
-                <label htmlFor="search-bar" className="block text-lg font-semibold mb-2">Search by License Plate</label>
+                <label htmlFor="search-bar" className="block text-lg font-semibold mb-2 text-gray-900">Search by License Plate</label>
                 <Input id="search-bar" type="text" placeholder="e.g., ABC-123" value={searchTerm} onChange={(e) => {
                   setSearchTerm(e.target.value);
                   updateURLParams({ search: e.target.value || null });
-                }} className="backdrop-blur-md bg-white/20 border-white/30 text-white" />
+                }} className="bg-white border-gray-300 text-gray-900" />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                    <label htmlFor="start-date" className="block text-sm font-medium mb-2">Start Date</label>
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="w-40">
+                    <label htmlFor="start-date" className="block text-xs font-medium mb-1 text-gray-700">Start Date</label>
                     <Input type="date" id="start-date" value={startDate} onChange={(e) => { 
                       setStartDate(e.target.value); 
                       setActiveFilter('custom');
                       updateURLParams({ startDate: e.target.value || null, filter: 'custom' });
-                    }} className="w-full backdrop-blur-md bg-white/20 border-white/30 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 text-sm" />
                 </div>
-                <div className="flex-1">
-                    <label htmlFor="end-date" className="block text-sm font-medium mb-2">End Date</label>
+                <div className="w-40">
+                    <label htmlFor="end-date" className="block text-xs font-medium mb-1 text-gray-700">End Date</label>
                     <Input type="date" id="end-date" value={endDate} onChange={(e) => { 
                       setEndDate(e.target.value); 
                       setActiveFilter('custom');
                       updateURLParams({ endDate: e.target.value || null, filter: 'custom' });
-                    }} className="w-full backdrop-blur-md bg-white/20 border-white/30 rounded-md text-white focus:ring-2 focus:ring-blue-500" />
+                    }} className="w-full bg-white border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div className="flex gap-2 items-end">
+                  <Button 
+                    variant={activeFilter === 'employee' ? 'default' : 'outline'} 
+                    onClick={() => {
+                      setActiveFilter('employee');
+                      updateURLParams({ filter: 'employee' });
+                    }} 
+                    className={`text-xs px-3 py-1 h-8 ${activeFilter === 'employee' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  >
+                    Employee
+                  </Button>
+                  <Button 
+                    variant={activeFilter === 'blacklist' ? 'default' : 'outline'} 
+                    onClick={() => {
+                      setActiveFilter('blacklist');
+                      updateURLParams({ filter: 'blacklist' });
+                    }} 
+                    className={`text-xs px-3 py-1 h-8 ${activeFilter === 'blacklist' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  >
+                    Blacklist
+                  </Button>
                 </div>
               </div>
-              <div className="flex flex-col space-y-2">
-                <label className="block text-sm font-medium mb-2">Quick Filters</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 gap-2">
-                  <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')}>Today</Button>
-                  <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')}>Week</Button>
-                  <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')}>Month</Button>
-                  <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')}>All</Button>
+              <div className="flex flex-col space-y-2 min-w-0">
+                <label className="block text-xs font-medium text-gray-700">Quick Filters</label>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('today')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'today' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>Today</Button>
+                  <Button variant={activeFilter === 'week' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('week')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>Week</Button>
+                  <Button variant={activeFilter === 'month' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('month')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>Month</Button>
+                  <Button variant={activeFilter === 'all' ? 'default' : 'outline'} onClick={() => handlePresetFilterClick('all')} className={`text-xs px-3 py-1 h-8 ${activeFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>All</Button>
                 </div>
               </div>
             </div>
-            <div><Button variant="ghost" onClick={handleClearFilters} className="text-sm text-gray-400 hover:text-white">Clear All Filters</Button></div>
           </section>
           
           {selectedAreaId && (
@@ -645,77 +755,101 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
               <div className="text-center py-10">Loading area data...</div>
             ) : (
               <div className="space-y-8">
-                <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="backdrop-blur-md bg-white/20 border-white/30">
-                    <CardHeader><CardTitle className="text-blue-400">Current Occupancy</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
+                <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-blue-600 flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Current Occupancy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{existingVehicles.length} / {selectedArea?.capacity || 'N/A'}</CardContent>
                   </Card>
-                  <Card className="backdrop-blur-md bg-white/20 border-white/30">
-                    <CardHeader><CardTitle className="text-green-400">Total Entries (Filtered)</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'ENTRY').length}</CardContent>
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-green-600 flex items-center gap-2">
+                        <ArrowUpRight className="h-5 w-5" />
+                        Total Entries
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.entryDate).length}</CardContent>
                   </Card>
-                  <Card className="backdrop-blur-md bg-white/20 border-white/30">
-                    <CardHeader><CardTitle className="text-yellow-400">Total Exits (Filtered)</CardTitle></CardHeader>
-                    <CardContent className="text-3xl font-bold">{filteredRecords.filter(r => r.action === 'EXIT').length}</CardContent>
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-yellow-600 flex items-center gap-2">
+                        <ArrowDownLeft className="h-5 w-5" />
+                        Total Exits
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.exitDate).length}</CardContent>
+                  </Card>
+                  <Card className="bg-white border-gray-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-red-600 flex items-center gap-2">
+                        <ArrowUpRight className="h-5 w-5" />
+                        Total Overstays
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.durationMinutes && r.durationMinutes > overstayLimit).length}</CardContent>
                   </Card>
                 </section>
                 
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div ref={hourlyChartRef} className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl lg:col-span-2">
+                  <div ref={hourlyChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg lg:col-span-2">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Hourly Activity (Historical & Predicted)</h3>
-                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('hourly-activity', combinedHourlyData, 'Hourly entries, exits, and next-day predictions.')}>
+                        <h3 className="text-lg font-semibold text-gray-900">Hourly Activity (Historical & Predicted)</h3>
+                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('hourly-activity', combinedHourlyData, 'Hourly entries, exits, and next-day predictions.')} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={combinedHourlyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
-                        <XAxis dataKey="hour" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
-                        <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
-                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                        <XAxis dataKey="hour" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                        <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                        <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                         <Legend />
-                        <Bar dataKey="Entries" fill="rgba(255, 255, 255, 0.7)" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Exits" fill="rgba(255, 255, 255, 0.5)" radius={[4, 4, 0, 0]} />
-                         <Line type="monotone" dataKey="Predictor" stroke="rgba(255, 255, 255, 0.8)" strokeWidth={2} dot={{ r: 4 }} />
+                        <Bar dataKey="Entries" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Exits" fill="#10b981" radius={[4, 4, 0, 0]} />
+                         <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                   
-                  <div ref={entriesChartRef} className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
+                  <div ref={entriesChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
                   {/* Chart 2: Historical Vehicle Entries */}
 {/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Vehicle Entries</h3>
-                       <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)}>
+                      <h3 className="text-lg font-semibold text-gray-900">Vehicle Entries</h3>
+                       <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
                      <div className="flex justify-between items-center mb-4">
-                      <p className="text-sm text-muted-foreground">Historical & Predicted</p>
+                      <p className="text-sm text-gray-600">Historical & Predicted</p>
                       <div className="flex items-center gap-2">
-                        <Button size="sm" variant={entriesPeriod === 'daily' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('daily')}>Daily</Button>
-                        <Button size="sm" variant={entriesPeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('weekly')}>Weekly</Button>
-                        <Button size="sm" variant={entriesPeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('monthly')}>Monthly</Button>
+                        <Button size="sm" variant={entriesPeriod === 'daily' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('daily')} className={entriesPeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Daily</Button>
+                        <Button size="sm" variant={entriesPeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('weekly')} className={entriesPeriod === 'weekly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Weekly</Button>
+                        <Button size="sm" variant={entriesPeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('monthly')} className={entriesPeriod === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Monthly</Button>
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={combinedEntriesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
-                        <XAxis dataKey="period" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} tick={<AngleTick />} height={60} />
-                        <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} allowDecimals={false}/>
-                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                        <XAxis dataKey="period" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} tick={<AngleTick />} height={60} />
+                        <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false}/>
+                        <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                         <Legend />
-                        <Line type="monotone" dataKey="Entries" stroke="rgba(255, 255, 255, 0.8)" strokeWidth={2} dot={false} connectNulls />
-                        <Line type="monotone" dataKey="Predictor" stroke="rgba(255, 255, 255, 0.6)" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+                        <Line type="monotone" dataKey="Entries" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                  
-                  <div ref={overstayChartRef} className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
+                  <div ref={overstayChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Vehicles Overstay Analysis</h3>
-                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, `Vehicles staying longer than ${overstayLimit} minutes.`)}>
+                        <h3 className="text-lg font-semibold text-gray-900">Vehicles Overstay Analysis</h3>
+                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, `Vehicles staying longer than ${overstayLimit} minutes.`)} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
@@ -723,51 +857,51 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
 {/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <div className="flex items-center gap-2">
-                        <label htmlFor="overstay-limit" className="text-sm">Time Limit (mins):</label>
-                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="backdrop-blur-md bg-white/20 border-white/30 w-24" />
+                        <label htmlFor="overstay-limit" className="text-sm text-gray-700">Time Limit (mins):</label>
+                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-white border-2 border-gray-300 text-gray-900 w-24 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" />
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={overstayChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.3)" />
-                        <XAxis dataKey="date" stroke="rgba(255, 255, 255, 0.6)" fontSize={12} />
-                        <YAxis stroke="rgba(255, 255, 255, 0.6)" fontSize={12} allowDecimals={false} />
-                        <Tooltip wrapperClassName="!bg-neutral-900 !border-neutral-700" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                        <XAxis dataKey="date" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} />
+                        <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false} />
+                        <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
                         <Legend />
-                        <Bar dataKey="Overstaying Vehicles" fill="rgba(255, 255, 255, 0.7)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </section>
                 
-                <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl">
+                <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
                 {/* Records Table */}
 {/* <!--                 <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
-                  <h3 className="text-lg font-semibold mb-4">Filtered Records ({filteredRecords.length} found)</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Records ({filteredRecords.length} found)</h3>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>License Plate</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Date & Time</TableHead>
-                        <TableHead>Duration (mins)</TableHead>
-                        <TableHead>Angle (°)</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">License Plate</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Entry Time</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Leaving Time</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Duration (mins)</TableHead>
+                        <TableHead className="text-gray-900 font-semibold">Angle (°)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredRecords.length > 0 ? (
                         filteredRecords.slice(0, 10).map((record) => (
                           <TableRow key={record._id}>
-                            <TableCell>{record.plate || 'N/A'}</TableCell>
-                            <TableCell>{record.action}</TableCell>
-                            <TableCell>{record.date} {record.time}</TableCell>
-                            <TableCell>{record.durationMinutes !== null ? record.durationMinutes : 'N/A'}</TableCell>
-                            <TableCell>{typeof record.angle === 'number' ? record.angle.toFixed(1) : 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{record.plate || 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{record.entryDate ? record.entryDate.toLocaleString() : 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{record.exitDate ? record.exitDate.toLocaleString() : 'Still Parking'}</TableCell>
+                            <TableCell className="text-gray-900">{record.durationMinutes !== null ? record.durationMinutes : 'N/A'}</TableCell>
+                            <TableCell className="text-gray-900">{typeof record.angle === 'number' ? record.angle.toFixed(1) : 'N/A'}</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center">No records found matching your filters.</TableCell>
+                          <TableCell colSpan={5} className="text-center text-gray-900">No records found matching your filters.</TableCell>
                         </TableRow>
                       )}
                     </TableBody>

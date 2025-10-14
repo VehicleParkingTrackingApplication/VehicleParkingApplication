@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
-const Blacklist = new Schema({
+const Employee_vehicle = new Schema({
     businessId: { 
         type: Schema.Types.ObjectId, 
         ref: 'businesses', 
@@ -13,13 +13,13 @@ const Blacklist = new Schema({
         type: String, 
         required: true, 
         maxLength: 100 },
-    reason: { 
+    owner: { 
         type: String, 
         required: true }
 }, { timestamps: true });
 
 // Compound index for efficient lookups
-Blacklist.index({ businessId: 1, plateNumber: 1 });
-Blacklist.index({ plateNumber: 1 });
+Employee_vehicle.index({ businessId: 1, plateNumber: 1 });
+Employee_vehicle.index({ plateNumber: 1 });
 
-export default mongoose.model('blacklist', Blacklist);
+export default mongoose.model('employee_vehicle', Employee_vehicle);
