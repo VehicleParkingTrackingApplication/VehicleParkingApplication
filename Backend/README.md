@@ -80,7 +80,9 @@ npm start
 http://localhost:1313/api
 ```
 
-### Authentication Endpoints
+## Complete API Endpoints
+
+### Authentication (`/api/auth`)
 
 #### POST `/auth/login`
 User login with username and password.
@@ -141,7 +143,30 @@ Logout user and clear refresh token cookie.
 }
 ```
 
-### Parking Area Management
+#### GET `/auth/me`
+Get current user information.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "_id": "user_id",
+  "username": "string",
+  "email": "string",
+  "firstName": "string",
+  "lastName": "string",
+  "role": "string",
+  "businessId": "business_id",
+  "createdAt": "date",
+  "updatedAt": "date"
+}
+```
+
+### Parking Management (`/api/parking`)
 
 #### GET `/parking/area`
 Get parking areas for the authenticated user's business.
@@ -158,62 +183,100 @@ Authorization: Bearer <access_token>
 - `sortBy` (optional): Sort field (default: createdAt)
 - `sortOrder` (optional): Sort order - "asc" or "desc" (default: asc)
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "_id": "parking_area_id",
-      "name": "Parking Area Name",
-      "businessId": "business_id",
-      "createdAt": "2024-01-01T00:00:00.000Z"
-    }
-  ],
-  "pagination": {
-    "total": 10,
-    "page": 1,
-    "limit": 3,
-    "totalPages": 4
-  }
-}
-```
-
-### Vehicle Management
-
-#### GET `/parking/vehicle`
-Get vehicles in a specific parking area.
+#### POST `/parking/area/input-area`
+Create a new parking area.
 
 **Headers:**
 ```
 Authorization: Bearer <access_token>
 ```
 
-**Query Parameters:**
-- `parkingAreaId` (required): ID of the parking area
-- `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 10)
+#### POST `/parking/area/:areaId/input-ftpserver`
+Configure FTP server for a parking area.
 
-**Response:**
-```json
-{
-  "success": true,
-  "vehicles": [
-    {
-      "_id": "vehicle_id",
-      "parkingAreaId": "parking_area_id",
-      "plateNumber": "ABC123",
-      "country": "AUS",
-      "confidence": 85,
-      "angle": 45,
-      "status": "APPROACHING",
-      "date": "2024-01-01",
-      "time": "10:30:00",
-      "entryTime": "2024-01-01T10:30:00.000Z",
-      "exitTime": null
-    }
-  ]
-}
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/parking/area/:areaId/trigger-ftp`
+Manually trigger FTP data fetch for an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/parking/area/:areaId/status-ftpserver`
+Test FTP server connection.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/parking/area/:areaId/details`
+Get detailed information about a parking area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/parking/vehicle/:areaId/manual-input`
+Manually input vehicle data.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/parking/vehicle/:areaId/existing-vehicles`
+Get vehicles currently in a parking area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/parking/vehicle/:areaId/recent-records`
+Get recent vehicle records for an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/parking/vehicle/:areaId/all-records`
+Get all vehicle records for an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/parking/vehicle/:areaId/filter-records`
+Get filtered vehicle records for an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/parking/records/:businessId/latest`
+Get latest records for all areas in a business.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/parking/vehicle/:areaId/vehicles-for-removal`
+Get vehicles that can be removed from an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
 ```
 
 #### POST `/parking/simulate`
@@ -239,43 +302,57 @@ Authorization: Bearer <access_token>
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Simulation data processed successfully"
-}
+### Image Management (`/api/parking/image`)
+
+#### POST `/parking/image/loadFtpServer/:areaId`
+Load images from FTP server for an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
 ```
 
-#### POST `/parking/vehicle/input/data`
-Receive vehicle data from camera systems.
+#### GET `/parking/image/:areaId/:plateNumber/:date`
+Get image URL for a specific vehicle and date.
 
-**Request Body:**
-```json
-{
-  "date": "2024-01-01",
-  "time": "10:30:00",
-  "parkingAreaId": "parking_area_id",
-  "plateNumber": "ABC123",
-  "country": "AUS",
-  "confidence": 85,
-  "angle": 45,
-  "image": "base64_image_data",
-  "status": "APPROACHING"
-}
+**Headers:**
+```
+Authorization: Bearer <access_token>
 ```
 
-**Response:**
-```json
-{
-  "message": "Vehicle data received successfully",
-  "data": {
-    // vehicle data
-  }
-}
+#### GET `/parking/image/:areaId/:plateNumber/:date/metadata`
+Get image metadata.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
 ```
 
-### User Management
+#### GET `/parking/image/:areaId/cached`
+Get cached images for an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/parking/image/:areaId/:plateNumber/:date/fetch`
+Force fetch an image.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### DELETE `/parking/image/cleanup`
+Clean up old cached images.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### User Management (`/api/users`)
 
 #### GET `/users/admin`
 Admin-only endpoint.
@@ -322,10 +399,10 @@ Authorization: Bearer <access_token>
 }
 ```
 
-### Data Import
+### Staff Management (`/api/staff`)
 
-#### POST `/home/import-data`
-Import CSV data (requires authentication).
+#### GET `/staff/list-staff`
+Get list of staff members (Admin only).
 
 **Headers:**
 ```
@@ -333,23 +410,518 @@ Authorization: Bearer <access_token>
 ```
 
 **Query Parameters:**
-- `file` (optional): CSV filename (default: 2025-04-02.csv)
+- `businessId` (optional): Filter by business ID
+- `page` (optional): Page number
+- `limit` (optional): Items per page
 
-#### POST `/home/import-business-data`
-Import business data (requires authentication).
+#### POST `/staff/create-staff`
+Create a new staff account (Admin only).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "username": "string",
+  "password": "string",
+  "firstName": "string",
+  "lastName": "string",
+  "email": "string",
+  "businessId": "string"
+}
+```
+
+#### PUT `/staff/update-staff`
+Update staff account information (Admin only).
 
 **Headers:**
 ```
 Authorization: Bearer <access_token>
 ```
 
-#### POST `/home/import-parking-area-data`
-Import parking area data (requires authentication).
+**Request Body:**
+```json
+{
+  "userId": "string",
+  "username": "string",
+  "firstName": "string",
+  "lastName": "string",
+  "email": "string",
+  "businessId": "string"
+}
+```
+
+#### DELETE `/staff/delete-staff`
+Delete a staff account (Admin only).
 
 **Headers:**
 ```
 Authorization: Bearer <access_token>
 ```
+
+**Request Body:**
+```json
+{
+  "userId": "string"
+}
+```
+
+### Account Management (`/api/account`)
+
+#### GET `/account`
+Get account information.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/account/input-business-account`
+Create or update business account information.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "email": "string",
+  "phonenumber": "string",
+  "businessName": "string",
+  "location": "string"
+}
+```
+
+#### PUT `/account/update-name`
+Update user name.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/account/business-users`
+Get users in the same business (Admin only).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### Notification Management (`/api/notification`)
+
+#### GET `/notification/getAllNotifications`
+Get all notifications for a business with pagination and filtering.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+- `status` (optional): Filter by status ('read' or 'unread')
+- `type` (optional): Filter by type ('capacity_warning', 'capacity_critical', 'blacklist_alert', 'system')
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 10)
+
+#### GET `/notification/getRecentNotifications`
+Get recent notifications.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### PUT `/notification/:notificationId/read`
+Mark a specific notification as read.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### PUT `/notification/business/:businessId/read-all`
+Mark all notifications as read for a business.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### Blacklist Management (`/api/blacklist`)
+
+#### POST `/blacklist`
+Create a new blacklist entry.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/blacklist/business/:businessId`
+Get all blacklist entries for a business.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/blacklist/search`
+Search blacklist entries by plate number.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/blacklist/check`
+Check if a plate number is blacklisted.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### Employee Vehicle Management (`/api/employee-vehicle`)
+
+#### POST `/employee-vehicle/add`
+Add a vehicle to employee vehicles.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "plateNumber": "string",
+  "owner": "string",
+  "areaId": "string"
+}
+```
+
+#### GET `/employee-vehicle/list`
+Get list of employee vehicles for the business.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+- `page` (optional): Page number
+- `limit` (optional): Items per page
+- `areaId` (optional): Filter by area ID
+
+#### DELETE `/employee-vehicle/remove`
+Remove a vehicle from employee vehicles.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "vehicleId": "string"
+}
+```
+
+### Scheduler Management (`/api/scheduler`)
+
+#### WebSocket Management
+
+#### GET `/scheduler/websocket/status`
+Get WebSocket service status.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/websocket/trigger/:areaId`
+Manually trigger WebSocket processing for an area.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### FTP Scheduler Management
+
+#### GET `/scheduler/ftp/status`
+Get FTP scheduler status.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/ftp/start`
+Start FTP scheduler.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/ftp/stop`
+Stop FTP scheduler.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/ftp/trigger`
+Manually trigger FTP processing.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### Simulation Scheduler Management
+
+#### GET `/scheduler/simulation/status`
+Get simulation scheduler status.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/simulation/start`
+Start simulation scheduler.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/simulation/stop`
+Stop simulation scheduler.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/simulation/trigger`
+Manually trigger simulation processing.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### Combined Scheduler Management
+
+#### GET `/scheduler/status`
+Get status of both FTP and simulation schedulers.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/start`
+Start both schedulers.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/scheduler/stop`
+Stop both schedulers.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### Reports Management (`/api/reports`)
+
+#### GET `/reports`
+Get all saved reports for the current user (owned and shared).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/reports/:id`
+Get full details of a specific report.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/reports`
+Create a new report.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "areaId": "string",
+  "type": "string",
+  "chartData": "object",
+  "filters": "object",
+  "description": "string"
+}
+```
+
+#### DELETE `/reports/:id`
+Delete a report by ID.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### Comments Management (`/api/comments`)
+
+#### GET `/comments/:reportId`
+Get all comments for a specific report.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/comments`
+Create a new comment.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "reportId": "string",
+  "content": "string"
+}
+```
+
+#### PUT `/comments/:id`
+Update a comment (only by author).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "content": "string"
+}
+```
+
+#### DELETE `/comments/:id`
+Delete a comment (only by author or report owner).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### Sharing Management (`/api/shares`)
+
+#### GET `/shares/:reportId`
+Get all users that a report has been shared with.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/shares`
+Share a report with users in the same business.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "reportId": "string",
+  "userIds": ["string"]
+}
+```
+
+#### DELETE `/shares/:shareId`
+Remove a share (unshare the report with a user).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### GET `/shares/business/users`
+Get all users in the same business for sharing.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### QA Management (`/api/qa`)
+
+#### GET `/qa`
+Get QA data from CSV file.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "keyword": "string",
+      "question": "string"
+    }
+  ]
+}
+```
+
+### AI Investigation (`/api/investigate-ai`)
+
+#### POST `/investigate-ai/generate`
+Generate MongoDB query without executing.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+#### POST `/investigate-ai/query`
+Process natural language query and execute.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+### Home/Health Check (`/api/home`)
 
 #### GET `/home`
 Health check endpoint.
@@ -358,18 +930,6 @@ Health check endpoint.
 ```json
 {
   "Check": "Hello"
-}
-```
-
-### Account Management
-
-#### GET `/account`
-Get account information.
-
-**Response:**
-```json
-{
-  // account data
 }
 ```
 

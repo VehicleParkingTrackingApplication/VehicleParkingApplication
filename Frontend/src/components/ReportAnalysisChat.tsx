@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { analyzeReport } from '../services/reportsApi'; // Corrected import path
+import { getReportById, queryReportAI } from '../services/reportsApi'; // Updated imports
 import { Send } from 'lucide-react';
 
 // Defines the structure for a single chat message
@@ -19,15 +19,30 @@ export default function ReportAnalysisChat({ reportId }: ReportAnalysisChatProps
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentReport, setCurrentReport] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref to scroll to the bottom of messages
 
-  // Effect to reset the chat when a new report is selected
+  // Effect to fetch report data and reset chat when a new report is selected
   useEffect(() => {
-    if (reportId) {
-        setMessages([{ sender: 'ai', text: 'Hello! Ask me anything about the selected chart.' }]);
-    } else {
+    const fetchReportData = async () => {
+      if (reportId) {
+        try {
+          const response = await getReportById(reportId);
+          if (response.success) {
+            setCurrentReport(response.data);
+            setMessages([{ sender: 'ai', text: 'Hello! Ask me anything about the selected chart.' }]);
+          }
+        } catch (error) {
+          console.error('Error fetching report:', error);
+          setMessages([{ sender: 'ai', text: 'Error loading report data. Please try again.' }]);
+        }
+      } else {
+        setCurrentReport(null);
         setMessages([]);
-    }
+      }
+    };
+
+    fetchReportData();
   }, [reportId]);
 
   // Function to automatically scroll to the latest message
@@ -43,7 +58,7 @@ export default function ReportAnalysisChat({ reportId }: ReportAnalysisChatProps
    */
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !reportId) return;
+    if (!input.trim() || !currentReport) return;
 
     const userMessage: Message = { sender: 'user', text: input };
     setMessages(prev => [...prev, userMessage]);
@@ -51,9 +66,23 @@ export default function ReportAnalysisChat({ reportId }: ReportAnalysisChatProps
     setIsLoading(true);
 
     try {
-      // Call the API service to get the AI's analysis
-      const response = await analyzeReport(reportId, input);
-      const aiMessage: Message = { sender: 'ai', text: response.analysis };
+      // Create context with full report data including chartData
+      const reportContext = JSON.stringify({
+        name: currentReport.name,
+        description: currentReport.description,
+        type: currentReport.type,
+        createdAt: currentReport.createdAt,
+        filters: currentReport.filters,
+        chartData: currentReport.chartData,
+        chartDataSummary: `The chart contains ${currentReport.chartData.length} data points with detailed values.`,
+      });
+
+      // Call the AI service with full context
+      const result = await queryReportAI(input, reportContext);
+      const aiMessage: Message = { 
+        sender: 'ai', 
+        text: result.response || result.error || 'Sorry, an error occurred.' 
+      };
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       const errorMessage: Message = { sender: 'ai', text: 'Sorry, I encountered an error. Please check the server and try again.' };

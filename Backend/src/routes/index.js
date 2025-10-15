@@ -5,9 +5,14 @@ import userRouter from './user.js';
 import authRouter from './auth.js';
 import staffRouter from './staff.js';
 import reportsRouter from './reports.js';
+import commentsRouter from './comments.js';
+import sharesRouter from './shares.js';
 import notificationRouter from './notification.js';
 import schedulerRouter from './scheduler.js';
 import blacklistRouter from './blacklist.js';
+import employeeVehicleRouter from './employee_vehicle.js';
+import qaRouter from './qa.js';
+import investigateAIRouter from './investigate-ai.js';
 
 function route(app) {
     // API routes
@@ -31,6 +36,9 @@ function route(app) {
     // Blacklist routes
     app.use('/api/blacklist', blacklistRouter);
 
+    // Employee Vehicle routes
+    app.use('/api/employee-vehicle', employeeVehicleRouter);
+
     // Scheduler routes
     app.use('/api/scheduler', schedulerRouter);
   
@@ -38,6 +46,18 @@ function route(app) {
     app.use('/api/home', homeRouter);
 
     app.use('/api/reports', reportsRouter);
+    
+    // Comments routes
+    app.use('/api/comments', commentsRouter);
+    
+    // Shares routes
+    app.use('/api/shares', sharesRouter);
+    
+    // QA routes
+    app.use('/api/qa', qaRouter);
+    
+    // Investigate AI routes
+    app.use('/api/investigate-ai', investigateAIRouter);
 }
 
 export default route;

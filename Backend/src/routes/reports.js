@@ -1,20 +1,52 @@
 import express from 'express';
 import Report from '../app/models/Report.js';
+import ReportShare from '../app/models/ReportShare.js';
 import requireAuth from '../middleware/auth/require-auth.js';
 
 const router = express.Router();
 
 // --- GET /api/reports ---
-// Fetches a summary of all saved reports for the current user
+// Fetches a summary of all saved reports for the current user (owned and shared)
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const reports = await Report.find({ ownerId: req.user.id })
+    const userId = req.user.id;
+    console.log('=== FETCHING REPORTS FOR USER ===');
+    console.log('User ID:', userId);
+
+    // Get owned reports
+    const ownedReports = await Report.find({ ownerId: userId })
       .sort({ createdAt: -1 })
-      .select('_id name createdAt type'); // Only select the fields needed for the list
+      .select('_id name createdAt type ownerId');
+    console.log('Owned reports count:', ownedReports.length);
+    console.log('Owned reports:', ownedReports.map(r => ({ id: r._id, name: r.name })));
+
+    // Get shared reports
+    const sharedReportIds = await ReportShare.find({ sharedWith: userId })
+      .select('reportId')
+      .lean();
+    console.log('Shared report IDs found:', sharedReportIds);
+
+    const sharedReports = await Report.find({ 
+      _id: { $in: sharedReportIds.map(share => share.reportId) }
+    })
+      .populate('ownerId', 'firstName lastName username')
+      .sort({ createdAt: -1 })
+      .select('_id name createdAt type ownerId');
+    console.log('Shared reports count:', sharedReports.length);
+    console.log('Shared reports:', sharedReports.map(r => ({ id: r._id, name: r.name, owner: r.ownerId })));
+
+    // Combine and format reports
+    const allReports = [
+      ...ownedReports.map(report => ({ ...report.toObject(), isOwner: true })),
+      ...sharedReports.map(report => ({ ...report.toObject(), isOwner: false }))
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    console.log('Total reports returned:', allReports.length);
+    console.log('=== END FETCHING REPORTS ===');
 
     res.status(200).json({
       success: true,
-      data: reports,
+      data: allReports,
       message: 'Reports fetched successfully.'
     });
 
@@ -32,14 +64,25 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // --- GET /api/reports/:id ---
-// Fetches the full details of a single report (only if owned by user)
+// Fetches the full details of a single report (owned by user or shared with user)
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const report = await Report.findOne({ _id: id, ownerId: req.user.id });
+    const userId = req.user.id;
+
+    // Check if user owns the report
+    let report = await Report.findOne({ _id: id, ownerId: userId });
+
+    // If not owned, check if it's shared with the user
+    if (!report) {
+      const share = await ReportShare.findOne({ reportId: id, sharedWith: userId });
+      if (share) {
+        report = await Report.findById(id);
+      }
+    }
 
     if (!report) {
-      return res.status(404).json({ success: false, message: 'Report not found.' });
+      return res.status(404).json({ success: false, message: 'Report not found or you do not have access to it.' });
     }
 
     res.status(200).json({ success: true, data: report, message: 'Report details fetched successfully.' });

@@ -130,7 +130,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({ onClose })
   return (
     <div 
       ref={popupRef}
-      className="absolute right-0 top-full mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-90 overflow-hidden"
+      className="fixed left-64 ml-4 bottom-4 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-90 overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
