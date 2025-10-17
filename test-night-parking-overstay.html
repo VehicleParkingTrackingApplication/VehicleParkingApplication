@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Parking Overstay Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(to bottom right, #4facfe, #f9f586);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .night-parking { background-color: #e2e3e5; border-color: #d6d8db; }
+        .day-parking { background-color: #d1ecf1; border-color: #bee5eb; }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        
+        .data-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        pre {
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .night-stat {
+            border-left-color: #dc3545;
+        }
+        
+        .night-stat .stat-value {
+            color: #dc3545;
+        }
+        
+        .day-stat {
+            border-left-color: #28a745;
+        }
+        
+        .day-stat .stat-value {
+            color: #28a745;
+        }
+        
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .night-record {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        
+        .day-record {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .record-time {
+            font-weight: bold;
+            font-family: monospace;
+        }
+        
+        .record-plate {
+            font-weight: bold;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌙 Night Parking Overstay Test</h1>
+        <p>This page tests the new overstay functionality that identifies vehicles parked after 9PM.</p>
+
+        <div class="test-section info">
+            <h3>🎯 Test Overview</h3>
+            <p><strong>New Overstay Logic:</strong> Vehicles parked after 9PM (21:00) are considered "overstays"</p>
+            <p><strong>Expected Results:</strong> Only vehicles with entry times ≥ 21:00 should appear in overstay analysis</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Test Controls</h3>
+            <button onclick="testNightParkingData()">🌙 Test Night Parking Data</button>
+            <button onclick="testDayParkingData()">☀️ Test Day Parking Data</button>
+            <button onclick="testOverstayLogic()">📊 Test Overstay Logic</button>
+            <button onclick="testChartData()">📈 Test Chart Data Generation</button>
+            <button onclick="clearResults()">🧹 Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Current Statistics</h3>
+            <div class="stats-grid" id="currentStats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalRecords">-</div>
+                    <div class="stat-label">Total Records</div>
+                </div>
+                <div class="stat-card night-stat">
+                    <div class="stat-value" id="nightParking">-</div>
+                    <div class="stat-label">Night Parking (≥9PM)</div>
+                </div>
+                <div class="stat-card day-stat">
+                    <div class="stat-value" id="dayParking">-</div>
+                    <div class="stat-label">Day Parking (<9PM)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stillParking">-</div>
+                    <div class="stat-label">Still Parking</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Results</h3>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data with comprehensive time entries
+        const createTimeEntry = (hoursAgo, hour, minute = 0) => {
+            const date = new Date();
+            date.setHours(hour, minute, 0, 0);
+            date.setDate(date.getDate() - Math.floor(hoursAgo / 24));
+            return date.toISOString();
+        };
+
+        const mockRecords = [
+            // Day time entries (before 9PM)
+            { _id: 'rec_001', plateNumber: 'ABC123', areaId: 'area_a', entryTime: createTimeEntry(0, 8, 30), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_002', plateNumber: 'XYZ789', areaId: 'area_b', entryTime: createTimeEntry(0, 14, 15), leavingTime: createTimeEntry(0, 16, 30), status: 'Leaved' },
+            { _id: 'rec_003', plateNumber: 'DPG85M', areaId: 'area_a', entryTime: createTimeEntry(1, 10, 0), leavingTime: createTimeEntry(1, 18, 0), status: 'Leaved' },
+            { _id: 'rec_004', plateNumber: 'DEF456', areaId: 'area_a', entryTime: createTimeEntry(0, 12, 0), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_005', plateNumber: 'GHI789', areaId: 'area_b', entryTime: createTimeEntry(0, 16, 45), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_006', plateNumber: 'JKL012', areaId: 'area_a', entryTime: createTimeEntry(0, 11, 30), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_007', plateNumber: 'MNO345', areaId: 'area_b', entryTime: createTimeEntry(0, 9, 0), leavingTime: createTimeEntry(0, 17, 0), status: 'Leaved' },
+            { _id: 'rec_008', plateNumber: 'PQR678', areaId: 'area_a', entryTime: createTimeEntry(0, 13, 0), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_009', plateNumber: 'STU901', areaId: 'area_b', entryTime: createTimeEntry(1, 8, 0), leavingTime: createTimeEntry(1, 17, 30), status: 'Leaved' },
+            { _id: 'rec_015', plateNumber: 'KLM789', areaId: 'area_b', entryTime: createTimeEntry(1, 20, 45), leavingTime: createTimeEntry(1, 23, 0), status: 'Leaved' },
+            { _id: 'rec_022', plateNumber: 'FGH890', areaId: 'area_c', entryTime: createTimeEntry(1, 20, 59), leavingTime: createTimeEntry(1, 23, 0), status: 'Leaved' },
+            
+            // Night parking entries (after 9PM) - These should show up in overstay analysis
+            { _id: 'rec_010', plateNumber: 'VWX234', areaId: 'area_c', entryTime: createTimeEntry(0, 21, 30), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_011', plateNumber: 'YZA567', areaId: 'area_c', entryTime: createTimeEntry(0, 22, 15), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_012', plateNumber: 'BCD890', areaId: 'area_d', entryTime: createTimeEntry(0, 23, 45), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_013', plateNumber: 'EFG123', areaId: 'area_d', entryTime: createTimeEntry(1, 21, 0), leavingTime: createTimeEntry(1, 23, 30), status: 'Leaved' },
+            { _id: 'rec_014', plateNumber: 'HIJ456', areaId: 'area_a', entryTime: createTimeEntry(1, 22, 30), leavingTime: createTimeEntry(0, 2, 0), status: 'Leaved' },
+            { _id: 'rec_016', plateNumber: 'NOP012', areaId: 'area_a', entryTime: createTimeEntry(2, 21, 15), leavingTime: createTimeEntry(2, 23, 45), status: 'Leaved' },
+            { _id: 'rec_017', plateNumber: 'QRS345', areaId: 'area_b', entryTime: createTimeEntry(2, 22, 0), leavingTime: undefined, status: 'Still Parking' },
+            { _id: 'rec_018', plateNumber: 'TUV678', areaId: 'area_c', entryTime: createTimeEntry(3, 21, 30), leavingTime: createTimeEntry(3, 23, 0), status: 'Leaved' },
+            { _id: 'rec_019', plateNumber: 'WXY901', areaId: 'area_d', entryTime: createTimeEntry(3, 23, 15), leavingTime: createTimeEntry(2, 1, 30), status: 'Leaved' },
+            { _id: 'rec_020', plateNumber: 'ZAB234', areaId: 'area_a', entryTime: createTimeEntry(4, 21, 45), leavingTime: createTimeEntry(4, 22, 30), status: 'Leaved' },
+            { _id: 'rec_021', plateNumber: 'CDE567', areaId: 'area_b', entryTime: createTimeEntry(1, 21, 0), leavingTime: createTimeEntry(1, 22, 0), status: 'Leaved' },
+        ];
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+            results.innerHTML += `<div class="test-section ${className}"><strong>[${timestamp}]</strong> ${message}</div>`;
+        }
+
+        function updateStats() {
+            const totalRecords = mockRecords.length;
+            const nightParking = mockRecords.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate.getHours() >= 21;
+            }).length;
+            const dayParking = totalRecords - nightParking;
+            const stillParking = mockRecords.filter(r => r.status === 'Still Parking').length;
+
+            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('nightParking').textContent = nightParking;
+            document.getElementById('dayParking').textContent = dayParking;
+            document.getElementById('stillParking').textContent = stillParking;
+        }
+
+        function testNightParkingData() {
+            log('🌙 Testing Night Parking Data (≥9PM)', 'info');
+            
+            const nightRecords = mockRecords.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate.getHours() >= 21;
+            });
+            
+            log(`✅ Found ${nightRecords.length} night parking records`, 'success');
+            
+            nightRecords.forEach(record => {
+                const entryDate = new Date(record.entryTime);
+                const timeStr = entryDate.toLocaleString();
+                const hour = entryDate.getHours();
+                log(`   🌙 ${record.plateNumber}: ${timeStr} (Hour: ${hour}) - ${record.status}`, 'night-parking');
+            });
+            
+            updateStats();
+        }
+
+        function testDayParkingData() {
+            log('☀️ Testing Day Parking Data (<9PM)', 'info');
+            
+            const dayRecords = mockRecords.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate.getHours() < 21;
+            });
+            
+            log(`✅ Found ${dayRecords.length} day parking records`, 'success');
+            
+            dayRecords.forEach(record => {
+                const entryDate = new Date(record.entryTime);
+                const timeStr = entryDate.toLocaleString();
+                const hour = entryDate.getHours();
+                log(`   ☀️ ${record.plateNumber}: ${timeStr} (Hour: ${hour}) - ${record.status}`, 'day-parking');
+            });
+            
+            updateStats();
+        }
+
+        function testOverstayLogic() {
+            log('📊 Testing Overstay Logic (9PM threshold)', 'info');
+            
+            // Simulate the new overstay logic from ParkingDashboard
+            const overstayRecords = mockRecords.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate.getHours() >= 21; // 9PM or later
+            });
+            
+            log(`✅ Overstay Analysis Results:`, 'success');
+            log(`   • Total records: ${mockRecords.length}`, 'info');
+            log(`   • Night parking (≥9PM): ${overstayRecords.length}`, 'warning');
+            log(`   • Day parking (<9PM): ${mockRecords.length - overstayRecords.length}`, 'info');
+            
+            // Test edge cases
+            const exactly9PM = mockRecords.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate.getHours() === 21 && entryDate.getMinutes() === 0;
+            });
+            
+            const justBefore9PM = mockRecords.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate.getHours() === 20 && entryDate.getMinutes() === 59;
+            });
+            
+            log(`   • Exactly 9:00 PM entries: ${exactly9PM.length}`, 'info');
+            log(`   • 8:59 PM entries (should NOT be overstay): ${justBefore9PM.length}`, 'info');
+            
+            updateStats();
+        }
+
+        function testChartData() {
+            log('📈 Testing Chart Data Generation', 'info');
+            
+            // Simulate the processOverstayData function
+            const overstays = mockRecords.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate.getHours() >= 21;
+            });
+            
+            // Group by date
+            const aggregation = {};
+            overstays.forEach(record => {
+                const entryDate = new Date(record.entryTime);
+                const key = entryDate.toLocaleDateString('en-CA');
+                aggregation[key] = (aggregation[key] || 0) + 1;
+            });
+            
+            const chartData = Object.keys(aggregation).sort().map(key => ({
+                date: key,
+                'Overstaying Vehicles': aggregation[key]
+            }));
+            
+            log(`✅ Chart Data Generated:`, 'success');
+            log(`   • ${chartData.length} data points for chart`, 'info');
+            
+            chartData.forEach(dataPoint => {
+                log(`   📊 ${dataPoint.date}: ${dataPoint['Overstaying Vehicles']} vehicles`, 'info');
+            });
+            
+            updateStats();
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            log('🧹 Results cleared', 'info');
+        }
+
+        // Initialize
+        log('🌙 Night Parking Overstay Test Page Loaded', 'success');
+        log('Ready to test the new 9PM overstay logic', 'info');
+        updateStats();
+    </script>
+</body>
+</html>

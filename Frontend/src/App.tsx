@@ -59,6 +59,14 @@ export default function App() {
           <Route path="/vehicle" element={<VehicleDashboard />} />
           <Route path="/reports" element={<ExistingReportsPage />} />
           <Route path="/investigate-ai" element={<InvestigateAI />} />
+          <Route 
+            path="/statistics/:areaId" 
+            element={
+              <ProtectedRoute>
+                <ParkingDashboard />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/area/:areaId/vehicles" element={<ViewAllExistingVehicles />} />
           <Route path="/area/:areaId/records" element={<ViewAllRecords />} />
           

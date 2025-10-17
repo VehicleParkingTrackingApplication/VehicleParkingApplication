@@ -5,10 +5,6 @@
   : "/api/";*/
 
   const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:1313/api/";
-  const USE_MOCKS = String(import.meta.env.VITE_USE_MOCKS || '').toLowerCase() === 'true';
-
-
-
 
 /**
  * @param {string} path
@@ -39,15 +35,6 @@ export function getApiUrl(path: string, query?: URLSearchParams | Record<string,
  */
 export async function fetchApi(path: string, query?: URLSearchParams | Record<string, unknown>): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
   const response = await fetch(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     headers: {
@@ -66,18 +53,6 @@ export async function fetchApi(path: string, query?: URLSearchParams | Record<st
  */
 export async function postApi(path: string, query?: URLSearchParams | Record<string, unknown>, body?: BodyInit): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      method: "POST",
-      redirect: "manual",
-      body: body,
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
   const response = await fetch(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     method: "POST",
@@ -103,15 +78,6 @@ export async function putApi(path: string, query?: URLSearchParams | Record<stri
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      method: "PUT",
-      body: body,
-      headers: headers
-    });
-  }
   const response = await fetch(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     method: "PUT",
@@ -129,16 +95,6 @@ export async function putApi(path: string, query?: URLSearchParams | Record<stri
  */
 export async function deleteApi(path: string, query?: URLSearchParams | Record<string, unknown>): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      method: "DELETE",
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
   const response = await fetch(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     method: "DELETE",
@@ -158,17 +114,8 @@ import { authInterceptor } from './authInterceptor';
  * @param {URLSearchParams | Record<string, any>=} query
  * @returns {Promise<Response>}
  */
-export async function fetchAuthApi(path: string, query?: URLSearchParams | Record<string, any>): Promise<Response> {
+export async function fetchAuthApi(path: string, query?: URLSearchParams | Record<string, unknown>): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
   return authInterceptor.makeAuthenticatedRequest(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     headers: {
@@ -183,20 +130,8 @@ export async function fetchAuthApi(path: string, query?: URLSearchParams | Recor
  * @param {BodyInit=} body
  * @returns {Promise<Response>}
  */
-export async function postAuthApi(path: string, query?: URLSearchParams | Record<string, any>, body?: BodyInit): Promise<Response> {
+export async function postAuthApi(path: string, query?: URLSearchParams | Record<string, unknown>, body?: BodyInit): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      method: "POST",
-      redirect: "manual",
-      body: body,
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
   return authInterceptor.makeAuthenticatedRequest(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     method: "POST",
@@ -214,19 +149,8 @@ export async function postAuthApi(path: string, query?: URLSearchParams | Record
  * @param {BodyInit=} body
  * @returns {Promise<Response>}
  */
-export async function putAuthApi(path: string, query?: URLSearchParams | Record<string, any>, body?: BodyInit): Promise<Response> {
+export async function putAuthApi(path: string, query?: URLSearchParams | Record<string, unknown>, body?: BodyInit): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      method: "PUT",
-      body: body,
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
   return authInterceptor.makeAuthenticatedRequest(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     method: "PUT",
@@ -242,18 +166,8 @@ export async function putAuthApi(path: string, query?: URLSearchParams | Record<
  * @param {URLSearchParams | Record<string, any>=} query
  * @returns {Promise<Response>}
  */
-export async function deleteAuthApi(path: string, query?: URLSearchParams | Record<string, any>): Promise<Response> {
+export async function deleteAuthApi(path: string, query?: URLSearchParams | Record<string, unknown>): Promise<Response> {
   const url = getApiUrlInternal(path, query);
-  if (USE_MOCKS) {
-    const { mockFetch } = await import('./mockApi');
-    return mockFetch(url.toString(), {
-      credentials: env() === "development" ? "include" : "same-origin",
-      method: "DELETE",
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
   return authInterceptor.makeAuthenticatedRequest(url.toString(), {
     credentials: env() === "development" ? "include" : "same-origin",
     method: "DELETE",

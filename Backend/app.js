@@ -56,7 +56,7 @@ dbConnect();
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['https://yourdomain.com'] // Replace with your production domain
-        : ['http://localhost:5173'], // Frontend dev server
+        : ['http://localhost:5173', 'http://localhost:5174'], // Frontend dev server
     credentials: true, // Allow cookies and credentials
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

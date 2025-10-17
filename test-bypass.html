@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Bypass Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(to bottom right, #4facfe, #f9f586);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .bypass-btn { background: #ffc107; color: black; }
+        .bypass-btn:hover { background: #e0a800; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Login Bypass Test</h1>
+        <p>This page tests the login bypass functionality for the Vehicle Parking Application.</p>
+
+        <div class="test-section info">
+            <h3>📋 Test Instructions</h3>
+            <ol>
+                <li>Click "Test Bypass Mode" to simulate bypass login</li>
+                <li>Check localStorage to verify bypass tokens are set</li>
+                <li>Navigate to the main application to test functionality</li>
+                <li>Use "Clear Bypass Mode" to reset</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Test Controls</h3>
+            <button class="bypass-btn" onclick="testBypassMode()">🚀 Test Bypass Mode</button>
+            <button onclick="checkLocalStorage()">📊 Check LocalStorage</button>
+            <button onclick="clearBypassMode()">🧹 Clear Bypass Mode</button>
+            <button onclick="testAuthInterceptor()">🔐 Test Auth Interceptor</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="results"></div>
+        </div>
+
+        <div class="test-section warning">
+            <h3>⚠️ Important Notes</h3>
+            <ul>
+                <li>Bypass mode is for development/testing only</li>
+                <li>Never use bypass mode in production</li>
+                <li>Bypass mode grants admin privileges</li>
+                <li>Always clear bypass mode when done testing</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            results.innerHTML += `<div class="test-section ${className}"><strong>[${timestamp}]</strong> ${message}</div>`;
+        }
+
+        function testBypassMode() {
+            try {
+                // Simulate the bypass login process
+                const mockToken = 'bypass-token-' + Date.now();
+                localStorage.setItem('token', mockToken);
+                localStorage.setItem('bypass-mode', 'true');
+                
+                log('✅ Bypass mode activated successfully!', 'success');
+                log(`Token set: ${mockToken}`, 'info');
+                log('Bypass mode flag: true', 'info');
+                log('You can now navigate to the main application', 'info');
+            } catch (error) {
+                log(`❌ Error activating bypass mode: ${error.message}`, 'error');
+            }
+        }
+
+        function checkLocalStorage() {
+            const token = localStorage.getItem('token');
+            const bypassMode = localStorage.getItem('bypass-mode');
+            
+            log('📊 LocalStorage Status:', 'info');
+            log(`Token: ${token ? 'Present' : 'Not found'}`, token ? 'success' : 'error');
+            log(`Bypass Mode: ${bypassMode}`, bypassMode === 'true' ? 'success' : 'info');
+            
+            if (token) {
+                log(`Token Value: ${token}`, 'info');
+            }
+        }
+
+        function clearBypassMode() {
+            try {
+                localStorage.removeItem('token');
+                localStorage.removeItem('bypass-mode');
+                log('🧹 Bypass mode cleared successfully!', 'success');
+                log('All authentication tokens removed', 'info');
+            } catch (error) {
+                log(`❌ Error clearing bypass mode: ${error.message}`, 'error');
+            }
+        }
+
+        function testAuthInterceptor() {
+            // Simulate the auth interceptor logic
+            const hasToken = !!localStorage.getItem('token');
+            const isBypassMode = localStorage.getItem('bypass-mode') === 'true';
+            const isAuthenticated = hasToken || isBypassMode;
+            
+            log('🔐 Auth Interceptor Test:', 'info');
+            log(`Has Token: ${hasToken}`, hasToken ? 'success' : 'error');
+            log(`Bypass Mode: ${isBypassMode}`, isBypassMode ? 'success' : 'info');
+            log(`Is Authenticated: ${isAuthenticated}`, isAuthenticated ? 'success' : 'error');
+            
+            if (isBypassMode) {
+                log('🚀 Bypass mode detected - requests will include x-bypass-auth header', 'info');
+            }
+        }
+
+        // Initialize
+        log('🚀 Login Bypass Test Page Loaded', 'success');
+        log('Ready to test bypass functionality', 'info');
+    </script>
+</body>
+</html>

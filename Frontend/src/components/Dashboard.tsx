@@ -2,21 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { 
   type Vehicle,
   type Area,
-  type ParkingRecord,
-  type Statistics,
-  type BlacklistEntry,
-  getCurrentUser,
-  getBlacklistByBusiness
 } from '../services/backend';
+
+interface ParkingRecord {
+  _id: string;
+  areaId: string;
+  hours?: number;
+  minutes?: number;
+}
 import { getAllParkingAreas, getAllRecords, getExistingVehicles } from '../services/parkingApi';
-import { Car, MapPin, FileText, TrendingUp, AlertCircle, Shield, Ban } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [records, setRecords] = useState<ParkingRecord[]>([]);
-  const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
-  const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,18 +28,15 @@ const Dashboard: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Get current user first to get businessId
-        const user = await getCurrentUser();
-
-        // Fetch areas first
+        // Fetch areas
         const areasResponse = await getAllParkingAreas();
         if (areasResponse.success && areasResponse.data) {
           setAreas(areasResponse.data);
         }
 
         // Fetch data for each area
-        let allVehicles: any[] = [];
-        let allRecords: any[] = [];
+        let allVehicles: Vehicle[] = [];
+        let allRecords: ParkingRecord[] = [];
 
         if (areasResponse.success && areasResponse.data) {
           for (const area of areasResponse.data) {
@@ -62,40 +61,6 @@ const Dashboard: React.FC = () => {
 
         setVehicles(allVehicles);
         setRecords(allRecords);
-
-        // Fetch blacklist data if user has businessId
-        if (user?.businessId) {
-          try {
-            const blacklistResponse = await getBlacklistByBusiness(user.businessId, 1, 10);
-            if (blacklistResponse?.success && blacklistResponse.data) {
-              setBlacklist(blacklistResponse.data);
-            }
-          } catch (blacklistError) {
-            console.error('Error fetching blacklist:', blacklistError);
-          }
-        }
-
-        // Debug logging
-        console.log('Dashboard data loaded:', {
-          areas: areasResponse.data?.length || 0,
-          vehicles: allVehicles.length,
-          records: allRecords.length,
-          blacklist: blacklist.length,
-          areasData: areasResponse.data,
-          vehiclesData: allVehicles,
-          recordsData: allRecords
-        });
-
-        // Calculate statistics
-        const stats = {
-          totalVehicles: allVehicles.length,
-          totalAreas: areasResponse.data?.length || 0,
-          totalRecords: allRecords.length,
-          totalRevenue: 0, // Calculate based on your revenue logic
-          activeVehicles: allVehicles.filter(v => v.isActive !== false).length, // Count only active vehicles
-          dailyStats: []
-        };
-        setStatistics(stats);
 
       } catch (err) {
         setError('Failed to load dashboard data');
@@ -139,7 +104,7 @@ const Dashboard: React.FC = () => {
           style={{ transform: 'translate(-50%, 50%)' }}
         ></div>
         <div className="backdrop-blur-md bg-white/5 rounded-2xl px-6 py-3 border border-white/10 shadow-2xl text-center relative z-10">
-          <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <div className="h-12 w-12 text-red-400 mx-auto mb-4">❌</div>
           <h2 className="text-xl font-semibold text-white mb-2">Error</h2>
           <p className="text-white">{error}</p>
         </div>
@@ -157,66 +122,16 @@ const Dashboard: React.FC = () => {
         className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
-      <div className="relative z-10 p-6">
+      <div className="relative z-10 px-4 py-10">
         <div className="max-w-7xl mx-auto">
-          <br></br>
-          <br></br>
-          {/* Header */}
-          {/* <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-            <p className="text-gray-300 mt-2">Overview of your parking management system</p>
-          </div> */}
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Car className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Vehicles</p>
-                <p className="text-2xl font-bold text-gray-900">{statistics?.totalVehicles || 0}</p>
+          <div className="mb-8">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold text-white">Areas Overview</h1>
+                <p className="text-gray-300 mt-2">Comprehensive view of all parking areas</p>
               </div>
             </div>
           </div>
-
-          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <MapPin className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Areas</p>
-                <p className="text-2xl font-bold text-gray-900">{statistics?.totalAreas || 0}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <FileText className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Records</p>
-                <p className="text-2xl font-bold text-gray-900">{statistics?.totalRecords || 0}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Shield className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Blacklisted Vehicles</p>
-                <p className="text-2xl font-bold text-gray-900">{blacklist.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Areas Overview */}
         <div className="mt-8 bg-white rounded-2xl border border-gray-200 shadow-lg">
@@ -248,7 +163,7 @@ const Dashboard: React.FC = () => {
                           {areas.reduce((sum, area) => sum + (area.capacity || 0), 0)}
                         </p>
                       </div>
-                      <Car className="h-8 w-8 text-green-600" />
+                      <span className="text-2xl">🚗</span>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
@@ -259,7 +174,7 @@ const Dashboard: React.FC = () => {
                           {areas.filter(area => area.isActive !== false).length}
                         </p>
                       </div>
-                      <TrendingUp className="h-8 w-8 text-yellow-600" />
+                      <span className="text-2xl">✅</span>
                     </div>
                   </div>
                 </div>
@@ -272,9 +187,21 @@ const Dashboard: React.FC = () => {
                     const areaRecords = records.filter(r => r.areaId === area._id);
                     const currentOccupancy = areaVehicles.length; // All vehicles in this area are currently parked
                     const occupancyRate = area.capacity > 0 ? (currentOccupancy / area.capacity * 100) : 0;
+
+                    // Calculate average parking time
+                    const totalParkingTime = areaRecords.reduce((total, record) => {
+                      return total + (record.hours || 0) * 60 + (record.minutes || 0);
+                    }, 0);
+                    const avgParkingMinutes = areaRecords.length ? Math.round(totalParkingTime / areaRecords.length) : 0;
+                    const avgParkingHours = Math.floor(avgParkingMinutes / 60);
+                    const avgParkingMins = avgParkingMinutes % 60;
                     
                     return (
-                      <div key={area._id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all duration-200">
+                      <div 
+                        key={area._id} 
+                        className="p-4 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all duration-200 cursor-pointer"
+                        onClick={() => navigate(`/statistics/${area._id}`)}
+                      >
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <h4 className="font-semibold text-gray-900 text-lg">{area.name}</h4>
@@ -325,6 +252,14 @@ const Dashboard: React.FC = () => {
                             <p className="text-gray-600">Available</p>
                             <p className="text-gray-900 font-semibold">{Math.max(0, area.capacity - currentOccupancy)}</p>
                           </div>
+                          
+                          {/* Average Parking Time - Full Width */}
+                          <div className="col-span-2 text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
+                            <p className="text-blue-700">Average Parking Time</p>
+                            <p className="text-blue-900 font-semibold">
+                              {avgParkingHours}h {avgParkingMins}m
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );
@@ -335,96 +270,8 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Data Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-          {/* Recent Vehicles */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Vehicles</h3>
-            </div>
-            <div className="p-6">
-              {vehicles.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No vehicles found</p>
-              ) : (
-                <div className="space-y-4">
-                  {vehicles.slice(0, 5).map((vehicle) => {
-                    // Find the area name for this vehicle
-                    const vehicleArea = areas.find(area => area._id === vehicle.areaId);
-                    const areaName = vehicleArea ? vehicleArea.name : 'Unknown Area';
-                    
-                    return (
-                      <div key={vehicle._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">{vehicle.plateNumber}</p>
-                          <p className="text-sm text-gray-600">{vehicle.ownerName}</p>
-                          <div className="flex items-center mt-1">
-                            <MapPin className="h-3 w-3 text-gray-400 mr-1" />
-                            <p className="text-xs text-gray-500">{areaName}</p>
-                          </div>
-                        </div>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          (vehicle.isActive !== false) 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {(vehicle.isActive !== false) ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Blacklist Management */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center">
-                <Shield className="h-5 w-5 text-red-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Blacklist Management</h3>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Recently blacklisted vehicles</p>
-            </div>
-            <div className="p-6">
-              {blacklist.length === 0 ? (
-                <div className="text-center py-8">
-                  <Ban className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No blacklisted vehicles found</p>
-                  <p className="text-sm text-gray-400 mt-1">All vehicles are currently allowed</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {blacklist.slice(0, 5).map((entry) => (
-                    <div key={entry._id} className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
-                      <div className="flex items-center">
-                        <div className="p-2 bg-red-100 rounded-lg mr-3">
-                          <Ban className="h-4 w-4 text-red-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{entry.plateNumber}</p>
-                          <p className="text-sm text-gray-600">{entry.reason}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">
-                          {new Date(entry.createdAt).toLocaleDateString()}
-                        </p>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Blacklisted
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
-    <br></br>
-    <br></br>
     </div>
   );
 };

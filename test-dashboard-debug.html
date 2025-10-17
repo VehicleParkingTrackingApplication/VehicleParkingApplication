@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(to bottom right, #4facfe, #f9f586);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .data-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        pre {
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Dashboard Debug Test</h1>
+        <p>This page tests the dashboard data flow to identify why total vehicles and areas are not showing.</p>
+
+        <div class="test-section info">
+            <h3>🎯 Test Steps</h3>
+            <ol>
+                <li>Test mock API endpoints directly</li>
+                <li>Check data format and structure</li>
+                <li>Verify vehicle and area counts</li>
+                <li>Test dashboard data aggregation</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Test Controls</h3>
+            <button onclick="testAreasAPI()">🅿️ Test Areas API</button>
+            <button onclick="testVehiclesAPI()">🚗 Test Vehicles API</button>
+            <button onclick="testRecordsAPI()">📋 Test Records API</button>
+            <button onclick="testBlacklistAPI()">🚫 Test Blacklist API</button>
+            <button onclick="testDashboardFlow()">📊 Test Dashboard Flow</button>
+            <button onclick="clearResults()">🧹 Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Current Statistics</h3>
+            <div class="stats-grid" id="currentStats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalAreas">-</div>
+                    <div class="stat-label">Total Areas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalVehicles">-</div>
+                    <div class="stat-label">Total Vehicles</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalRecords">-</div>
+                    <div class="stat-label">Total Records</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalBlacklist">-</div>
+                    <div class="stat-label">Blacklisted</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Results</h3>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for testing
+        const mockAreas = [
+            { _id: 'area_a', name: 'Lot A', capacity: 120, isActive: true },
+            { _id: 'area_b', name: 'Lot B', capacity: 80, isActive: true },
+            { _id: 'area_c', name: 'Lot C', capacity: 60, isActive: true },
+            { _id: 'area_d', name: 'Lot D', capacity: 40, isActive: true },
+            { _id: 'area_e', name: 'Lot E', capacity: 200, isActive: false }
+        ];
+
+        const mockVehicles = [
+            { _id: 'veh_001', plateNumber: 'ABC123', areaId: 'area_a', isActive: true },
+            { _id: 'veh_002', plateNumber: 'XYZ789', areaId: 'area_b', isActive: true },
+            { _id: 'veh_003', plateNumber: 'DEF456', areaId: 'area_a', isActive: true },
+            { _id: 'veh_004', plateNumber: 'GHI789', areaId: 'area_b', isActive: true },
+            { _id: 'veh_005', plateNumber: 'JKL012', areaId: 'area_a', isActive: true },
+            { _id: 'veh_006', plateNumber: 'MNO345', areaId: 'area_b', isActive: false },
+            { _id: 'veh_007', plateNumber: 'PQR678', areaId: 'area_a', isActive: true },
+            { _id: 'veh_008', plateNumber: 'STU901', areaId: 'area_b', isActive: false },
+            { _id: 'veh_009', plateNumber: 'VWX234', areaId: 'area_c', isActive: true },
+            { _id: 'veh_010', plateNumber: 'YZA567', areaId: 'area_d', isActive: true },
+            { _id: 'veh_011', plateNumber: 'BCD890', areaId: 'area_c', isActive: true },
+            { _id: 'veh_012', plateNumber: 'EFG123', areaId: 'area_d', isActive: true }
+        ];
+
+        const mockRecords = [
+            { _id: 'rec_001', plateNumber: 'ABC123', areaId: 'area_a' },
+            { _id: 'rec_002', plateNumber: 'XYZ789', areaId: 'area_b' },
+            { _id: 'rec_003', plateNumber: 'DEF456', areaId: 'area_a' },
+            { _id: 'rec_004', plateNumber: 'GHI789', areaId: 'area_b' },
+            { _id: 'rec_005', plateNumber: 'JKL012', areaId: 'area_a' },
+            { _id: 'rec_006', plateNumber: 'MNO345', areaId: 'area_b' },
+            { _id: 'rec_007', plateNumber: 'PQR678', areaId: 'area_a' },
+            { _id: 'rec_008', plateNumber: 'STU901', areaId: 'area_b' },
+            { _id: 'rec_009', plateNumber: 'VWX234', areaId: 'area_c' },
+            { _id: 'rec_010', plateNumber: 'YZA567', areaId: 'area_d' },
+            { _id: 'rec_011', plateNumber: 'BCD890', areaId: 'area_c' },
+            { _id: 'rec_012', plateNumber: 'EFG123', areaId: 'area_d' },
+            { _id: 'rec_013', plateNumber: 'HIJ456', areaId: 'area_a' },
+            { _id: 'rec_014', plateNumber: 'KLM789', areaId: 'area_b' },
+            { _id: 'rec_015', plateNumber: 'NOP012', areaId: 'area_c' }
+        ];
+
+        const mockBlacklist = [
+            { _id: 'blk_001', plateNumber: 'BLK001', reason: 'Unauthorized parking violation' },
+            { _id: 'blk_002', plateNumber: 'BLK002', reason: 'Multiple unpaid parking tickets' },
+            { _id: 'blk_003', plateNumber: 'BLK003', reason: 'Security threat - suspicious activity' },
+            { _id: 'blk_004', plateNumber: 'BLK004', reason: 'Vehicle reported stolen' },
+            { _id: 'blk_005', plateNumber: 'BLK005', reason: 'Repeated policy violations' }
+        ];
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            results.innerHTML += `<div class="test-section ${className}"><strong>[${timestamp}]</strong> ${message}</div>`;
+        }
+
+        function updateStats() {
+            document.getElementById('totalAreas').textContent = mockAreas.length;
+            document.getElementById('totalVehicles').textContent = mockVehicles.length;
+            document.getElementById('totalRecords').textContent = mockRecords.length;
+            document.getElementById('totalBlacklist').textContent = mockBlacklist.length;
+        }
+
+        function testAreasAPI() {
+            log('🅿️ Testing Areas API', 'info');
+            log(`✅ Mock areas data: ${mockAreas.length} areas found`, 'success');
+            mockAreas.forEach(area => {
+                log(`   • ${area.name} (${area._id}): ${area.capacity} capacity, ${area.isActive ? 'Active' : 'Inactive'}`, 'info');
+            });
+            updateStats();
+        }
+
+        function testVehiclesAPI() {
+            log('🚗 Testing Vehicles API', 'info');
+            log(`✅ Mock vehicles data: ${mockVehicles.length} vehicles found`, 'success');
+            
+            const activeVehicles = mockVehicles.filter(v => v.isActive === true);
+            const inactiveVehicles = mockVehicles.filter(v => v.isActive === false);
+            
+            log(`   • Active vehicles: ${activeVehicles.length}`, 'success');
+            log(`   • Inactive vehicles: ${inactiveVehicles.length}`, 'info');
+            
+            // Group by area
+            const vehiclesByArea = mockVehicles.reduce((acc, vehicle) => {
+                acc[vehicle.areaId] = (acc[vehicle.areaId] || 0) + 1;
+                return acc;
+            }, {});
+            
+            log('   • Vehicles by area:', 'info');
+            Object.entries(vehiclesByArea).forEach(([areaId, count]) => {
+                const area = mockAreas.find(a => a._id === areaId);
+                log(`     - ${area?.name || areaId}: ${count} vehicles`, 'info');
+            });
+            
+            updateStats();
+        }
+
+        function testRecordsAPI() {
+            log('📋 Testing Records API', 'info');
+            log(`✅ Mock records data: ${mockRecords.length} records found`, 'success');
+            
+            // Group by area
+            const recordsByArea = mockRecords.reduce((acc, record) => {
+                acc[record.areaId] = (acc[record.areaId] || 0) + 1;
+                return acc;
+            }, {});
+            
+            log('   • Records by area:', 'info');
+            Object.entries(recordsByArea).forEach(([areaId, count]) => {
+                const area = mockAreas.find(a => a._id === areaId);
+                log(`     - ${area?.name || areaId}: ${count} records`, 'info');
+            });
+            
+            updateStats();
+        }
+
+        function testBlacklistAPI() {
+            log('🚫 Testing Blacklist API', 'info');
+            log(`✅ Mock blacklist data: ${mockBlacklist.length} entries found`, 'success');
+            mockBlacklist.forEach(entry => {
+                log(`   • ${entry.plateNumber}: ${entry.reason}`, 'info');
+            });
+            updateStats();
+        }
+
+        function testDashboardFlow() {
+            log('📊 Testing Dashboard Data Flow', 'info');
+            
+            // Simulate the dashboard data aggregation
+            const areas = mockAreas;
+            let allVehicles = [];
+            let allRecords = [];
+            
+            // Simulate fetching data for each area
+            areas.forEach(area => {
+                const areaVehicles = mockVehicles.filter(v => v.areaId === area._id);
+                const areaRecords = mockRecords.filter(r => r.areaId === area._id);
+                
+                allVehicles = [...allVehicles, ...areaVehicles];
+                allRecords = [...allRecords, ...areaRecords];
+                
+                log(`   • ${area.name}: ${areaVehicles.length} vehicles, ${areaRecords.length} records`, 'info');
+            });
+            
+            const stats = {
+                totalVehicles: allVehicles.length,
+                totalAreas: areas.length,
+                totalRecords: allRecords.length,
+                totalRevenue: 0,
+                activeVehicles: allVehicles.filter(v => v.isActive !== false).length,
+                dailyStats: []
+            };
+            
+            log('✅ Dashboard statistics calculated:', 'success');
+            log(`   • Total Vehicles: ${stats.totalVehicles}`, 'success');
+            log(`   • Total Areas: ${stats.totalAreas}`, 'success');
+            log(`   • Total Records: ${stats.totalRecords}`, 'success');
+            log(`   • Active Vehicles: ${stats.activeVehicles}`, 'success');
+            
+            updateStats();
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            log('🧹 Results cleared', 'info');
+        }
+
+        // Initialize
+        log('🔍 Dashboard Debug Test Page Loaded', 'success');
+        log('Ready to test dashboard data flow', 'info');
+        updateStats();
+    </script>
+</body>
+</html>

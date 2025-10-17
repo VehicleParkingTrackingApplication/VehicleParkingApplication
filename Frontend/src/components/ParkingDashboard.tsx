@@ -1,7 +1,7 @@
 // @ts-ignore - dom-to-image-more doesn't have TypeScript definitions
 import domtoimage from 'dom-to-image-more';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,11 +109,13 @@ const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'w
   const entries = records.filter(r => r.entryDate);
   const aggregation: { [key: string]: number } = {};
   
+  console.log('Processing entries data for', entries.length, 'records with entry dates');
+  
   entries.forEach(record => {
     try {
-      const date = new Date(record.entryTime);
+      const date = record.entryDate;
       // Check if date is valid
-      if (isNaN(date.getTime())) {
+      if (!date || isNaN(date.getTime())) {
         console.warn('Invalid date in record:', record);
         return;
       }
@@ -123,7 +125,8 @@ const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'w
         key = date.toLocaleDateString('en-CA');
       } else if (period === 'weekly') {
         const dayOfWeek = date.getDay();
-        const firstDay = new Date(date.setDate(date.getDate() - dayOfWeek));
+        const firstDay = new Date(date);
+        firstDay.setDate(date.getDate() - dayOfWeek);
         key = `Week of ${firstDay.toLocaleDateString('en-CA')}`;
       } else if (period === 'monthly') {
         key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
@@ -134,10 +137,13 @@ const processEntriesByPeriod = (records: ProcessedRecord[], period: 'daily' | 'w
     }
   });
   
-  return Object.keys(aggregation).sort().map(key => ({
+  const result = Object.keys(aggregation).sort().map(key => ({
     period: key,
     Entries: aggregation[key]
   }));
+  
+  console.log('Entries aggregation result:', result);
+  return result;
 };
 
 const processPredictionsByPeriod = (
@@ -168,13 +174,13 @@ const processPredictionsByPeriod = (
 };
 
 
-const processOverstayData = (records: RawRecord[], timeLimitMinutes: number) => {
+const processOverstayData = (records: ProcessedRecord[]) => {
   const overstays = records.filter(r => {
     try {
-      if (r.status === 'Leaved' && r.leavingTime !== 'Still Parking') {
-        // Use the hours and minutes from the duration object
-        const totalMinutes = (r.duration.hours * 60) + r.duration.minutes;
-        return totalMinutes > timeLimitMinutes;
+      // Check if vehicle parked after 9PM (21:00)
+      if (r.entryDate && r.entryDate instanceof Date && !isNaN(r.entryDate.getTime())) {
+        const entryHour = r.entryDate.getHours();
+        return entryHour >= 21; // 9PM or later
       }
       return false;
     } catch (error) {
@@ -186,9 +192,9 @@ const processOverstayData = (records: RawRecord[], timeLimitMinutes: number) => 
   const aggregation: { [key: string]: number } = {};
   overstays.forEach(record => {
     try {
-      const date = new Date(record.entryTime);
+      const date = record.entryDate;
       // Check if date is valid
-      if (isNaN(date.getTime())) {
+      if (!date || isNaN(date.getTime())) {
         console.warn('Invalid date in overstay record:', record);
         return;
       }
@@ -203,6 +209,59 @@ const processOverstayData = (records: RawRecord[], timeLimitMinutes: number) => 
     date: key,
     'Overstaying Vehicles': aggregation[key]
   }));
+};
+
+const processAverageTimeData = (records: ProcessedRecord[], period: 'daily' | 'weekly' | 'monthly') => {
+  const recordsWithDuration = records.filter(r => r.durationMinutes !== null && r.durationMinutes > 0);
+  const aggregation: { [key: string]: { total: number; count: number } } = {};
+  
+  console.log('Processing average time data for', recordsWithDuration.length, 'records with duration');
+  console.log('Sample records:', recordsWithDuration.slice(0, 5).map(r => ({
+    entryDate: r.entryDate,
+    durationMinutes: r.durationMinutes,
+    plate: r.plate
+  })));
+  
+  recordsWithDuration.forEach(record => {
+    try {
+      const date = record.entryDate;
+      // Check if date is valid
+      if (!date || isNaN(date.getTime())) {
+        console.warn('Invalid date in average time record:', record);
+        return;
+      }
+      
+      let key = '';
+      if (period === 'daily') {
+        key = date.toLocaleDateString('en-CA');
+      } else if (period === 'weekly') {
+        const dayOfWeek = date.getDay();
+        const firstDay = new Date(date);
+        firstDay.setDate(date.getDate() - dayOfWeek);
+        key = `Week of ${firstDay.toLocaleDateString('en-CA')}`;
+      } else if (period === 'monthly') {
+        key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      }
+      
+      if (key) {
+        if (!aggregation[key]) {
+          aggregation[key] = { total: 0, count: 0 };
+        }
+        aggregation[key].total += record.durationMinutes!;
+        aggregation[key].count += 1;
+      }
+    } catch (error) {
+      console.warn('Error processing record for average time chart:', record, error);
+    }
+  });
+  
+  const result = Object.keys(aggregation).sort().map(key => ({
+    period: key,
+    'Average Time (mins)': Math.round(aggregation[key].total / aggregation[key].count)
+  }));
+  
+  console.log('Average time aggregation result:', result);
+  return result;
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
@@ -223,10 +282,11 @@ export default function ParkingDashboard() {
   const hourlyChartRef = useRef(null);
   const entriesChartRef = useRef(null);
   const overstayChartRef = useRef(null);
+  const averageTimeChartRef = useRef(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
-  const [allRecords, setAllRecords] = useState<RawRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<ProcessedRecord[]>([]);
   const [existingVehicles, setExistingVehicles] = useState<VehicleRecord[]>([]);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [startDate, setStartDate] = useState('');
@@ -244,7 +304,7 @@ export default function ParkingDashboard() {
 
   // State for the new charts
   const [entriesPeriod, setEntriesPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [overstayLimit, setOverstayLimit] = useState(60);
+  const [averageTimePeriod, setAverageTimePeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
     
   // --- ML Predictor State ---
   const [rawHourlyPredictions, setRawHourlyPredictions] = useState<{ [key: string]: number }>({});
@@ -279,20 +339,28 @@ export default function ParkingDashboard() {
     verifyAuth();
   }, []);
 
+  // Get area ID from URL path parameter
+  const { areaId: urlAreaId } = useParams<{ areaId: string }>();
+  
   // Effect to read URL parameters on component mount
   useEffect(() => {
-    const areaId = searchParams.get('area');
     const search = searchParams.get('search');
     const start = searchParams.get('startDate');
     const end = searchParams.get('endDate');
     const filter = searchParams.get('filter');
+    const queryAreaId = searchParams.get('area');
 
-    if (areaId) setSelectedAreaId(areaId);
+    // Prefer URL path parameter over query parameter
+    if (urlAreaId) {
+      setSelectedAreaId(urlAreaId);
+    } else if (queryAreaId) {
+      setSelectedAreaId(queryAreaId);
+    }
     if (search) setSearchTerm(search);
     if (start) setStartDate(start);
     if (end) setEndDate(end);
     if (filter) setActiveFilter(filter);
-  }, [searchParams]);
+  }, [searchParams, urlAreaId]);
 
   // Memoized function to fetch areas
   const fetchAreas = useCallback(async () => {
@@ -458,8 +526,8 @@ export default function ParkingDashboard() {
       start.setHours(0, 0, 0, 0);
       records = records.filter(record => {
         try {
-          const entryDate = new Date(record.entryTime);
-          return !isNaN(entryDate.getTime()) && entryDate >= start;
+          const entryDate = record.entryDate;
+          return entryDate && !isNaN(entryDate.getTime()) && entryDate >= start;
         } catch (error) {
           console.warn('Error filtering by start date:', record, error);
           return false;
@@ -471,8 +539,8 @@ export default function ParkingDashboard() {
       end.setHours(23, 59, 59, 999);
       records = records.filter(record => {
         try {
-          const entryDate = new Date(record.entryTime);
-          return !isNaN(entryDate.getTime()) && entryDate <= end;
+          const entryDate = record.entryDate;
+          return entryDate && !isNaN(entryDate.getTime()) && entryDate <= end;
         } catch (error) {
           console.warn('Error filtering by end date:', record, error);
           return false;
@@ -511,8 +579,8 @@ export default function ParkingDashboard() {
           Date.now(),
           ...filteredRecords.map(r => {
             try {
-              const date = new Date(r.entryTime);
-              return isNaN(date.getTime()) ? 0 : date.getTime();
+              const date = r.entryDate;
+              return !date || isNaN(date.getTime()) ? 0 : date.getTime();
             } catch (error) {
               console.warn('Error processing record for predictions:', r, error);
               return 0;
@@ -602,6 +670,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
         if (chartType === 'hourly-activity') chartElement = hourlyChartRef.current;
         if (chartType === 'entries-over-time') chartElement = entriesChartRef.current;
         if (chartType === 'overstay-analysis') chartElement = overstayChartRef.current;
+        if (chartType === 'average-time-analysis') chartElement = averageTimeChartRef.current;
 
         if (!chartElement) {
             throw new Error("Chart element could not be found in the DOM.");
@@ -625,7 +694,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
             type: chartType,
             chartData: chartData,
             chartImage: chartImage,
-            filters: { startDate, endDate, searchTerm, overstayLimit, entriesPeriod },
+            filters: { startDate, endDate, searchTerm, entriesPeriod, averageTimePeriod },
             description
         };
 
@@ -643,7 +712,12 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
 };
 
   // --- MEMOIZED CHART DATA ---
-  const overstayChartData = useMemo(() => processOverstayData(filteredRecords, overstayLimit), [filteredRecords, overstayLimit]);
+  const overstayChartData = useMemo(() => processOverstayData(filteredRecords), [filteredRecords]);
+  const averageTimeChartData = useMemo(() => {
+    const result = processAverageTimeData(filteredRecords, averageTimePeriod);
+    console.log('Average time chart data:', result);
+    return result;
+  }, [filteredRecords, averageTimePeriod]);
   
   const combinedHourlyData = useMemo(() => {
     const historical = processHourlyChartData(filteredRecords);
@@ -651,8 +725,8 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
         Date.now(),
         ...filteredRecords.map(r => {
           try {
-            const date = new Date(r.entryTime);
-            return isNaN(date.getTime()) ? 0 : date.getTime();
+            const date = r.entryDate;
+            return !date || isNaN(date.getTime()) ? 0 : date.getTime();
           } catch (error) {
             console.warn('Error processing record for combined chart:', r, error);
             return 0;
@@ -680,9 +754,19 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
   }, [filteredRecords, rawHourlyPredictions]);
 
   const combinedEntriesData = useMemo(() => {
+    console.log('Processing entries with records:', filteredRecords.length, 'records');
+    console.log('Sample records:', filteredRecords.slice(0, 5).map(r => ({
+      entryDate: r.entryDate,
+      exitDate: r.exitDate,
+      plate: r.plate
+    })));
+    
     const historical = processEntriesByPeriod(filteredRecords, entriesPeriod);
     const predicted = processPredictionsByPeriod(rawHourlyPredictions, entriesPeriod);
     const combinedMap = new Map<string, { period: string; Entries?: number | null; Predictor?: number | null }>();
+
+    console.log('Historical entries data:', historical);
+    console.log('Predicted entries data:', predicted);
 
     historical.forEach(item => {
       combinedMap.set(item.period, { ...item, Predictor: null });
@@ -695,7 +779,20 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
         combinedMap.set(item.period, { period: item.period, Entries: null, Predictor: item.Predictor });
       }
     });
-    return Array.from(combinedMap.values()).sort((a, b) => new Date(a.period.replace('Week of ', '')).getTime() - new Date(b.period.replace('Week of ', '')).getTime());
+    
+    const result = Array.from(combinedMap.values()).sort((a, b) => {
+      try {
+        const dateA = new Date(a.period.replace('Week of ', ''));
+        const dateB = new Date(b.period.replace('Week of ', ''));
+        return dateA.getTime() - dateB.getTime();
+      } catch (error) {
+        // If date parsing fails, sort alphabetically
+        return a.period.localeCompare(b.period);
+      }
+    });
+    
+    console.log('Combined entries data:', result);
+    return result;
   }, [filteredRecords, entriesPeriod, rawHourlyPredictions]);
 
 
@@ -851,12 +948,13 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                         Total Overstays
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.durationMinutes && r.durationMinutes > overstayLimit).length}</CardContent>
+                    <CardContent className="text-3xl font-bold text-gray-900 text-center">{filteredRecords.filter(r => r.entryDate && r.entryDate.getHours() >= 21).length}</CardContent>
                   </Card>
                 </section>
                 
-                <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div ref={hourlyChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg lg:col-span-2">
+                <section className="grid grid-cols-1 gap-8">
+                  {/* Hourly Activity Chart - Full Width */}
+                  <div ref={hourlyChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-gray-900">Hourly Activity (Historical & Predicted)</h3>
                         <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('hourly-activity', combinedHourlyData, 'Hourly entries, exits, and next-day predictions.')} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
@@ -876,11 +974,12 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  
-                  <div ref={entriesChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
-                  {/* Chart 2: Historical Vehicle Entries */}
-{/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
-                    <div className="flex justify-between items-center mb-4">
+
+                  {/* Three Charts in a Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Vehicle Entries Chart */}
+                    <div ref={entriesChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
+                      <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold text-gray-900">Vehicle Entries</h3>
                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('entries-over-time', combinedEntriesData, `Vehicle entries shown ${entriesPeriod}.`)} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
@@ -894,23 +993,30 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                         <Button size="sm" variant={entriesPeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setEntriesPeriod('monthly')} className={entriesPeriod === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Monthly</Button>
                       </div>
                     </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={combinedEntriesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
-                        <XAxis dataKey="period" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} tick={<AngleTick />} height={60} />
-                        <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false}/>
-                        <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
-                        <Legend />
-                        <Line type="monotone" dataKey="Entries" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
-                        <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                 
-                  <div ref={overstayChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
-                     <div className="flex justify-between items-center mb-4">
+                    {combinedEntriesData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={combinedEntriesData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                          <XAxis dataKey="period" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} tick={<AngleTick />} height={60} />
+                          <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false}/>
+                          <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
+                          <Legend />
+                          <Line type="monotone" dataKey="Entries" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
+                          <Line type="monotone" dataKey="Predictor" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[300px] text-gray-500">
+                        No data available for the selected period
+                      </div>
+                    )}
+                    </div>
+                    
+                    {/* Overstay Analysis Chart */}
+                    <div ref={overstayChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
+                      <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-gray-900">Vehicles Overstay Analysis</h3>
-                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, `Vehicles staying longer than ${overstayLimit} minutes.`)} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
+                        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('overstay-analysis', overstayChartData, 'Vehicles parked after 9PM.')} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
                            <Save className="mr-2 h-4 w-4" /> Save Report
                         </Button>
                     </div>
@@ -918,8 +1024,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
 {/* <!--                   <div className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                       <div className="flex items-center gap-2">
-                        <label htmlFor="overstay-limit" className="text-sm text-gray-700">Time Limit (mins):</label>
-                        <Input id="overstay-limit" type="number" value={overstayLimit} onChange={(e) => setOverstayLimit(parseInt(e.target.value) || 0)} className="bg-white border-2 border-gray-300 text-gray-900 w-24 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" />
+                        <p className="text-sm text-gray-700">Vehicles parked after 9PM</p>
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
@@ -932,9 +1037,45 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
                         <Bar dataKey="Overstaying Vehicles" fill="#ef4444" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                    </div>
+
+                    {/* Average Parking Time Chart */}
+                    <div ref={averageTimeChartRef} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Average Parking Time</h3>
+                      <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleSaveReport('average-time-analysis', averageTimeChartData, `Average parking time shown ${averageTimePeriod}.`)} className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
+                        <Save className="mr-2 h-4 w-4" /> Save Report
+                      </Button>
+                    </div>
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-sm text-gray-600">Average time vehicles spend parked</p>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant={averageTimePeriod === 'daily' ? 'default' : 'outline'} onClick={() => setAverageTimePeriod('daily')} className={averageTimePeriod === 'daily' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Daily</Button>
+                        <Button size="sm" variant={averageTimePeriod === 'weekly' ? 'default' : 'outline'} onClick={() => setAverageTimePeriod('weekly')} className={averageTimePeriod === 'weekly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Weekly</Button>
+                        <Button size="sm" variant={averageTimePeriod === 'monthly' ? 'default' : 'outline'} onClick={() => setAverageTimePeriod('monthly')} className={averageTimePeriod === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}>Monthly</Button>
+                      </div>
+                    </div>
+                    {averageTimeChartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={averageTimeChartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.1)" />
+                          <XAxis dataKey="period" stroke="rgba(0, 0, 0, 0.6)" fontSize={12} tick={<AngleTick />} height={60} />
+                          <YAxis stroke="rgba(0, 0, 0, 0.6)" fontSize={12} allowDecimals={false} />
+                          <Tooltip wrapperClassName="!bg-white !border-gray-300 !text-gray-900" contentStyle={{ color: '#111827', backgroundColor: 'white', border: '1px solid #d1d5db' }} />
+                          <Legend />
+                          <Line type="monotone" dataKey="Average Time (mins)" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} connectNulls />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[300px] text-gray-500">
+                        No data available for the selected period
+                      </div>
+                    )}
+                  </div>
                   </div>
                 </section>
-                
+
+                {/* Records Table Section */}
                 <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
                 {/* Records Table */}
 {/* <!--                 <section className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-6 shadow-2xl"> --> */}
@@ -976,3 +1117,4 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
     </div>
   );
 }
+

@@ -21,6 +21,7 @@ export const Header: React.FC = () => {
     const handleAuthChange = async () => {
       const authenticated = authInterceptor.isAuthenticated();
       setIsAuthenticated(authenticated);
+      
       if (authenticated) {
         try {
           const user = await getCurrentUser();
@@ -64,7 +65,6 @@ export const Header: React.FC = () => {
           <Link to={getLogoLink()} className="flex items-center justify-center mb-6">
             <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
           </Link>
-
           {isAuthenticated && (
             <nav className="flex flex-col space-y-2">
               {userRole === 'Admin' ? (
