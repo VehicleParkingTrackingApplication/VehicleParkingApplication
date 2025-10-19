@@ -1,4 +1,4 @@
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ interface ApiResponse {
 export default function ViewAllVehicles() {
   const { areaId } = useParams<{ areaId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -119,6 +120,20 @@ export default function ViewAllVehicles() {
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
       <div className="max-w-6xl mx-auto space-y-6 relative z-10">
+        {/* Back Button */}
+        <div className="flex items-center justify-start mb-4">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/area-management')}
+            className="flex items-center gap-2 text-white border-white/30 hover:bg-white/10 hover:border-white/50 transition-all duration-200"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Connection Page
+          </Button>
+        </div>
+        
         <h1 className="text-3xl font-bold text-center mb-6">
           Currently Parked Vehicles - {areaName}
         </h1>

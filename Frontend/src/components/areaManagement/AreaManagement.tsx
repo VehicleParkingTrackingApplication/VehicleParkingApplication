@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import AreaCreatePopup from '@/components/areaManagement/AreaCreatePopup';
@@ -277,13 +269,6 @@ export default function AreaManagement() {
      }
    }, [limit]);
 
-  // Helper function to get occupancy color
-  const getOccupancyColor = (current: number, capacity: number) => {
-    const percentage = (current / capacity) * 100;
-    if (percentage < 50) return 'bg-blue-600';
-    if (percentage >= 50 && percentage < 75) return 'bg-yellow-600';
-    return 'bg-red-600';
-  };
 
 
   // Show loading while checking authentication
@@ -506,13 +491,13 @@ export default function AreaManagement() {
                             <span className="font-medium">Policy:</span> {area.policy}
                           </p>
                         )}
-                        <div className="ml-11 flex items-center gap-6 text-sm text-gray-600">
+                        <div className="ml-11 flex items-center gap-6 text-base text-gray-600">
                           <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            <span>{area.location}</span>
+                            <span className="text-lg font-medium">{area.location}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -523,23 +508,6 @@ export default function AreaManagement() {
                         </div>
                       </div>
                       
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900 mb-1">
-                          {area.currentVehicles || 0}/{area.capacity}
-                        </div>
-                        <div className="text-sm text-gray-600 mb-2">
-                          {Math.round(((area.currentVehicles || 0) / area.capacity) * 100)}% occupied
-                        </div>
-                        <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-300 ${
-                              ((area.currentVehicles || 0) / area.capacity) > 0.8 ? 'bg-red-500' : 
-                              ((area.currentVehicles || 0) / area.capacity) > 0.6 ? 'bg-yellow-500' : 'bg-green-500'
-                            }`}
-                            style={{ width: `${Math.min(((area.currentVehicles || 0) / area.capacity) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
                     </div>
                     
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200">
