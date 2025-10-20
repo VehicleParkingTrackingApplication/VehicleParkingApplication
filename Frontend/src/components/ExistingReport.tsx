@@ -284,7 +284,7 @@ export default function ExistingReportsPage() {
   };
 
   return (
-    <div className="relative min-h-screen text-white overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
+    <div className="relative min-h-screen text-white overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
       {/* NEW: Embedded CSS for hiding the scrollbar */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -300,10 +300,9 @@ export default function ExistingReportsPage() {
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
       
-      <div className="relative z-10 px-8 py-10 min-h-screen flex flex-col items-center">
-        <header className="text-center mb-10">
-          <h1 className="text-5xl font-extrabold tracking-tight drop-shadow-lg">ReportAI</h1>
-          <p className="text-lg text-white/80 mt-3 drop-shadow">Select the Report and power your team with AI Assistant</p>
+      <div className="relative z-10 px-8 py-4 min-h-screen flex flex-col items-center">
+        <header className="text-center mb-8 mt-5">
+          <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">ReportAI</h1>
         </header>
 
         {error && <div className="w-full max-w-7xl bg-red-900/50 border border-red-700/50 rounded-xl p-4 text-red-200 mb-8">{error}</div>}

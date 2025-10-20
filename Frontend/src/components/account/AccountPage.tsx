@@ -155,7 +155,7 @@ export default function AccountPage() {
 
     if (isLoading && !user.email) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
+            <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
                 <div className="text-white text-xl">Loading...</div>
             </div>
         );
@@ -186,7 +186,7 @@ export default function AccountPage() {
     };
 
     return (
-        <div className="min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
+        <div className="min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
             {/* Background decorative elements */}
             <div 
                 className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
@@ -197,6 +197,9 @@ export default function AccountPage() {
                 style={{ transform: 'translate(-50%, 50%)' }}
             ></div>
             <main className="relative z-10 px-4 py-8 sm:px-6 lg:px-8 w-full max-w-6xl mx-auto">
+                <header className="text-center mb-6 mt-5">
+                    <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">My Account</h1>
+                </header>
                 {/* Profile Header Section */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-32 h-32 bg-white/20 rounded-full border-4 border-white/30 mb-4">
@@ -390,10 +393,6 @@ export default function AccountPage() {
                     </CardContent>
                 </Card>
             </main>
-            <br></br>
-            <br></br>
-            <br></br>
-            <br></br>
         </div>
     );
 }

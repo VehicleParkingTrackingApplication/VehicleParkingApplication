@@ -289,7 +289,7 @@ export default function AreaManagement() {
   // Show loading while checking authentication
   if (isAuthenticated === null) {
     return (
-      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -311,7 +311,7 @@ export default function AreaManagement() {
 
   if (loading) {
     return (
-      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -331,7 +331,7 @@ export default function AreaManagement() {
 // #1a5bcc,
 // #8е3794) '}}>
   return (
-    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -341,12 +341,11 @@ export default function AreaManagement() {
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
       
-      <div className="relative z-10 px-4 py-10">
+      <div className="relative z-10 px-4 py-4">
         <div className="max-w-5xl mx-auto space-y-10">
                      {/* Header */}
-           <header className="text-center">
-             {/* <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 to-blue-400 bg-clip-text text-transparent">MoniPark</h1>
-             <p className="text-sm text-white/70 mt-2">"From Parked Cars to Smart Starts"</p> */}
+           <header className="text-center mb-8 mt-5">
+             <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">Area Management</h1>
            </header>
 
           {error && (
@@ -644,7 +643,7 @@ export default function AreaManagement() {
               </Button>
             </div>
             <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">Connection setup section will be implemented here</p>
+              <p className="text-gray-600 mb-4">Connection setup section</p>
               <div className="text-sm text-gray-500">
                 This area is reserved for FTP server connections, camera integrations, and other system configurations.
               </div>

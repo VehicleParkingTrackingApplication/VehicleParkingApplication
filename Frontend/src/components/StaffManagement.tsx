@@ -165,9 +165,7 @@ export default function StaffManagement() {
   };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden p-6 md:p-8"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
-      <br></br>
-      <br></br>
+    <div className="min-h-screen text-white relative overflow-hidden p-6 md:p-8"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -177,11 +175,14 @@ export default function StaffManagement() {
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
       <div className="mx-auto w-full max-w-6xl relative z-10">
+        <header className="text-center mb-6 mt-5">
+          <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">Staff Management</h1>
+        </header>
         <Card className="w-full bg-white border-gray-200 shadow-2xl">
           <CardContent className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2">
               <div>
-                <h1 className="text-2xl font-semibold text-gray-800">Staff Management</h1>
+                <h2 className="text-2xl font-semibold text-gray-800">Staff Management</h2>
                 <p className="text-sm text-gray-600">Streamlined, secure, and consistent with your workspace</p>
               </div>
               <Dialog open={open} onOpenChange={setOpen}>

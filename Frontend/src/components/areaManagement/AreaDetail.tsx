@@ -162,7 +162,6 @@ export default function AreaDetail() {
   };
 
   const handleEditArea = () => {
-    // TODO: Implement edit area functionality
     console.log('Edit area clicked');
   };
 
@@ -213,7 +212,7 @@ export default function AreaDetail() {
   // Show loading while checking authentication
   if (isAuthenticated === null) {
     return (
-      <div className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}} text-white overflow-hidden flex items-center justify-center">
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -235,7 +234,7 @@ export default function AreaDetail() {
 
   if (loading) {
     return (
-      <div className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}} text-white overflow-hidden flex items-center justify-center">
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -251,7 +250,7 @@ export default function AreaDetail() {
 
   if (!area) {
     return (
-      <div className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}} text-white overflow-hidden flex items-center justify-center">
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -273,7 +272,7 @@ export default function AreaDetail() {
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}} text-white overflow-hidden">
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -283,7 +282,7 @@ export default function AreaDetail() {
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
       
-      <div className="relative z-10 px-4 py-10">
+      <div className="relative z-10 px-4 py-4">
         <div className="max-w-6xl mx-auto space-y-10">
           {/* Header */}
           <header className="text-center">
