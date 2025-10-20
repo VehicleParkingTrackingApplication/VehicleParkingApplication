@@ -86,7 +86,7 @@ export default function ViewAllRecords() {
   };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden px-6 py-4" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
+    <div className="min-h-screen text-slate-900 relative overflow-hidden px-6 py-4" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -101,7 +101,7 @@ export default function ViewAllRecords() {
           <Button
             variant="outline"
             onClick={() => navigate('/area-management')}
-            className="flex items-center gap-2 text-white border-white/30 hover:bg-white/10 hover:border-white/50 transition-all duration-200"
+            className="flex items-center gap-2 text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400 transition-all duration-200"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -110,39 +110,39 @@ export default function ViewAllRecords() {
           </Button>
         </div>
         
-        <h1 className="text-3xl font-bold text-center mb-6">
+        <h1 className="text-3xl font-bold text-center mb-6 text-slate-900">
           All Parking Records - {areaName}
         </h1>
 
-        <div className="backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl p-4">
-          <p className="text-sm text-white/70 mb-4">
+        <div className="backdrop-blur-md bg-white/70 rounded-2xl border border-white/60 shadow-2xl p-4">
+          <p className="text-sm text-slate-600 mb-4">
             Showing {records.length} records (Page {page} of {totalPages})
           </p>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Plate Number</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Image</TableHead>
+                <TableHead className="text-slate-700">Plate Number</TableHead>
+                <TableHead className="text-slate-700">Action</TableHead>
+                <TableHead className="text-slate-700">Date</TableHead>
+                <TableHead className="text-slate-700">Time</TableHead>
+                <TableHead className="text-slate-700">Country</TableHead>
+                <TableHead className="text-slate-700">Image</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {records.length > 0 ? (
                 records.map((record, index) => (
                   <TableRow key={record._id || index} className="hover:bg-white/5">
-                    <TableCell className="font-medium text-white">{record.plateNumber}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{record.plateNumber}</TableCell>
                     <TableCell>
                       <span className={`font-semibold ${getActionColor(record.status)}`}>
                         {record.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-white">{record.date}</TableCell>
-                    <TableCell className="text-white">{record.time}</TableCell>
-                    <TableCell className="text-white">{record.country || 'N/A'}</TableCell>
+                    <TableCell className="text-slate-900">{record.date}</TableCell>
+                    <TableCell className="text-slate-900">{record.time}</TableCell>
+                    <TableCell className="text-slate-900">{record.country || 'N/A'}</TableCell>
                     <TableCell>
                       {record.image && record.image !== 'image.jpg' ? (
                         <img 
@@ -151,14 +151,14 @@ export default function ViewAllRecords() {
                           className="w-16 h-12 object-cover rounded"
                         />
                       ) : (
-                        <span className="text-gray-400">No image</span>
+                        <span className="text-gray-500">No image</span>
                       )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-white/70">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-600">
                     No parking records found for this area
                   </TableCell>
                 </TableRow>
@@ -178,11 +178,11 @@ export default function ViewAllRecords() {
               Previous
             </Button>
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600">
                 Page {page} of {totalPages}
               </p>
               {totalRecords > 0 && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-600">
                   Total records: {totalRecords}
                 </p>
               )}

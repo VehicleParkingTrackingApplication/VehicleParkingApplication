@@ -110,7 +110,7 @@ export default function ViewAllVehicles() {
   };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden px-6 py-4" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
+    <div className="min-h-screen text-slate-900 relative overflow-hidden px-6 py-4" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -122,10 +122,10 @@ export default function ViewAllVehicles() {
       <div className="max-w-6xl mx-auto space-y-6 relative z-10">
         {/* Back Button */}
         <div className="flex items-center justify-start mb-4">
-          <Button
+            <Button
             variant="outline"
             onClick={() => navigate('/area-management')}
-            className="flex items-center gap-2 text-white border-white/30 hover:bg-white/10 hover:border-white/50 transition-all duration-200"
+            className="flex items-center gap-2 text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400 transition-all duration-200"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -134,12 +134,12 @@ export default function ViewAllVehicles() {
           </Button>
         </div>
         
-        <h1 className="text-3xl font-bold text-center mb-6">
+        <h1 className="text-3xl font-bold text-center mb-6 text-slate-900">
           Currently Parked Vehicles - {areaName}
         </h1>
 
-        <div className="backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl p-4">
-          <p className="text-sm text-white/70 mb-4">
+        <div className="backdrop-blur-md bg-white/70 rounded-2xl border border-white/60 shadow-2xl p-4">
+          <p className="text-sm text-slate-600 mb-4">
             Showing {vehicles.length} vehicles (Page {page} of {totalPages})
           </p>
 
@@ -159,15 +159,15 @@ export default function ViewAllVehicles() {
                   const entryDateTime = formatDateTime(vehicle.entryTime);
                   return (
                     <TableRow key={vehicle._id || index} className="hover:bg-white/5">
-                      <TableCell className="font-medium text-white">{vehicle.plateNumber}</TableCell>
-                      <TableCell className="text-white">{vehicle.country}</TableCell>
+                      <TableCell className="font-medium text-slate-900">{vehicle.plateNumber}</TableCell>
+                      <TableCell className="text-slate-900">{vehicle.country}</TableCell>
                       <TableCell>
                         <div>
-                          <div className="text-white">{entryDateTime.date}</div>
-                          <div className="text-sm text-white/70">{entryDateTime.time}</div>
+                          <div className="text-slate-900">{entryDateTime.date}</div>
+                          <div className="text-sm text-slate-600">{entryDateTime.time}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-white">{formatDuration(vehicle.currentDuration)}</TableCell>
+                      <TableCell className="text-slate-900">{formatDuration(vehicle.currentDuration)}</TableCell>
                       <TableCell>
                         {vehicle.image && vehicle.image !== 'image.jpg' ? (
                           <img 
@@ -176,7 +176,7 @@ export default function ViewAllVehicles() {
                             className="w-16 h-12 object-cover rounded"
                           />
                         ) : (
-                          <span className="text-gray-400">No image</span>
+                          <span className="text-gray-600">No image</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -184,7 +184,7 @@ export default function ViewAllVehicles() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-white/70">
+                  <TableCell colSpan={5} className="text-center py-8 text-slate-600">
                     No vehicles currently parked in this area
                   </TableCell>
                 </TableRow>
@@ -204,11 +204,11 @@ export default function ViewAllVehicles() {
               Previous
             </Button>
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600">
                 Page {page} of {totalPages}
               </p>
               {totalVehicles > 0 && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-600">
                   Total vehicles: {totalVehicles}
                 </p>
               )}

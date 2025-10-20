@@ -131,7 +131,7 @@ export default function LandingPage() {
             }
         `}>
           <div className="flex items-center">
-            <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+            <img src="/assets/Logo.png" alt="MoniPark" className="w-24 h-24 object-contain" />
           </div>
           <div className="hidden md:flex items-center space-x-8">
             <a href="#features" className="hover:text-yellow-400 transition-colors">Features</a>
@@ -327,7 +327,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+                <img src="/assets/Logo.png" alt="MoniPark" className="w-24 h-24 object-contain" />
               </div>
               <p className="text-blue-300 text-sm">Smart parking solutions for modern businesses.</p>
             </div>

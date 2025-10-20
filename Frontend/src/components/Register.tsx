@@ -66,7 +66,7 @@ export default function RegisterPage() {
           >
             <div className="max-w-7xl mx-auto flex items-center justify-between backdrop-blur-lg bg-white/5 rounded-2xl px-6 py-2 border border-white/10 shadow-xl">
               <div className="flex items-center">
-                <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+                <img src="/assets/Logo.png" alt="MoniPark" className="w-24 h-24 object-contain" />
               </div>
               <div className="flex items-center space-x-4">
                 <Button 

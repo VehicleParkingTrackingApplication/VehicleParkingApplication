@@ -109,7 +109,7 @@ export const Header: React.FC = () => {
       {/* Logo in top 1/8 area */}
       <div className="fixed top-0 left-0 w-64 h-1/8 flex items-center justify-center z-50 bg-transparent">
         <Link to={getLogoLink()} className="flex items-center justify-center cursor-default">
-          <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+          <img src="/assets/Logo.png" alt="MoniPark" className="w-24 h-24 object-contain" />
         </Link>
       </div>
       

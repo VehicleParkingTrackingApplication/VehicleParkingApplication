@@ -243,7 +243,7 @@ export default function StaffManagement() {
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               {loading ? (
                 <div className="p-8 text-center">
-                  <div className="text-gray-500">Loading staff list...</div>
+                  <div className="text-black">Loading staff list...</div>
                 </div>
               ) : (
                 <Table>
