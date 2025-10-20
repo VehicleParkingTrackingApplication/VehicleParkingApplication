@@ -641,7 +641,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
   // --- RENDER LOGIC ---
   if (loading || isAuthenticated === null) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -658,15 +658,14 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
   }
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       {/* Background decorative elements */}
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
-      <div className="relative z-10 px-4 py-10">
+      <div className="relative z-10 px-4 py-4">
         <div className="max-w-6xl mx-auto space-y-8">
-          <header className="text-center">
-             {/* <h1 className="text-4xl font-bold tracking-tight">Parking Dashboard</h1>
-             <p className="text-sm text-muted mt-2">Live view of parking area activity</p> */}
+          <header className="text-center mb-8 mt-5">
+            <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">Statistics</h1>
           </header>
           {error && <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">{error}</div>}  
           {saveMessage && (

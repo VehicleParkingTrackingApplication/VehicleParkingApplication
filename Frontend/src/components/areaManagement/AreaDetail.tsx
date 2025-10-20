@@ -162,7 +162,6 @@ export default function AreaDetail() {
   };
 
   const handleEditArea = () => {
-    // TODO: Implement edit area functionality
     console.log('Edit area clicked');
   };
 
@@ -213,7 +212,7 @@ export default function AreaDetail() {
   // Show loading while checking authentication
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -235,7 +234,7 @@ export default function AreaDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -251,7 +250,7 @@ export default function AreaDetail() {
 
   if (!area) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen text-white overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -273,7 +272,7 @@ export default function AreaDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white relative overflow-hidden px-6 py-10">
+    <div className="relative min-h-screen text-white overflow-hidden px-6 py-10" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}

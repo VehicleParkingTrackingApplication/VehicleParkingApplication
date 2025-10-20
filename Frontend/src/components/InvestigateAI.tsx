@@ -234,24 +234,16 @@ const InvestigateAI: React.FC<InvestigateAIProps> = () => {
   };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden" style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       {/* Background decorative elements */}
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
-      <div className="relative z-10 px-4 py-10">
+      <div className="relative z-10 px-4 py-4">
         <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-gradient-to-r from-purple-500 to-blue-600 rounded-xl">
-              <Brain className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold text-white">InvestigateAI</h1>
-              <p className="text-lg text-white/80">Ask questions about your parking data and get instant insights</p>
-            </div>
-          </div>
-        </div>
+        <header className="text-center mb-8 mt-5">
+          <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">InvestigateAI</h1>
+        </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Query Input Section */}

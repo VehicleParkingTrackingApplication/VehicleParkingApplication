@@ -110,7 +110,7 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -129,7 +129,7 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -148,7 +148,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden"style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -159,15 +159,10 @@ const Dashboard: React.FC = () => {
       ></div>
       <div className="relative z-10 p-6">
         <div className="max-w-7xl mx-auto">
-          <br></br>
-          <br></br>
-          {/* Header */}
-          {/* <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-            <p className="text-gray-300 mt-2">Overview of your parking management system</p>
-          </div> */}
-
-        {/* Statistics Cards */}
+          <header className="text-center mb-6 mt-5">
+            <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">Dashboard</h1>
+          </header>
+          {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-2xl px-6 py-4 border border-gray-200 shadow-lg">
             <div className="flex items-center">
@@ -423,8 +418,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
     </div>
-    <br></br>
-    <br></br>
     </div>
   );
 };
