@@ -605,7 +605,7 @@ export default function AreaManagement() {
                   e.stopPropagation();
                   setCreateOpen(true);
                 }}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-white border border-gray-300 text-blue-600 hover:bg-gray-50 hover:border-gray-400"
               >
                 Add New Area
               </Button>

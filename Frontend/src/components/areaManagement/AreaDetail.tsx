@@ -316,19 +316,19 @@ export default function AreaDetail() {
               <div className="flex gap-2">
                 <Button 
                   onClick={handleEditArea}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-white border border-gray-300 text-blue-600 hover:bg-gray-50 hover:border-gray-400"
                 >
                   Edit Area Info
                 </Button>
                 <Button 
                   onClick={handleEditFtpServer}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-white border border-gray-300 text-green-600 hover:bg-gray-50 hover:border-gray-400"
                 >
                   Change FTP Server
                 </Button>
                 <Button
                   onClick={handleTriggerFtp}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white border border-yellow-600"
+                  className="bg-white border border-gray-300 text-yellow-600 hover:bg-gray-50 hover:border-gray-400"
                 >
                   Trigger FTP Server
                 </Button>
