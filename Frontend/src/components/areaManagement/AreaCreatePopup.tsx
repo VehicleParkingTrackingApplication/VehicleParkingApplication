@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { inputParkingArea, type CreateAreaPayload } from '@/services/parkingApi';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AreaCreatePopupProps {
   open: boolean;
@@ -11,42 +11,36 @@ interface AreaCreatePopupProps {
 }
 
 export default function AreaCreatePopup({ open, onClose, onSuccess }: AreaCreatePopupProps) {
-  const [form, setForm] = useState<CreateAreaPayload>({
-    name: '',
-    capacity: 1,
-    location: '',
-    policy: ''
+  const [ftpConfig, setFtpConfig] = useState({
+    protocol: '',
+    encryption: '',
+    host: '',
+    port: '',
+    username: '',
+    password: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = (field: keyof CreateAreaPayload, value: string) => {
-    setForm(prev => ({
+  const handleFtpChange = (field: keyof typeof ftpConfig, value: string) => {
+    setFtpConfig(prev => ({
       ...prev,
-      [field]: field === 'capacity' ? Number(value) || 0 : value
+      [field]: value
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!form.name.trim() || !form.location.trim() || !form.capacity || form.capacity < 1) {
-      setError('Name, location and a capacity ≥ 1 are required.');
-      return;
-    }
     try {
       setSubmitting(true);
-      await inputParkingArea({
-        name: form.name.trim(),
-        location: form.location.trim(),
-        capacity: form.capacity,
-        policy: form.policy?.trim() || undefined
-      });
-      onSuccess('Area created successfully');
+      // TODO: Implement FTP server creation logic
+      onSuccess('FTP Server configured successfully');
       onClose();
-      setForm({ name: '', capacity: 1, location: '', policy: '' });
+      setFtpConfig({ protocol: '', encryption: '', host: '', port: '', username: '', password: '' });
     } catch (err: any) {
-      setError(err?.message || 'Failed to create area');
+      setError(err?.message || 'Failed to configure FTP server');
     } finally {
       setSubmitting(false);
     }
@@ -65,7 +59,7 @@ export default function AreaCreatePopup({ open, onClose, onSuccess }: AreaCreate
       {/* Popup content */}
       <div className="relative bg-white rounded-xl border border-gray-200 shadow-2xl w-full max-w-md mx-4 p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Create New Area</h2>
+          <h2 className="text-xl font-semibold text-gray-900">FTP Server Configuration</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -82,21 +76,93 @@ export default function AreaCreatePopup({ open, onClose, onSuccess }: AreaCreate
               {error}
             </div>
           )}
+          
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-gray-700">Name</Label>
-            <Input id="name" value={form.name} onChange={(e) => handleChange('name', e.target.value)} className="bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500" required />
+            <Label htmlFor="protocol" className="text-gray-700">Protocol</Label>
+            <Select value={ftpConfig.protocol} onValueChange={(value) => handleFtpChange('protocol', value)}>
+              <SelectTrigger className="bg-gray-100 border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm">
+                <SelectValue placeholder="Select Protocol" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ftp">FTP</SelectItem>
+                <SelectItem value="ftps">FTPS</SelectItem>
+                <SelectItem value="sftp">SFTP</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="capacity" className="text-gray-700">Capacity</Label>
-            <Input id="capacity" type="number" min={1} value={form.capacity} onChange={(e) => handleChange('capacity', e.target.value)} className="bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500" required />
+            <Label htmlFor="encryption" className="text-gray-700">Encryption</Label>
+            <Input 
+              id="encryption" 
+              value={ftpConfig.encryption} 
+              onChange={(e) => handleFtpChange('encryption', e.target.value)} 
+              placeholder="Enter Encryption details"
+              className="bg-gray-100 border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm" 
+            />
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="location" className="text-gray-700">Location</Label>
-            <textarea id="location" value={form.location} onChange={(e) => handleChange('location', e.target.value)} className="bg-white border-gray-300 text-gray-900 w-full min-h-[80px] rounded-md px-3 py-2 focus:border-blue-500 focus:ring-blue-500" required />
+            <Label htmlFor="host" className="text-gray-700">Host</Label>
+            <Input 
+              id="host" 
+              value={ftpConfig.host} 
+              onChange={(e) => handleFtpChange('host', e.target.value)} 
+              placeholder="Enter Host details"
+              className="bg-gray-100 border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm" 
+            />
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="policy" className="text-gray-700">Policy (optional)</Label>
-            <textarea id="policy" value={form.policy} onChange={(e) => handleChange('policy', e.target.value)} className="bg-white border-gray-300 text-gray-900 w-full min-h-[80px] rounded-md px-3 py-2 focus:border-blue-500 focus:ring-blue-500" />
+            <Label htmlFor="port" className="text-gray-700">Port</Label>
+            <Input 
+              id="port" 
+              value={ftpConfig.port} 
+              onChange={(e) => handleFtpChange('port', e.target.value)} 
+              placeholder="Enter Port details"
+              className="bg-gray-100 border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm" 
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="username" className="text-gray-700">Username</Label>
+            <Input 
+              id="username" 
+              value={ftpConfig.username} 
+              onChange={(e) => handleFtpChange('username', e.target.value)} 
+              placeholder="Enter User Name"
+              className="bg-gray-100 border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm" 
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-gray-700">Password</Label>
+            <div className="relative">
+              <Input 
+                id="password" 
+                type={showPassword ? "text" : "password"}
+                value={ftpConfig.password} 
+                onChange={(e) => handleFtpChange('password', e.target.value)} 
+                placeholder="Enter Password"
+                className="bg-gray-100 border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500 shadow-sm pr-10" 
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" disabled={submitting} onClick={onClose} className="border-gray-300 text-gray-700 hover:bg-gray-50">

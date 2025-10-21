@@ -4,6 +4,7 @@ import { Bell, LogOut, LayoutDashboard, BarChart2, FileText, Car, Plug, Users, U
 import { Button } from './ui/button';
 
 import { NotificationPopup } from './notification/NotificationPopup';
+import { getUnreadNotificationCount } from '../services/notificationApi';
 
 // import { NotificationPopup } from './NotificationPopup';
 
@@ -30,7 +31,14 @@ export const Header: React.FC = () => {
           } else {
             setUserRole('User');
           }
-          setUnreadCount(3);
+          // Fetch actual unread count from API
+          try {
+            const count = await getUnreadNotificationCount();
+            setUnreadCount(count);
+          } catch (error) {
+            console.error('Failed to fetch unread count:', error);
+            setUnreadCount(0);
+          }
         } catch (error) {
           console.error('Failed to fetch user role:', error);
           setUserRole('User');
@@ -45,8 +53,38 @@ export const Header: React.FC = () => {
     return () => window.removeEventListener('authChange', handleAuthChange);
   }, []);
 
+  // Refresh unread count periodically when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Initial fetch
+    refreshUnreadCount();
+
+    // Set up interval to refresh every 30 seconds
+    const interval = setInterval(refreshUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  const refreshUnreadCount = async () => {
+    if (isAuthenticated) {
+      try {
+        const count = await getUnreadNotificationCount();
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Failed to refresh unread count:', error);
+      }
+    }
+  };
+
   const toggleNotificationPopup = () => {
     setIsNotificationOpen(!isNotificationOpen);
+  };
+
+  const handleNotificationClose = () => {
+    setIsNotificationOpen(false);
+    // Refresh unread count when popup closes (in case notifications were marked as read)
+    refreshUnreadCount();
   };
   const handleLogout = async () => {
     await authInterceptor.logout();
@@ -71,7 +109,7 @@ export const Header: React.FC = () => {
       {/* Logo in top 1/8 area */}
       <div className="fixed top-0 left-0 w-64 h-1/8 flex items-center justify-center z-50 bg-transparent">
         <Link to={getLogoLink()} className="flex items-center justify-center cursor-default">
-          <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+          <img src="/assets/Logo.png" alt="MoniPark" className="w-24 h-24 object-contain" />
         </Link>
       </div>
       
@@ -159,7 +197,7 @@ export const Header: React.FC = () => {
                 </Button>
                 {isNotificationOpen && (
                   <div className="absolute bottom-50 left-full ml-110 z-2">
-                    <NotificationPopup onClose={() => setIsNotificationOpen(false)} />
+                    <NotificationPopup onClose={handleNotificationClose} />
                   </div>
                 )}
               </div>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { fetchAuthApi, putAuthApi } from '../../services/api';
-import { User, Mail, Shield, Building, Eye, EyeOff, Edit, Save, X } from 'lucide-react';
+import { Mail, Shield, Building, Eye, EyeOff, Edit, Save, X, Lock } from 'lucide-react';
 
 export default function AccountPage() {
     const [user, setUser] = useState({
@@ -156,7 +156,7 @@ export default function AccountPage() {
     if (isLoading && !user.email) {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
-                <div className="text-white text-xl">Loading...</div>
+                <div className="text-black text-xl">Loading...</div>
             </div>
         );
     }
@@ -186,7 +186,7 @@ export default function AccountPage() {
     };
 
     return (
-        <div className="min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
+        <div className="min-h-screen text-slate-900 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
             {/* Background decorative elements */}
             <div 
                 className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
@@ -202,13 +202,13 @@ export default function AccountPage() {
                 </header>
                 {/* Profile Header Section */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-32 h-32 bg-white/20 rounded-full border-4 border-white/30 mb-4">
-                        <span className="text-4xl font-bold text-white">{getInitials()}</span>
+                    <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-blue-600 border-4 border-white/80 shadow-lg mb-4">
+                        <span className="text-4xl font-bold text-white drop-shadow-sm">{getInitials()}</span>
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">
                         {user.firstName} {user.lastName}
                     </h1>
-                    <p className="text-white/80 text-lg">{user.email}</p>
+                    <p className="text-slate-700 text-lg">{user.email}</p>
                     <div className="flex items-center justify-center gap-2 mt-3">
                         <div className="bg-purple-600 px-3 py-1 rounded-full text-white text-sm font-medium">
                             {user.role}
@@ -220,9 +220,10 @@ export default function AccountPage() {
                 </div>
 
                 {/* Main Content Card */}
-                <Card className="backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
-                    <CardHeader className="text-center">
-                        <div className="flex items-center justify-end">
+                <Card className="backdrop-blur-md bg-white/70 border-slate-300 shadow-2xl">
+                    <CardHeader className="px-6 pt-6 pb-4 border-b border-slate-300">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-slate-900">Personal Information</h3>
                             <div className="flex gap-2">
                                 {!isEditing ? (
                                     <Button
@@ -245,7 +246,7 @@ export default function AccountPage() {
                                         <Button
                                             onClick={() => setIsEditing(false)}
                                             variant="outline"
-                                            className="border-white/30 text-white hover:bg-white/10"
+                                            className="border-slate-300 text-slate-700 hover:bg-slate-100"
                                         >
                                             <X size={16} className="mr-2" />
                                             Cancel
@@ -258,21 +259,18 @@ export default function AccountPage() {
                     <CardContent className="space-y-8">
                         {error && (
                             <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
-                                <p className="text-red-300 text-sm">{error}</p>
+                                <p className="text-red-700 text-sm">{error}</p>
                             </div>
                         )}
                         
                         <form onSubmit={handleUpdate} className="space-y-6">
                             {/* Personal Information Section */}
                             <div className="space-y-6">
-                                <h3 className="text-xl font-semibold text-white border-b border-white/20 pb-2">
-                                    Personal Information
-                                </h3>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                                     {/* First Name */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="firstName" className="text-white text-sm font-medium">
+                                        <Label htmlFor="firstName" className="text-slate-900 text-sm font-medium">
                                             First Name
                                         </Label>
                                         {isEditing ? (
@@ -280,11 +278,11 @@ export default function AccountPage() {
                                                 id="firstName" 
                                                 value={user.firstName} 
                                                 onChange={handleUserChange} 
-                                                className="bg-black/20 border-white/20 text-white"
+                                                className="bg-white border-slate-300 text-slate-900 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 placeholder="Enter your first name"
                                             />
                                         ) : (
-                                            <div className="bg-black/20 border-white/20 px-4 py-3 rounded-lg text-white">
+                                            <div className="bg-white border-slate-300 px-4 py-3 rounded-lg text-slate-900 shadow-sm">
                                                 {user.firstName || 'Not provided'}
                                             </div>
                                         )}
@@ -292,7 +290,7 @@ export default function AccountPage() {
 
                                     {/* Last Name */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="lastName" className="text-white text-sm font-medium">
+                                        <Label htmlFor="lastName" className="text-slate-900 text-sm font-medium">
                                             Last Name
                                         </Label>
                                         {isEditing ? (
@@ -300,11 +298,11 @@ export default function AccountPage() {
                                                 id="lastName" 
                                                 value={user.lastName} 
                                                 onChange={handleUserChange} 
-                                                className="bg-black/20 border-white/20 text-white"
+                                                className="bg-white border-slate-300 text-slate-900 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 placeholder="Enter your last name"
                                             />
                                         ) : (
-                                            <div className="bg-black/20 border-white/20 px-4 py-3 rounded-lg text-white">
+                                            <div className="bg-white border-slate-300 px-4 py-3 rounded-lg text-slate-900 shadow-sm">
                                                 {user.lastName || 'Not provided'}
                                             </div>
                                         )}
@@ -314,19 +312,19 @@ export default function AccountPage() {
                                 {/* Email Address */}
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-3">
-                                        <Mail size={20} className="text-white" />
-                                        <Label className="text-white text-sm font-medium">Email Address</Label>
+                                        <Mail size={20} className="text-slate-700" />
+                                        <Label className="text-slate-900 text-sm font-medium">Email Address</Label>
                                     </div>
                                     {isEditing ? (
                                         <Input 
                                             value={user.email} 
                                             onChange={(e) => setUser({...user, email: e.target.value})}
-                                            className="bg-black/20 border-white/20 text-white"
+                                            className="bg-white border-slate-300 text-slate-900 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             type="email"
                                             placeholder="Enter your email address"
                                         />
                                     ) : (
-                                        <div className="bg-black/20 border-white/20 px-4 py-3 rounded-lg text-white">
+                                        <div className="bg-white border-slate-300 px-4 py-3 rounded-lg text-slate-900 shadow-sm">
                                             {user.email}
                                         </div>
                                     )}
@@ -335,18 +333,18 @@ export default function AccountPage() {
                                 {/* Company */}
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-3">
-                                        <Building size={20} className="text-white" />
-                                        <Label className="text-white text-sm font-medium">Company</Label>
+                                        <Building size={20} className="text-slate-700" />
+                                        <Label className="text-slate-900 text-sm font-medium">Company</Label>
                                     </div>
                                     {isEditing ? (
                                         <Input 
                                             value={user.company} 
                                             onChange={(e) => setUser({...user, company: e.target.value})}
-                                            className="bg-black/20 border-white/20 text-white"
+                                            className="bg-white border-slate-300 text-slate-900 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             placeholder="Enter your company name"
                                         />
                                     ) : (
-                                        <div className="bg-black/20 border-white/20 px-4 py-3 rounded-lg text-white">
+                                        <div className="bg-white border-slate-300 px-4 py-3 rounded-lg text-slate-900 shadow-sm">
                                             {user.company || 'Not provided'}
                                         </div>
                                     )}
@@ -355,21 +353,24 @@ export default function AccountPage() {
 
                             {/* Security Section */}
                             <div className="space-y-6">
-                                <h3 className="text-xl font-semibold text-white border-b border-white/20 pb-2">
+                                <h3 className="text-xl font-semibold text-slate-900 border-b border-slate-300 pb-2">
                                     Security & Access
                                 </h3>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                                     {/* Password */}
                                     <div className="space-y-2">
-                                        <Label className="text-white text-sm font-medium">Password</Label>
+                                        <div className="flex items-center gap-3">
+                                            <Lock size={20} className="text-slate-700" />
+                                            <Label className="text-slate-900 text-sm font-medium">Password</Label>
+                                        </div>
                                         <div className="relative">
-                                            <div className="bg-black/20 border-white/20 px-4 py-3 rounded-lg text-white flex items-center justify-between">
+                                            <div className="bg-white border-slate-300 px-4 rounded-lg text-slate-900 flex items-center justify-between shadow-sm h-12">
                                                 <span>{showPassword ? userPassword : '••••••••••'}</span>
                                                 <button 
                                                     type="button"
                                                     onClick={handlePasswordToggle}
-                                                    className="text-white hover:text-gray-300 transition-colors"
+                                                    className="text-slate-700 hover:text-slate-900 transition-colors"
                                                 >
                                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                                 </button>
@@ -380,10 +381,10 @@ export default function AccountPage() {
                                     {/* Role */}
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-3">
-                                            <Shield size={20} className="text-white" />
-                                            <Label className="text-white text-sm font-medium">Role</Label>
+                                            <Shield size={20} className="text-slate-700" />
+                                            <Label className="text-slate-900 text-sm font-medium">Role</Label>
                                         </div>
-                                        <div className="bg-purple-600 px-4 py-3 rounded-lg text-white font-medium">
+                                        <div className="bg-purple-600 px-4 rounded-lg text-white font-medium h-12 flex items-center">
                                             {user.role}
                                         </div>
                                     </div>

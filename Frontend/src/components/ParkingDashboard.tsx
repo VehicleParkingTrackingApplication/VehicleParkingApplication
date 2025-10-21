@@ -909,7 +909,7 @@ const handleSaveReport = async (chartType: string, chartData: any[], description
           
           {selectedAreaId && (
             dashboardLoading ? (
-              <div className="text-center py-10">Loading area data...</div>
+              <div className="text-center py-10 text-black">Loading area data...</div>
             ) : (
               <div className="space-y-8">
                 <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

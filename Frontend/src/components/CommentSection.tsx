@@ -175,7 +175,7 @@ export default function CommentSection({ reportId, isOwner }: CommentSectionProp
         {/* Comments list */}
         <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
           {isLoading && comments.length === 0 ? (
-            <div className="text-center text-gray-500 py-4">Loading comments...</div>
+            <div className="text-center text-black py-4">Loading comments...</div>
           ) : comments.length === 0 ? (
             <div className="text-center text-gray-500 py-4">No comments yet. Be the first to comment!</div>
           ) : (

@@ -1,4 +1,4 @@
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -11,36 +11,20 @@ import { Button } from '@/components/ui/button';
 import { getExistingVehicles } from '@/services/parkingApi';
 import { useState, useEffect } from 'react';
 
-// Helper function to format duration
-const formatDuration = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0) {
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  }
-  return `${mins}m`;
-};
-
-// Convert ISO date to YYYY-MM-DD HH:mm:ss format (keeping original time without timezone conversion)
-const formatDateTime = (isoString: string): string => {
-  // Extract date and time components directly from ISO string to avoid timezone conversion
-  const dateTimePart = isoString.split('T')[0]; // Get YYYY-MM-DD part
-  const timePart = isoString.split('T')[1].split('.')[0]; // Get HH:mm:ss part (remove milliseconds and Z)
-  return `${dateTimePart} ${timePart}`;
-};
-
 interface VehicleRecord {
-  _id?: string;
+  _id: string;
   plateNumber: string;
-  entryTime: string; // ISO format: "2025-08-26T13:37:54.572Z"
-  leavingTime: string; // Either ISO format or "Still Parking"
-  duration: {
+  country: string;
+  image: string;
+  datetime: string;
+  currentDuration?: {
+    totalMinutes: number;
     hours: number;
     minutes: number;
+    milliseconds: number;
   };
-  image: string;
-  country: string;
-  status: 'Parking' | 'Leaved';
+  entryTime: string;
+  currentTime: string;
 }
 
 interface ApiResponse {
@@ -57,6 +41,7 @@ interface ApiResponse {
 export default function ViewAllVehicles() {
   const { areaId } = useParams<{ areaId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -102,9 +87,30 @@ export default function ViewAllVehicles() {
     fetchVehicles();
   }, [areaId, page]);
 
+  const formatDuration = (duration?: VehicleRecord['currentDuration']) => {
+    if (!duration) return 'N/A';
+    return `${duration.hours}h ${duration.minutes}m`;
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    const date = new Date(dateTime);
+    return {
+      date: date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    };
+  };
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden px-6 py-4" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
+    <div className="min-h-screen text-slate-900 relative overflow-hidden px-6 py-4" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -114,12 +120,26 @@ export default function ViewAllVehicles() {
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
       <div className="max-w-6xl mx-auto space-y-6 relative z-10">
-        <h1 className="text-3xl font-bold text-center mb-6">
+        {/* Back Button */}
+        <div className="flex items-center justify-start mb-4">
+            <Button
+            variant="outline"
+            onClick={() => navigate('/area-management')}
+            className="flex items-center gap-2 text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400 transition-all duration-200"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Connection Page
+          </Button>
+        </div>
+        
+        <h1 className="text-3xl font-bold text-center mb-6 text-slate-900">
           Currently Parked Vehicles - {areaName}
         </h1>
 
-        <div className="backdrop-blur-md bg-white/10 rounded-2xl border border-white/20 shadow-2xl p-4">
-          <p className="text-sm text-white/70 mb-4">
+        <div className="backdrop-blur-md bg-white/70 rounded-2xl border border-white/60 shadow-2xl p-4">
+          <p className="text-sm text-slate-600 mb-4">
             Showing {vehicles.length} vehicles (Page {page} of {totalPages})
           </p>
 
@@ -135,33 +155,36 @@ export default function ViewAllVehicles() {
             </TableHeader>
             <TableBody>
               {vehicles.length > 0 ? (
-                vehicles.map((vehicle, index) => (
-                  <TableRow key={vehicle._id || index} className="hover:bg-white/5">
-                    <TableCell className="font-medium text-white">{vehicle.plateNumber}</TableCell>
-                    <TableCell className="text-white">{vehicle.country}</TableCell>
-                    <TableCell className="text-white">{formatDateTime(vehicle.entryTime)}</TableCell>
-                    <TableCell className="text-white">
-                      {vehicle.status === 'Parking' 
-                        ? 'Still parking' 
-                        : formatDuration((vehicle.duration.hours * 60) + vehicle.duration.minutes)
-                      }
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.image && vehicle.image !== 'image.jpg' ? (
-                        <img 
-                          src={vehicle.image} 
-                          alt={`Vehicle ${vehicle.plateNumber}`}
-                          className="w-16 h-12 object-cover rounded"
-                        />
-                      ) : (
-                        <span className="text-gray-400">No image</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                vehicles.map((vehicle, index) => {
+                  const entryDateTime = formatDateTime(vehicle.entryTime);
+                  return (
+                    <TableRow key={vehicle._id || index} className="hover:bg-white/5">
+                      <TableCell className="font-medium text-slate-900">{vehicle.plateNumber}</TableCell>
+                      <TableCell className="text-slate-900">{vehicle.country}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="text-slate-900">{entryDateTime.date}</div>
+                          <div className="text-sm text-slate-600">{entryDateTime.time}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-slate-900">{formatDuration(vehicle.currentDuration)}</TableCell>
+                      <TableCell>
+                        {vehicle.image && vehicle.image !== 'image.jpg' ? (
+                          <img 
+                            src={vehicle.image} 
+                            alt={`Vehicle ${vehicle.plateNumber}`}
+                            className="w-16 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <span className="text-gray-600">No image</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-white/70">
+                  <TableCell colSpan={5} className="text-center py-8 text-slate-600">
                     No vehicles currently parked in this area
                   </TableCell>
                 </TableRow>
@@ -181,11 +204,11 @@ export default function ViewAllVehicles() {
               Previous
             </Button>
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600">
                 Page {page} of {totalPages}
               </p>
               {totalVehicles > 0 && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-600">
                   Total vehicles: {totalVehicles}
                 </p>
               )}

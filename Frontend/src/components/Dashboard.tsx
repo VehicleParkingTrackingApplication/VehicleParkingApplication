@@ -86,7 +86,7 @@ const Dashboard: React.FC = () => {
         ></div>
         <div className="backdrop-blur-md bg-white/5 rounded-2xl px-6 py-3 border border-white/10 shadow-2xl text-center relative z-10">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto"></div>
-          <p className="mt-4 text-white">Loading dashboard...</p>
+          <p className="mt-4 text-black">Loading dashboard...</p>
         </div>
       </div>
     );

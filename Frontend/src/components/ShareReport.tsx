@@ -158,7 +158,7 @@ export default function ShareReport({ reportId, isOwner }: ShareReportProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500 py-4">Loading sharing options...</div>
+          <div className="text-center text-black py-4">Loading sharing options...</div>
         </CardContent>
       </Card>
     );

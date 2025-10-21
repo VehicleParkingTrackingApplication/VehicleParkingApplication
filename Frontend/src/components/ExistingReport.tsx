@@ -311,7 +311,7 @@ export default function ExistingReportsPage() {
           {/* UPDATED: Report selector card with sliding dots */}
           <Card className="bg-white rounded-2xl border border-gray-200 shadow-lg">
             <CardContent className="p-4 py-2">
-              {loadingList ? <p className="text-gray-600">Loading reports...</p> : (
+              {loadingList ? <p className="text-black">Loading reports...</p> : (
                 <>
                   <div
                     ref={scrollContainerRef}
@@ -365,7 +365,7 @@ export default function ExistingReportsPage() {
 
           {/* Details section remains the same with the balanced height fix */}
           <div className={`transition-opacity duration-500 ease-in-out ${currentReport || loadingDetails ? 'opacity-100' : 'opacity-0'}`}>
-            {loadingDetails && <div className="text-center py-12 text-lg">Loading Analysis Workspace...</div>}
+            {loadingDetails && <div className="text-center py-12 text-lg text-black">Loading Analysis Workspace...</div>}
 
             {currentReport && !loadingDetails && (
               <Card className="bg-white rounded-2xl border border-gray-200 shadow-lg">
@@ -380,7 +380,7 @@ export default function ExistingReportsPage() {
                   <div className="lg:col-span-3 flex flex-col h-[452px]">
                     <h3 className="text-xl font-medium text-gray-900 mb-3 flex items-center"><BarChart2 className="mr-2 h-5 w-5 text-blue-600"/> Data Visualization</h3>
                     <div className="flex-grow bg-gray-50 rounded-xl p-4 border border-gray-200 shadow-sm">
-                      <Suspense fallback={<div className="flex items-center justify-center h-full text-gray-500">Loading Chart...</div>}>
+                      <Suspense fallback={<div className="flex items-center justify-center h-full text-black">Loading Chart...</div>}>
                         <ClientOnlyReportChart report={currentReport} />
                       </Suspense>
                     </div>

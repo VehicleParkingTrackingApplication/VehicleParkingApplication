@@ -453,8 +453,8 @@ export default function VehicleDashboard() {
           style={{ transform: 'translate(-50%, 50%)' }}
         ></div>
         <div className="backdrop-blur-md bg-white/5 rounded-2xl px-6 py-3 border border-white/10 shadow-2xl text-center relative z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Loading Vehicle Dashboard...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+          <p className="text-black">Loading Vehicle Dashboard...</p>
         </div>
       </div>
     );
@@ -536,8 +536,8 @@ export default function VehicleDashboard() {
         {selectedAreaId && (
           dashboardLoading ? (
             <div className="backdrop-blur-md bg-white/5 rounded-2xl border border-white/10 shadow-2xl text-center py-10">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-              <p className="text-white">Loading area data...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
+              <p className="text-black">Loading area data...</p>
             </div>
           ) : (
             <div className="space-y-8">
