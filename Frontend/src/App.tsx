@@ -21,9 +21,8 @@ import InvestigateAI from './components/InvestigateAI';
 // The Layout Component
 const MainLayout = () => {
   return (
-    <div>
+    <div className="min-h-screen" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <Header />
-      {/* CHANGE: The padding class 'p-8' has been removed from here */}
       <main className="ml-64">
         <Outlet /> {/* The <Outlet> component renders the current page */}
       </main>

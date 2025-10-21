@@ -25,7 +25,6 @@ const requireAuth = (req, res, next) => {
         }
 
         // Add user info to request object
-        // TODO: Reimplement on all controller, user is now an object. use user.id, user.role
         req.user = {
             id: decoded.id,
             businessId: decoded.businessId,

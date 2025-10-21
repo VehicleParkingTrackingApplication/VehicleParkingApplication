@@ -90,7 +90,6 @@ def investigate_query():
 
     try:
         # For now, use rule-based approach with AI-like response
-        # TODO: Fix AI integration once Ollama is properly configured
         mongo_query = generate_fallback_query(question)
         
         return jsonify({

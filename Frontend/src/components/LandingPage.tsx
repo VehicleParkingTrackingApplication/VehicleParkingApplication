@@ -78,7 +78,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
+    <div className="min-h-screen text-white relative overflow-hidden" style={{ backgroundColor: '#2361c6' }}>
       
       {/* NEW: Top edge gradient fade for smoother scrolling */}
       <motion.div

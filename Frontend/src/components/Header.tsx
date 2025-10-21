@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, LayoutDashboard, BarChart2, FileText, Car, Plug, Users, User, Settings, Brain } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Bell, LogOut, LayoutDashboard, BarChart2, FileText, Car, Plug, Users, User, Brain } from 'lucide-react';
 import { Button } from './ui/button';
 
 import { NotificationPopup } from './notification/NotificationPopup';
@@ -16,12 +16,12 @@ export const Header: React.FC = () => {
   const [userRole, setUserRole] = useState<string>('User');
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleAuthChange = async () => {
       const authenticated = authInterceptor.isAuthenticated();
       setIsAuthenticated(authenticated);
-      
       if (authenticated) {
         try {
           const user = await getCurrentUser();
@@ -55,65 +55,81 @@ export const Header: React.FC = () => {
   };
   const getLogoLink = () => isAuthenticated ? '/dashboard' : '/';
 
-  const interactiveBlockClasses = "transition-all duration-150 ease-in-out hover:bg-white/30 hover:shadow-lg active:scale-95 active:shadow-inner";
+  const getNavItemClasses = (path: string) => {
+    const isActive = location.pathname === path;
+    return `transition-all duration-200 ease-in-out p-2 rounded-md text-base flex items-center ${
+      isActive 
+        ? 'bg-white/40 text-white font-semibold shadow-lg' 
+        : 'text-white/80 hover:bg-white/20 hover:text-white hover:shadow-md'
+    }`;
+  };
+  
   const interactiveButtonClasses = "transition-all duration-150 ease-in-out hover:shadow-lg active:scale-95";
 
   return (
-    <header className="backdrop-blur-md bg-white/20 rounded-2xl border border-white/30 p-4 z-50 fixed top-0 left-0 h-screen w-64 text-gray-800">
-      <div className="flex flex-col justify-between h-full">
-        <div>
-          <Link to={getLogoLink()} className="flex items-center justify-center mb-6">
-            <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
-          </Link>
+    <>
+      {/* Logo in top 1/8 area */}
+      <div className="fixed top-0 left-0 w-64 h-1/8 flex items-center justify-center z-50 bg-transparent">
+        <Link to={getLogoLink()} className="flex items-center justify-center cursor-default">
+          <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+        </Link>
+      </div>
+      
+      {/* Navbar in bottom 7/8 area with blue background */}
+      <header className="fixed top-1/8 left-0 h-7/8 w-64 text-gray-800 z-40">
+        <div className="h-full w-full rounded-tr-3xl border-r border-white/30 p-4 overflow-hidden" style={{backgroundColor: '#2361c6'}}>
+          <div className="flex flex-col justify-between h-full">
+            <div className="pt-6">
+
           {isAuthenticated && (
             <nav className="flex flex-col space-y-2">
               {userRole === 'Admin' ? (
                 <>
-                  <Link to="/dashboard" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/dashboard" className={getNavItemClasses('/dashboard')}>
                     <LayoutDashboard className="mr-3 h-5 w-5" /> Dashboard
                   </Link>
-                  <Link to="/parking-dashboard" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/parking-dashboard" className={getNavItemClasses('/parking-dashboard')}>
                     <BarChart2 className="mr-3 h-5 w-5" /> Statistic
                   </Link>
-                  <Link to="/reports" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/reports" className={getNavItemClasses('/reports')}>
                     <FileText className="mr-3 h-5 w-5" /> ReportAI
                   </Link>
-                  <Link to="/investigate-ai" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/investigate-ai" className={getNavItemClasses('/investigate-ai')}>
                     <Brain className="mr-3 h-5 w-5" /> InvestigateAI
                   </Link>
-                  <Link to="/vehicle" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/vehicle" className={getNavItemClasses('/vehicle')}>
                     <Car className="mr-3 h-5 w-5" /> Vehicle
                   </Link>
-                  <Link to="/area-management" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/area-management" className={getNavItemClasses('/area-management')}>
                     <Plug className="mr-3 h-5 w-5" /> Connection
                   </Link>
-                  <Link to="/staff-management" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/staff-management" className={getNavItemClasses('/staff-management')}>
                     <Users className="mr-3 h-5 w-5" /> Staff Management
                   </Link>
-                  <Link to="/account" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/account" className={getNavItemClasses('/account')}>
                     <User className="mr-3 h-5 w-5" /> My Details
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link to="/dashboard" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/dashboard" className={getNavItemClasses('/dashboard')}>
                     <LayoutDashboard className="mr-3 h-5 w-5" /> Dashboard
                   </Link>
-                  <Link to="/parking-dashboard" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/parking-dashboard" className={getNavItemClasses('/parking-dashboard')}>
                     <BarChart2 className="mr-3 h-5 w-5" /> Statistic
                   </Link>
-                  <Link to="/reports" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/reports" className={getNavItemClasses('/reports')}>
                     <FileText className="mr-3 h-5 w-5" /> ReportAI
                   </Link>
-                  <Link to="/investigate-ai" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/investigate-ai" className={getNavItemClasses('/investigate-ai')}>
                     <Brain className="mr-3 h-5 w-5" /> InvestigateAI
                   </Link>
-                  <Link to="/vehicle" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/vehicle" className={getNavItemClasses('/vehicle')}>
                     <Car className="mr-3 h-5 w-5" /> Vehicle
                   </Link>
                   {/* Hidden for non-admin: Connection (area-management) */}
                   {/* Hidden for non-admin: Staff Management */}
-                  <Link to="/account" className={`flex items-center text-black hover:font-bold p-2 rounded-md text-base ${interactiveBlockClasses}`}>
+                  <Link to="/account" className={getNavItemClasses('/account')}>
                     <User className="mr-3 h-5 w-5" /> My Details
                   </Link>
                 </>
@@ -130,7 +146,7 @@ export const Header: React.FC = () => {
               <div className="relative">
                 <Button
                   variant="ghost"
-                  className={`w-full flex items-center justify-center text-black bg-white/20 text-sm py-2 px-3 rounded-md relative ${interactiveButtonClasses}`}
+                  className={`w-full flex items-center justify-center text-black bg-white text-sm py-2 px-3 rounded-md relative ${interactiveButtonClasses}`}
                   onClick={toggleNotificationPopup}
                 >
                   <Bell className="h-5 w-5 mr-1" />
@@ -159,17 +175,19 @@ export const Header: React.FC = () => {
             </>
           ) : (
             <>
-              <Button onClick={() => navigate('/signin')} className={`w-full text-black bg-white/10 text-base ${interactiveBlockClasses}`}>
+              <Button onClick={() => navigate('/signin')} className={`w-full text-black bg-white/10 text-base transition-all duration-150 ease-in-out hover:bg-white/20 hover:shadow-lg active:scale-95 active:shadow-inner`}>
                 Sign In
               </Button>
-              <Button onClick={() => navigate('/register')} className={`w-full bg-yellow-500 text-black hover:bg-yellow-600 text-base ${interactiveBlockClasses}`}>
+              <Button onClick={() => navigate('/register')} className={`w-full bg-yellow-500 text-black hover:bg-yellow-600 text-base transition-all duration-150 ease-in-out hover:bg-white/20 hover:shadow-lg active:scale-95 active:shadow-inner`}>
                 Sign Up
               </Button>
             </>
           )}
+            </div>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 };
 
