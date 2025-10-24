@@ -31,8 +31,6 @@ const EVENT_INTERVAL = 5; // Generate events every 5 simulation seconds
 // Manual list of area IDs to simulate
 const SIMULATION_AREA_IDS = [
     '68463ea062d56405aaef9ff9', // First area ID
-    // Add more area IDs here as needed
-    // '68463ea062d56405aaef9ffa',
     // '68463ea062d56405aaef9ffb',
     // '68463ea062d56405aaef9ffc',
     // '68463ea062d56405aaef9ff8'

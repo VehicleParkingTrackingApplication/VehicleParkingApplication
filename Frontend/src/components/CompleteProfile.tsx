@@ -60,10 +60,10 @@ export default function CompleteProfile() {
     }
   };
 
-  if (loading) return <div className="text-white p-8">Loading...</div>;
+  if (loading) return <div className="text-black p-8">Loading...</div>;
 
   return (
-    <div className="flex flex-col min-h-screen text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
+    <div className="flex flex-col min-h-screen text-white relative overflow-hidden" style={{ backgroundColor: '#2361c6' }}>
       {/* Animated Background Glass Effects */}
       <div className="absolute inset-0 overflow-hidden z-0">
         <motion.div animate={{ x: [0, 50, 0], y: [0, -30, 0] }} transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }} className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl transform translate-x-32 -translate-y-32"></motion.div>
@@ -79,7 +79,7 @@ export default function CompleteProfile() {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between backdrop-blur-lg bg-white/5 rounded-2xl px-6 py-2 border border-white/10 shadow-xl">
           <div className="flex items-center">
-            <img src="/assets/Logo.png" alt="MoniPark" className="w-16 h-16 object-contain" />
+            <img src="/assets/Logo.png" alt="MoniPark" className="w-24 h-24 object-contain" />
           </div>
           <div className="flex items-center space-x-4">
             <Button 

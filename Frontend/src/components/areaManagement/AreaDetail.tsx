@@ -162,7 +162,6 @@ export default function AreaDetail() {
   };
 
   const handleEditArea = () => {
-    // TODO: Implement edit area functionality
     console.log('Edit area clicked');
   };
 
@@ -213,7 +212,7 @@ export default function AreaDetail() {
   // Show loading while checking authentication
   if (isAuthenticated === null) {
     return (
-      <div className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen text-slate-900 overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -235,7 +234,7 @@ export default function AreaDetail() {
 
   if (loading) {
     return (
-      <div className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen text-slate-900 overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -251,7 +250,7 @@ export default function AreaDetail() {
 
   if (!area) {
     return (
-      <div className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+      <div className="relative min-h-screen text-slate-900 overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -273,7 +272,7 @@ export default function AreaDetail() {
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen text-slate-900 overflow-hidden px-6 py-10" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -283,12 +282,11 @@ export default function AreaDetail() {
         style={{ transform: 'translate(-50%, 50%)' }}
       ></div>
       
-      <div className="relative z-10 px-4 py-10">
-        <div className="max-w-6xl mx-auto space-y-10">
+      <div className="max-w-6xl mx-auto space-y-6 relative z-10">
           {/* Header */}
           <header className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight">MoniPark</h1>
-            <p className="text-sm text-muted mt-2">"From Parked Cars to Smart Starts"</p>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900">MoniPark</h1>
+            <p className="text-sm text-slate-600 mt-2">"From Parked Cars to Smart Starts"</p>
           </header>
 
           {/* Back Button */}
@@ -296,63 +294,65 @@ export default function AreaDetail() {
             <Button 
               variant="outline" 
               onClick={() => navigate('/area-management')}
-              className="bg-neutral-700 border-neutral-600 text-white hover:bg-neutral-600"
+              className="flex items-center gap-2 text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400 transition-all duration-200"
             >
-              ← Back to Area Management
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Connection Page
             </Button>
           </div>
 
           {error && (
-            <div className="bg-red-900 border border-red-700 rounded-xl p-4 text-red-200">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
               {error}
             </div>
           )}
 
           {/* Area Information */}
-          <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+          <section className="backdrop-blur-md bg-white/70 rounded-2xl border border-white/60 shadow-2xl p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">{area.name}</h2>
+              <h2 className="text-2xl font-semibold text-slate-900">{area.name}</h2>
               <div className="flex gap-2">
                 <Button 
                   onClick={handleEditArea}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-white border border-gray-300 text-blue-600 hover:bg-gray-50 hover:border-gray-400"
                 >
                   Edit Area Info
                 </Button>
                 <Button 
                   onClick={handleEditFtpServer}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-white border border-gray-300 text-green-600 hover:bg-gray-50 hover:border-gray-400"
                 >
                   Change FTP Server
                 </Button>
                 <Button
                   onClick={handleTriggerFtp}
-                  variant="outline"
-                  className="border-yellow-500 text-yellow-300 hover:bg-yellow-600 hover:text-white"
+                  className="bg-white border border-gray-300 text-yellow-600 hover:bg-gray-50 hover:border-gray-400"
                 >
                   Trigger FTP Server
                 </Button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
               {/* Basic Info */}
               <div className="space-y-4">
-                <div className="bg-neutral-700 rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-3">Basic Information</h3>
+                <div className="backdrop-blur-md bg-white/80 rounded-xl border border-slate-300 shadow-md p-4 h-full">
+                  <h3 className="font-semibold text-lg mb-3 text-slate-900">Basic Information</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Location:</span>
-                      <span className="text-gray-300 flex-1" title={area.location}>{area.location}</span>
+                      <span className="text-slate-600 w-20 flex-shrink-0">Location:</span>
+                      <span className="text-slate-900 flex-1" title={area.location}>{area.location}</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Capacity:</span>
-                      <span className="text-gray-300 flex-1">{area.capacity} spots</span>
+                      <span className="text-slate-600 w-20 flex-shrink-0">Capacity:</span>
+                      <span className="text-slate-900 flex-1">{area.capacity} spots</span>
                     </div>
                     {area.policy && (
                       <div className="flex items-start">
-                        <span className="text-gray-400 w-20 flex-shrink-0">Policy:</span>
-                        <span className="text-gray-300 flex-1" title={area.policy}>{area.policy}</span>
+                        <span className="text-slate-600 w-20 flex-shrink-0">Policy:</span>
+                        <span className="text-slate-900 flex-1" title={area.policy}>{area.policy}</span>
                       </div>
                     )}
                   </div>
@@ -361,19 +361,19 @@ export default function AreaDetail() {
 
               {/* Current Status */}
               <div className="space-y-4">
-                <div className="bg-neutral-700 rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-3">Current Status</h3>
+                <div className="backdrop-blur-md bg-white/80 rounded-xl border border-slate-300 shadow-md p-4 h-full">
+                  <h3 className="font-semibold text-lg mb-3 text-slate-900">Current Status</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Occupied:</span>
-                      <span className="text-gray-300 flex-1">{area.currentVehicles || 0} spots</span>
+                      <span className="text-slate-600 w-20 flex-shrink-0">Occupied:</span>
+                      <span className="text-slate-900 flex-1">{area.currentVehicles || 0} spots</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Available:</span>
-                      <span className="text-gray-300 flex-1">{area.capacity - (area.currentVehicles || 0)} spots</span>
+                      <span className="text-slate-600 w-20 flex-shrink-0">Available:</span>
+                      <span className="text-slate-900 flex-1">{area.capacity - (area.currentVehicles || 0)} spots</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Status:</span>
+                      <span className="text-slate-600 w-20 flex-shrink-0">Status:</span>
                       <span className={`${getOccupancyColor(area.currentVehicles || 0, area.capacity)} text-white text-xs px-2 py-1 rounded`}>
                         {Math.round(((area.currentVehicles || 0) / area.capacity) * 100)}% Full
                       </span>
@@ -384,24 +384,24 @@ export default function AreaDetail() {
 
               {/* FTP Server Info */}
               <div className="space-y-4">
-                <div className="bg-neutral-700 rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-3">FTP Server</h3>
+                <div className="backdrop-blur-md bg-white/80 rounded-xl border border-slate-300 shadow-md p-4 h-full">
+                  <h3 className="font-semibold text-lg mb-3 text-slate-900">FTP Server</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Server:</span>
-                      <span className="text-gray-300 text-xs font-mono bg-neutral-600 px-2 py-1 rounded truncate flex-1" title={area.ftpServer}>
+                      <span className="text-slate-600 w-20 flex-shrink-0">Server:</span>
+                      <span className="text-slate-900 text-xs font-mono bg-white/70 px-2 py-1 rounded truncate flex-1" title={area.ftpServer}>
                         {area.ftpServer}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Created:</span>
-                      <span className="text-gray-300 flex-1">
+                      <span className="text-slate-600 w-20 flex-shrink-0">Created:</span>
+                      <span className="text-slate-900 flex-1">
                         {new Date(area.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-gray-400 w-20 flex-shrink-0">Updated:</span>
-                      <span className="text-gray-300 flex-1">
+                      <span className="text-slate-600 w-20 flex-shrink-0">Updated:</span>
+                      <span className="text-slate-900 flex-1">
                         {new Date(area.updatedAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -412,13 +412,13 @@ export default function AreaDetail() {
           </section>
 
           {/* Recent Vehicles Table */}
-          <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+          <section className="backdrop-blur-md bg-white/70 rounded-2xl border border-white/60 shadow-2xl p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Recent Existing Vehicles (Last 10)</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Recent Existing Vehicles (Last 10)</h3>
               <Button 
                 onClick={handleViewAllVehicles}
                 variant="outline"
-                className="bg-neutral-700 border-neutral-600 text-white hover:bg-neutral-600"
+                className="text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400 transition-all duration-200"
               >
                 View All Vehicles
               </Button>
@@ -426,24 +426,24 @@ export default function AreaDetail() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Plate Number</TableHead>
-                  <TableHead>Entry Time</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>History</TableHead>
+                  <TableHead className="text-slate-700">Plate Number</TableHead>
+                  <TableHead className="text-slate-700">Entry Time</TableHead>
+                  <TableHead className="text-slate-700">Duration</TableHead>
+                  <TableHead className="text-slate-700">History</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentVehicles.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-gray-400 py-8">
+                    <TableCell colSpan={3} className="text-center text-slate-600 py-8">
                       No vehicles currently in this area
                     </TableCell>
                   </TableRow>
                 ) : (
                   recentVehicles.map((vehicle) => (
                     <TableRow key={vehicle._id}>
-                      <TableCell>{vehicle._id}</TableCell>
-                      <TableCell>{new Date(vehicle.entryTime).toLocaleString()}</TableCell>
+                      <TableCell className="text-slate-900">{vehicle._id}</TableCell>
+                      <TableCell className="text-slate-900">{new Date(vehicle.entryTime).toLocaleString()}</TableCell>
                       <TableCell>
                         {Math.round((Date.now() - new Date(vehicle.entryTime).getTime()) / (1000 * 60))} min
                       </TableCell>
@@ -460,13 +460,13 @@ export default function AreaDetail() {
           </section>
 
           {/* Recent Records Table */}
-          <section className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-md">
+          <section className="backdrop-blur-md bg-white/70 rounded-2xl border border-white/60 shadow-2xl p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Recent Parking Recordss</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Recent Parking Records</h3>
               <Button 
                 onClick={handleViewAllRecords}
                 variant="outline"
-                className="bg-neutral-700 border-neutral-600 text-white hover:bg-neutral-600"
+                className="text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400 transition-all duration-200"
               >
                 View All Records
               </Button>
@@ -474,28 +474,28 @@ export default function AreaDetail() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Plate Number</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Entry Time</TableHead>
-                  <TableHead>Exit Time</TableHead>
-                  <TableHead>Duration</TableHead>
+                  <TableHead className="text-slate-700">Plate Number</TableHead>
+                  <TableHead className="text-slate-700">Status</TableHead>
+                  <TableHead className="text-slate-700">Entry Time</TableHead>
+                  <TableHead className="text-slate-700">Exit Time</TableHead>
+                  <TableHead className="text-slate-700">Duration</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentRecords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-400 py-8">
+                    <TableCell colSpan={5} className="text-center text-slate-600 py-8">
                       No parking records found for this area
                     </TableCell>
                   </TableRow>
                 ) : (
                   recentRecords.map((record) => (
                     <TableRow key={record._id}>
-                      <TableCell>{record.plateNumber}</TableCell>
-                      <TableCell>{record.status}</TableCell>
-                      <TableCell>{record.date} {record.time}</TableCell>
-                      <TableCell>{record.status === 'EXIT' ? `${record.date} ${record.time}` : '-'}</TableCell>
-                      <TableCell>{record.duration ? `${record.duration} min` : '-'}</TableCell>
+                      <TableCell className="text-slate-900">{record.plateNumber}</TableCell>
+                      <TableCell className="text-slate-900">{record.status}</TableCell>
+                      <TableCell className="text-slate-900">{record.date} {record.time}</TableCell>
+                      <TableCell className="text-slate-900">{record.status === 'EXIT' ? `${record.date} ${record.time}` : '-'}</TableCell>
+                      <TableCell className="text-slate-900">{record.duration ? `${record.duration} min` : '-'}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -503,7 +503,6 @@ export default function AreaDetail() {
             </Table>
           </section>
         </div>
-      </div>
 
       {/* FTP Server Edit Popup */}
       <FtpServerEditPopup

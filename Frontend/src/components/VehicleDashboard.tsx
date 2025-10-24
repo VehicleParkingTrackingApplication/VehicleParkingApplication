@@ -443,7 +443,7 @@ export default function VehicleDashboard() {
 
   if (loading || isAuthenticated === null) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -453,8 +453,8 @@ export default function VehicleDashboard() {
           style={{ transform: 'translate(-50%, 50%)' }}
         ></div>
         <div className="backdrop-blur-md bg-white/5 rounded-2xl px-6 py-3 border border-white/10 shadow-2xl text-center relative z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Loading Vehicle Dashboard...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+          <p className="text-black">Loading Vehicle Dashboard...</p>
         </div>
       </div>
     );
@@ -462,7 +462,7 @@ export default function VehicleDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+      <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
         <div 
           className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
           style={{ transform: 'translate(50%, -50%)' }}
@@ -485,13 +485,15 @@ export default function VehicleDashboard() {
   }
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden" style={{background: 'linear-gradient(to bottom right, #4facfe, #f9f586)'}}>
+    <div className="min-h-screen text-white relative overflow-hidden" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       {/* Background decorative elements */}
-      <br></br>
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
-      <div className="relative z-10 px-4 py-10">
+      <div className="relative z-10 px-4 py-4">
       <div className="max-w-7xl mx-auto space-y-8">
+        <header className="text-center mb-8 mt-5">
+          <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">Vehicle Management</h1>
+        </header>
         {/* Controls Section */}
         <section className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -534,8 +536,8 @@ export default function VehicleDashboard() {
         {selectedAreaId && (
           dashboardLoading ? (
             <div className="backdrop-blur-md bg-white/5 rounded-2xl border border-white/10 shadow-2xl text-center py-10">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-              <p className="text-white">Loading area data...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
+              <p className="text-black">Loading area data...</p>
             </div>
           ) : (
             <div className="space-y-8">

@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col">
+    <div className="relative min-h-screen text-white overflow-hidden flex flex-col" style={{background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)'}}>
       <div 
         className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20"
         style={{ transform: 'translate(50%, -50%)' }}
@@ -17,7 +17,7 @@ const HomePage: React.FC = () => {
       
       <main className="flex-grow relative z-10">
         {/* Top section with button and dashboard */}
-        <div className="pt-16 px-8">
+        <div className="pt-4 px-8">
           <div className="flex items-start gap-6 ml-32">
             {/* Square + Button - positioned on the left near top */}
             <div className="flex-shrink-0">

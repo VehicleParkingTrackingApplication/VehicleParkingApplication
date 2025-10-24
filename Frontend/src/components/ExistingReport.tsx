@@ -284,7 +284,7 @@ export default function ExistingReportsPage() {
   };
 
   return (
-    <div className="relative min-h-screen text-white overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #4facfe, #f9f586)' }}>
+    <div className="relative min-h-screen text-white overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #f0f8ff, #e6f3ff)' }}>
       {/* NEW: Embedded CSS for hiding the scrollbar */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -300,10 +300,9 @@ export default function ExistingReportsPage() {
       <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[#193ED8] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(50%, -50%)' }}></div>
       <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-[#E8D767] rounded-full filter blur-3xl opacity-20" style={{ transform: 'translate(-50%, 50%)' }}></div>
       
-      <div className="relative z-10 px-8 py-10 min-h-screen flex flex-col items-center">
-        <header className="text-center mb-10">
-          <h1 className="text-5xl font-extrabold tracking-tight drop-shadow-lg">ReportAI</h1>
-          <p className="text-lg text-white/80 mt-3 drop-shadow">Select the Report and power your team with AI Assistant</p>
+      <div className="relative z-10 px-8 py-4 min-h-screen flex flex-col items-center">
+        <header className="text-center mb-8 mt-5">
+          <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg text-blue-600">ReportAI</h1>
         </header>
 
         {error && <div className="w-full max-w-7xl bg-red-900/50 border border-red-700/50 rounded-xl p-4 text-red-200 mb-8">{error}</div>}
@@ -312,7 +311,7 @@ export default function ExistingReportsPage() {
           {/* UPDATED: Report selector card with sliding dots */}
           <Card className="bg-white rounded-2xl border border-gray-200 shadow-lg">
             <CardContent className="p-4 py-2">
-              {loadingList ? <p className="text-gray-600">Loading reports...</p> : (
+              {loadingList ? <p className="text-black">Loading reports...</p> : (
                 <>
                   <div
                     ref={scrollContainerRef}
@@ -366,7 +365,7 @@ export default function ExistingReportsPage() {
 
           {/* Details section remains the same with the balanced height fix */}
           <div className={`transition-opacity duration-500 ease-in-out ${currentReport || loadingDetails ? 'opacity-100' : 'opacity-0'}`}>
-            {loadingDetails && <div className="text-center py-12 text-lg">Loading Analysis Workspace...</div>}
+            {loadingDetails && <div className="text-center py-12 text-lg text-black">Loading Analysis Workspace...</div>}
 
             {currentReport && !loadingDetails && (
               <Card className="bg-white rounded-2xl border border-gray-200 shadow-lg">
@@ -381,7 +380,7 @@ export default function ExistingReportsPage() {
                   <div className="lg:col-span-3 flex flex-col h-[452px]">
                     <h3 className="text-xl font-medium text-gray-900 mb-3 flex items-center"><BarChart2 className="mr-2 h-5 w-5 text-blue-600"/> Data Visualization</h3>
                     <div className="flex-grow bg-gray-50 rounded-xl p-4 border border-gray-200 shadow-sm">
-                      <Suspense fallback={<div className="flex items-center justify-center h-full text-gray-500">Loading Chart...</div>}>
+                      <Suspense fallback={<div className="flex items-center justify-center h-full text-black">Loading Chart...</div>}>
                         <ClientOnlyReportChart report={currentReport} />
                       </Suspense>
                     </div>
