@@ -4,7 +4,7 @@ import xgboost as xgb
 import pandas as pd
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.llms import Ollama
 
 # --- Initialize the Flask app ---
@@ -74,7 +74,7 @@ def rag_query():
     prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
     prompt = prompt_template.format(context=context_text, question=query_text)
 
-    model = Ollama(model="llava-phi3") 
+    model = Ollama(model="llama2") 
     response_text = model.invoke(prompt)
 
     return jsonify({"response": response_text})
