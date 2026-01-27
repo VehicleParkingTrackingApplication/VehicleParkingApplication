@@ -44,8 +44,8 @@ dbConnect();
 // scheduledSimulationService.startScheduledProcessing();
 
 // Init schedulers services for data FTP
-// const scheduledFtpService = new ScheduledFtpService();
-// scheduledFtpService.startScheduledProcessing();
+const scheduledFtpService = new ScheduledFtpService();
+scheduledFtpService.startScheduledProcessing();
 
 // Init scheduled monitoring service for long-parked vehicles
 // const scheduledMonitoringService = new ScheduledMonitoringService();
